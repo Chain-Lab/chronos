@@ -1,5 +1,7 @@
 import binascii
 
+import ecdsa
+
 from utils import funcs
 from config import Config
 
@@ -29,6 +31,44 @@ class Transaction(object):
         :return: 如果是coinbase交易， 返回True
         """
         return len(self.vins) == 1 and len(self.vins[0].txid) == 0 and self.vins[0].vout == -1
+
+    def __trimmed_copy(self):
+        inputs = []
+        outputs = []
+
+        for vin in self.vins:
+            inputs.append(TxInput(vin.txid, vin.vout, None))
+
+        for vout in self.vouts:
+            outputs.append(TxOutput(vout.value, vout.pub_key_hash))
+
+        result = Transaction(inputs, outputs)
+        result.txid = self.txid
+        return result
+
+    def verify(self, prev_txs):
+        if self.is_coinbase():
+            return True
+
+        tx_copy = self.__trimmed_copy()
+
+        for index, vin in enumerate(tx_copy.vins):
+            prev_tx = prev_txs.get(vin.txid, None)
+            if not prev_tx:
+                raise ValueError('Previous transaction error.')
+            tx_copy.vins[index].signature = None
+            tx_copy.vins[index].pub_key = prev_tx.vouts[vin.vout].pub_key_hash
+            tx_copy.set_id()
+            tx_copy.vins[index].pub_key = None
+
+            signature = binascii.a2b_hex(self.vins[index].signature)
+            vk = ecdsa.VerifyingKey.from_string(binascii.a2b_hex(vin.pub_key), curve=ecdsa.SECP256k1)
+
+
+            if not vk.verify(signature, tx_copy.txid.encode()):
+                return False
+
+        return True
 
     def serialize(self):
         """

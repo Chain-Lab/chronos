@@ -13,7 +13,7 @@ class Config(Singleton):
         """
         :param key: 键值，格式为[section].[key]
         :param default: 在发生错误情况下返回的默认值
-        :return: default或配置文件中的值
+        :return: default或配置文件中的值, str类型
         """
         map_key = key.split('.')
         if len(map_key) < 2:
