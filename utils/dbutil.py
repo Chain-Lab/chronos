@@ -1,6 +1,6 @@
 import couchdb
 
-from singleton import Singleton
+from utils.singleton import Singleton
 
 
 class DBUtil(Singleton):

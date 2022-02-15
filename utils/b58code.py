@@ -1,5 +1,5 @@
 from hashlib import sha256
-from decorators import scrub_base58_input
+from utils.decorators import scrub_base58_input
 
 
 class Base58Code(object):
