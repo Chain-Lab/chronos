@@ -1,5 +1,7 @@
 import json
 
+from couchdb import ResourceNotFound
+
 from config import Config
 from utils.dbutil import DBUtil
 from block import Block
@@ -7,6 +9,7 @@ from merkle import MerkleTree
 from block_header import BlockHeader
 from utxo import UTXOSet
 from transaction import Transaction
+
 
 class BlockChain(object):
 
@@ -67,7 +70,7 @@ class BlockChain(object):
 
         latest_block_hash = latest_block_hash_doc.get('hash', '')
         block_data = self.db.get(latest_block_hash)
-        block = Block().deserialize(block_data)
+        block = Block.deserialize(block_data)
         return block, latest_block_hash
 
     def set_latest_hash(self, hash):
@@ -98,7 +101,12 @@ class BlockChain(object):
         docs = self.db.find(query)
         block = None
         for block_data in docs:
-            block = Block().deserialize(block_data)
+            block = Block.deserialize(block_data)
+        return block
+
+    def get_block_by_hash(self, hash):
+        data = self.db.get(hash)
+        block = Block.deserialize(data)
         return block
 
     def get_transaction_by_txid(self, txid):
@@ -147,6 +155,22 @@ class BlockChain(object):
             last_hash = block.block_header.hash
             self.set_latest_hash(last_hash)
             UTXOSet().update(block)
+
+    def roll_back(self):
+        """
+        回滚数据库中的latest记录， 将记录回滚到上一区块高度
+        :return: None
+        """
+        latest_block, prev_hash = self.get_latest_block()
+        latest_height = latest_block.block_header.height
+        doc = self.db.get(latest_block.block_header.hash)
+        try:
+            self.db.delete(doc)
+        except ResourceNotFound as e:
+            # todo: 错误显示方式fix
+            print(e)
+        block = self.get_block_by_height(latest_height - 1)
+        self.set_latest_hash(block.block_header.hash)
 
     def find_utxo(self):
         spent_txos = {}

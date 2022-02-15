@@ -85,6 +85,60 @@ class UTXOSet(Singleton):
                     print(e)
         self.set_latest_height(block.block_header.height)
 
+    def roll_back(self, block):
+        for transaction in block.transactions:
+            txid = transaction.txud
+            key = self.FLAG + txid
+
+            for index, vout in enumerate(transaction.vouts):
+                tmp_key = key + '-' + str(index)
+                doc = self.db.get(tmp_key)
+                if not doc:
+                    continue
+                try:
+                    self.db.delete(doc)
+                except ResourceNotFound as e:
+                    print(e)
+
+            for vin in transaction.vins:
+                vin_txid = vin.txid
+                vout_index = vin.vout
+                key = self.FLAG + vin_txid + '-' + str(vin.vout)
+                query = {
+                    "selector": {
+                        "transactions": {
+                            "$elemMatch": {
+                                "txid": vin_txid
+                            }
+                        }
+                    }
+                }
+
+                docs = self.db.find(query)
+                if not docs:
+                    doc = docs[0]
+                else:
+                    continue
+
+                transactions = doc.get("transactions", [])
+                # todo:命名规则变更, 原有代码中和外部循环变量一致
+                for tx in transactions:
+                    if tx.get('txid', '') == txid:
+                        vouts = tx.get('vouts', [])
+                        if len(vouts) <= vout_index:
+                            continue
+
+                        vout = vouts[vout_index]
+                        vout_dict = vout.serialize()
+                        vout_dict.update({'index': vout_index})
+                        tmp_key = key + '-' + str(vout_index)
+
+                        try:
+                            self.db.create(tmp_key, vout_dict)
+                        except ResourceConflict as e:
+                            print(e)
+        self.set_latest_height(block.block_header.height - 1)
+
     @staticmethod
     def clear_transactions(transactions):
         used_utxo = []
