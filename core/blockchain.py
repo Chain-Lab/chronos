@@ -27,8 +27,11 @@ class BlockChain(object):
         merkle_tree = MerkleTree(data)
         block_header = BlockHeader(merkle_tree.root_hash, height, prev_hash)
 
-        # coin_base_tx = self.coin_base_tx(w, vote)
+        coin_base_tx = Transaction.coinbase_tx(vote)
+        transactions.insert(coin_base_tx)
+
         # coinbase 钱包和节点耦合， 可以考虑将挖矿、钱包、全节点服务解耦
+        # upd: 节点和挖矿耦合， 但是可以在配置中设置是否为共识节点
         txs = UTXOSet().clear_transactions(transactions)
         block = Block(block_header, txs)
 

@@ -110,11 +110,12 @@ class Transaction(object):
         return tx
 
     @classmethod
-    def coinbase_tx(cls, w, data):
+    def coinbase_tx(cls, data):
         vote_node = data
-        txin = CoinBaseInput('', -1, w.public_key)
+        txin = CoinBaseInput('', -1, Config().get('node.public_key'))
         txin.vote_info = vote_node
-        txout = TxOutput(int(Config().get('node.coinbase_reward')), w.address)
+        txout = TxOutput(int(Config().get('node.coinbase_reward')),
+                         Config().get('node.address'))
         tx = cls([txin], [txout])
         tx.set_id()
         return tx
