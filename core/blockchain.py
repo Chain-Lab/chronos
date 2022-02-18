@@ -17,6 +17,22 @@ class BlockChain(object):
         db_url = Config().get('database.url')
         self.db = DBUtil(db_url)
 
+    def __getitem__(self, index):
+        """
+        重写内部方法， 即blockchain[index]这个逻辑
+        :param index:  需要取出的区块高度
+        :return: None
+        """
+        latest_block, prev_hash = self.get_latest_block()
+        height = -1
+        if latest_block:
+            height = latest_block.block_header.height
+
+        if index <= height:
+            return self.get_block_by_height(index)
+        else:
+            raise IndexError('Index overflow')
+
     def add_new_block(self, transactions: list, vote: dict):
         latest_block, prev_hash = self.get_latest_block()
         height = latest_block.block_header.height + 1

@@ -5,3 +5,7 @@ class Message(object):
     def __init__(self, code:STATUS, data):
         self.code = code
         self.data = data
+
+    @classmethod
+    def empty_message(cls):
+        return cls(STATUS.NODE_MSG, "")
