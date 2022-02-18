@@ -1,0 +1,8 @@
+CouchDB==1.2
+ecdsa==0.17.0
+fire==0.4.0
+kademlia==2.2.2
+rpcudp==4.0.2
+six==1.16.0
+termcolor==1.1.0
+u-msgpack-python==2.7.1

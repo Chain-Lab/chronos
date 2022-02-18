@@ -13,13 +13,16 @@ from node.constants import STATUS
 from node.pot import ProofOfTime
 
 
-class TCPServer(object):
-    def __init__(self, ip, port):
+class Server(object):
+    def __init__(self, ip: str=None, port: int=None):
         """
         由cli调用时传入ip和端口来进行初始化， 尽量保证模块独立
         :param ip: ip地址，一般为localhost
         :param port: 端口
         """
+        if ip is None and port is None:
+            ip = Config().get('node.listen_ip')
+            port = int(Config().get('node.port'))
         self.sock = socket.socket()
         self.ip = ip
         self.port = port
