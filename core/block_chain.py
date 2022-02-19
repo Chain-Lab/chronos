@@ -2,13 +2,13 @@ import json
 
 from couchdb import ResourceNotFound
 
-from config import Config
+from core.config import Config
 from utils.dbutil import DBUtil
-from block import Block
-from merkle import MerkleTree
-from block_header import BlockHeader
-from utxo import UTXOSet
-from transaction import Transaction
+from core.block import Block
+from core.merkle import MerkleTree
+from core.block_header import BlockHeader
+from core.utxo import UTXOSet
+from core.transaction import Transaction
 
 
 class BlockChain(object):

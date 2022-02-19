@@ -5,7 +5,7 @@ import time
 
 from core.txmempool import TxMemPool
 from core.block import Block
-from core.blockchain import BlockChain
+from core.block_chain import BlockChain
 from core.transaction import Transaction
 from core.config import Config
 from node.message import Message
@@ -22,7 +22,7 @@ class Server(object):
         """
         if ip is None and port is None:
             ip = Config().get('node.listen_ip')
-            port = int(Config().get('node.port'))
+            port = int(Config().get('node.listen_port'))
         self.sock = socket.socket()
         self.ip = ip
         self.port = port
@@ -149,7 +149,7 @@ class Server(object):
             # todo: 用于进行共识的信息， 后续根据对应接口进行操作
             "address": Config().get('node.address'),
             "time": time.time(),
-            # "id": w.id,
+            "id": int(Config().get('node.id')),
             "vote": self.vote
         }
 
@@ -159,7 +159,7 @@ class Server(object):
                 "genesis_block": genesis_block.serialize(),
                 "address": Config().get('node.address'),
                 "time": time.time(),
-                # "id": w.id,
+                "id": int(Config().get('node.id')),
                 "vote": self.vote
             }
         result = Message(STATUS.HAND_SHAKE_MSG, result_data)
@@ -214,7 +214,7 @@ class Server(object):
                 'address': local_address,
                 # todo: 数据信息待确定
                 'time': time.time(),
-                # 'id': w.id
+                'id': int(Config().get('node.id'))
             }
             result = Message(STATUS.POT, result_data)
             return result

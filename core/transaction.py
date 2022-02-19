@@ -3,7 +3,7 @@ import binascii
 import ecdsa
 
 from utils import funcs
-from config import Config
+from core.config import Config
 
 
 class Transaction(object):

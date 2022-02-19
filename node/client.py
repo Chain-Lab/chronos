@@ -3,7 +3,7 @@ import socket
 import time
 
 from core.txmempool import TxMemPool
-from core.blockchain import BlockChain
+from core.block_chain import BlockChain
 from core.block import Block
 from core.transaction import Transaction
 from core.config import Config
@@ -49,7 +49,7 @@ class Client(object):
                         address: {
                             'time': time,
                             # todo: 修改节点id
-                            'id': 1
+                            'id': int(Config().get('node.id'))
                         }
                     })
                     db.update([old_wallets])
@@ -150,8 +150,8 @@ class Client(object):
             message_data = {
                 'vote': address + ' ' + final_address,
                 'address': address,
-                'time': time.time()
-                # 'id': w.id
+                'time': time.time(),
+                'id': int(Config().get('node.id'))
             }
             send_message = Message(STATUS.POT, message_data)
             self.send(send_message)
@@ -192,7 +192,7 @@ class Client(object):
             data = block.serialize()
             data['address'] = address
             data['time'] = time.time()
-            # data['id'] = w.id
+            data['id'] = int(Config().get('node.id'))
             send_message = Message(STATUS.UPDATE_MSG, data)
             self.send(send_message)
 

@@ -1,6 +1,6 @@
-from config import Config
-from block_header import BlockHeader
-from transaction import Transaction
+from core.config import Config
+from core.block_header import BlockHeader
+from core.transaction import Transaction
 
 
 class Block(object):

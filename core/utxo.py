@@ -1,7 +1,6 @@
 from utils.singleton import Singleton
-from config import Config
+from core.config import Config
 from utils.dbutil import DBUtil
-from blockchain import BlockChain
 
 from couchdb import ResourceConflict, ResourceNotFound
 
@@ -12,7 +11,7 @@ class UTXOSet(Singleton):
     def __init__(self):
         self.db = DBUtil(Config().get('database.url'))
 
-    def reindex(self, bc: BlockChain):
+    def reindex(self, bc):
         key = self.FLAG + 'latest'
         latest_block, prev_hash = bc.get_latest_block()
 

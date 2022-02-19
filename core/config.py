@@ -7,7 +7,7 @@ class Config(Singleton):
     def __init__(self):
         # todo: 添加日志记录
         self.parser = ConfigParser()
-        self.parser.read("../config.ini", "utf-8")
+        self.parser.read("config.ini", "utf-8")
 
     def get(self, key: str, default=None):
         """
