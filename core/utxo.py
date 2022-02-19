@@ -36,7 +36,7 @@ class UTXOSet(Singleton):
             self.set_latest_height(latest_block.block_header.height)
         else:
             latest_utxo_height = self.get_latest_height()
-            latest_block_height = latest_utxo_height.block_header.height
+            latest_block_height = latest_block.block_header.height
             for i in range(latest_utxo_height, latest_block_height):
                 block = bc.get_block_by_height(i)
                 self.update(block)

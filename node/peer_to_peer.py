@@ -11,11 +11,11 @@ class P2p(object):
 
     def run(self):
         port = int(Config().get('node.listen_port'))
+        host = Config().get('node.bootstrap_host')
         loop = asyncio.get_event_loop()
         self.loop = loop
         loop.run_until_complete(self.server.listen(port))
-        self.loop.run_until_complete(self.server.bootstrap([(
-            Config().get('node.bootstrap_host'), port)]))
+        self.loop.run_until_complete(self.server.bootstrap([(host, port)]))
         loop.run_forever()
 
     def get_nodes(self):

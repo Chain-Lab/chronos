@@ -59,6 +59,39 @@ class Client(object):
         if rec_message is not None:
             self.handle(rec_message)
 
+    def shake_loop(self):
+        while True:
+            if self.txs:
+                data = self.txs[0].serialize()
+                message = Message(STATUS.TRANSACTION_MSG, data)
+                self.send(message)
+                self.txs.clear()
+            else:
+                bc = BlockChain()
+                latest_block, prev_hash = bc.get_latest_block()
+                try:
+                    genesis_block = bc[0]
+                except IndexError as e:
+                    genesis_block = None
+
+                data = {
+                    "last_height": -1,
+                    "genesis_block": "",
+                    "address": Config().get('node.address'),
+                    "time": time.time(),
+                    "id": Config().get('node.id'),
+                    "vote": self.vote
+                }
+
+                if genesis_block:
+                    data['latest_height'] = latest_block.block_header.height
+                    data['genesis_block'] = genesis_block.serialize()
+
+                send_message = Message(STATUS.HAND_SHAKE_MSG, data)
+                print("send message:", data)
+                self.send(send_message)
+                time.sleep(10)
+
     def handle(self, message: dict):
         code = message.get('code', 0)
 

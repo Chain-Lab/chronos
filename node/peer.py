@@ -23,7 +23,7 @@ class Peer(Singleton):
                 if node not in self.nodes:
                     ip = node.ip
                     port = node.port
-
+                    print('node_ip:{}, node_port:{}'.format(ip, port))
                     if local_ip == ip:
                         continue
 

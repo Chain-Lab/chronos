@@ -35,7 +35,8 @@ class Server(object):
         self.sock.listen(10)
 
     def run(self):
-        pass
+        thread = threading.Thread(target=self.listen_loop, args=())
+        thread.start()
 
     def handle_loop(self, conn, address):
         rec_msg = None
@@ -105,6 +106,7 @@ class Server(object):
         :return:
         """
         data = message.get("data", "")
+        print("handshake_receive:", data)
         # todo: 用于共识的投票信息， 后续在设计完成相关的共识RPC接口后再接入
         vote_data = data.get("vote", {})
         height = data.get("latest_height", 0)

@@ -98,12 +98,12 @@ class Transaction(object):
 
         for vin_data in vins_data:
             if is_coinbase:
-                vins.append(CoinBaseInput().deserialize(vin_data))
+                vins.append(CoinBaseInput.deserialize(vin_data))
             else:
-                vins.append(TxInput().deserialize(vin_data))
+                vins.append(TxInput.deserialize(vin_data))
 
         for vout_data in vouts_data:
-            vouts.append(TxOutput().deserialize(vout_data))
+            vouts.append(TxOutput.deserialize(vout_data))
 
         tx = cls(vins, vouts)
         tx.txid = txid
@@ -151,8 +151,11 @@ class TxInput(object):
         return str(self.__dict__)
 
     # 直接更新dict进行初始化
-    def deserialize(self, data: dict):
-        self.__dict__.update(data)
+    @classmethod
+    def deserialize(cls, data: dict):
+        result = cls()
+        result.__dict__.update(data)
+        return result
 
 
 class TxOutput(object):
@@ -175,8 +178,11 @@ class TxOutput(object):
     def __repr__(self):
         return str(self.__dict__)
 
-    def deserialize(self, data: dict):
-        self.__dict__.update(data)
+    @classmethod
+    def deserialize(cls, data: dict):
+        result = cls()
+        result.__dict__.update(data)
+        return result
 
 
 class CoinBaseInput(TxInput):

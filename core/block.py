@@ -62,7 +62,8 @@ class Block(object):
     @classmethod
     def deserialize(cls, data: dict):
         block_header_dict = data['block_header']
-        block_header = BlockHeader.deserialize(block_header_dict)
+        block_header = BlockHeader()
+        block_header.deserialize(block_header_dict)
         transactions = data['transactions']
         txs = []
         for transaction in transactions:
