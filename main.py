@@ -1,4 +1,8 @@
+import os
+import yaml
+
 import fire
+import logging.config
 
 from core.block_chain import BlockChain
 from core.utxo import UTXOSet
@@ -10,7 +14,23 @@ from node.peer import Peer
 from utils.dbutil import DBUtil
 
 
+def setup_logger(default_path="logging.yaml", default_level=logging.DEBUG, env_key="LOG_CFG"):
+    path = default_path
+    value = os.getenv(env_key, None)
+    if value:
+        path = value
+
+    if os.path.exists(path):
+        with open(path, "r") as f:
+            config = yaml.full_load(f)
+            logging.config.dictConfig(config)
+    else:
+        logging.basicConfig(level=default_level)
+
+
 def run():
+    setup_logger()
+
     bc = BlockChain()
     utxo_set = UTXOSet()
     utxo_set.reindex(bc)
