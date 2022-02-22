@@ -1,20 +1,21 @@
 import json
+import logging
 import socket
 import threading
 import time
 
-from core.txmempool import TxMemPool
 from core.block import Block
 from core.block_chain import BlockChain
-from core.transaction import Transaction
 from core.config import Config
-from node.message import Message
+from core.transaction import Transaction
+from core.txmempool import TxMemPool
 from node.constants import STATUS
+from node.message import Message
 from node.pot import ProofOfTime
 
 
 class Server(object):
-    def __init__(self, ip: str=None, port: int=None):
+    def __init__(self, ip: str = None, port: int = None):
         """
         由cli调用时传入ip和端口来进行初始化， 尽量保证模块独立
         :param ip: ip地址，一般为localhost
@@ -33,6 +34,12 @@ class Server(object):
     def listen(self):
         self.sock.bind((self.ip, self.port))
         self.sock.listen(10)
+
+    def listen_loop(self):
+        while True:
+            conn, address = self.sock.accept()
+            thread = threading.Thread(target=self.handle_loop, args=(conn, address))
+            thread.start()
 
     def run(self):
         thread = threading.Thread(target=self.listen_loop, args=())
@@ -55,6 +62,10 @@ class Server(object):
             time.sleep(5)
 
     def handle(self, message: dict):
+        """
+        :param message: 从client接收到的待处理的message
+        :return: 消息处理完成后应该返回的数据
+        """
         code = message.get('code', 0)
         if code == STATUS.HAND_SHAKE_MSG:
             result_message = self.handle_handshake(message)
@@ -70,12 +81,6 @@ class Server(object):
         else:
             result_message = Message.empty_message()
         return json.dumps(result_message.__dict__)
-
-    def listen_loop(self):
-        while True:
-            conn, address = self.sock.accept()
-            thread = threading.Thread(target=self.handle_loop, args=(conn, address))
-            thread.start()
 
     def check_vote_synced(self, vote_data):
         """
@@ -106,7 +111,7 @@ class Server(object):
         :return:
         """
         data = message.get("data", "")
-        print("handshake_receive:", data)
+        logging.debug("Receive data: {}".format(message))
         # todo: 用于共识的投票信息， 后续在设计完成相关的共识RPC接口后再接入
         vote_data = data.get("vote", {})
         height = data.get("latest_height", 0)
@@ -256,4 +261,3 @@ class Server(object):
         except ValueError as e:
             # todo: 日志记录
             print(e)
-

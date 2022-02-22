@@ -1,8 +1,8 @@
-from utils.singleton import Singleton
+from couchdb import ResourceConflict, ResourceNotFound
+
 from core.config import Config
 from utils.dbutil import DBUtil
-
-from couchdb import ResourceConflict, ResourceNotFound
+from utils.singleton import Singleton
 
 
 class UTXOSet(Singleton):

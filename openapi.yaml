@@ -1,0 +1,15 @@
+openapi: 3.0.0
+info:
+  title: Chronos Openapi Document
+  version: 1.0.0
+servers:
+  - url: https://example.com/v1
+    description: example
+tags:
+  - name: node
+    description: Node Openapi
+  - name: transactions
+    description: None
+  - name: address
+    description: None
+paths:

@@ -1,5 +1,5 @@
-from core.config import Config
 from core.block_header import BlockHeader
+from core.config import Config
 from core.transaction import Transaction
 
 

@@ -2,8 +2,8 @@ import binascii
 
 import ecdsa
 
-from utils import funcs
 from core.config import Config
+from utils import funcs
 
 
 class Transaction(object):
@@ -63,7 +63,6 @@ class Transaction(object):
 
             signature = binascii.a2b_hex(self.vins[index].signature)
             vk = ecdsa.VerifyingKey.from_string(binascii.a2b_hex(vin.pub_key), curve=ecdsa.SECP256k1)
-
 
             if not vk.verify(signature, tx_copy.txid.encode()):
                 return False
@@ -195,4 +194,3 @@ class CoinBaseInput(TxInput):
         self.vote_info[address]['node_id'] = node_id
         self.vote_info[address]['vote_count'] = vote_count
         self.vote_info[address][vote_node] = vote_node
-

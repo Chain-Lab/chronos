@@ -1,5 +1,3 @@
-
-
 class STATUS(object):
     """
     状态码的定义
@@ -12,4 +10,3 @@ class STATUS(object):
     POT = 4
     SYNC_MSG = 5
     UPDATE_MSG = 6
-

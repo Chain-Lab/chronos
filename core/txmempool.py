@@ -1,5 +1,5 @@
-from utils.singleton import Singleton
 from core.config import Config
+from utils.singleton import Singleton
 
 
 class TxMemPool(Singleton):

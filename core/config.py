@@ -29,5 +29,6 @@ class Config(Singleton):
         except NoOptionError:
             return default
 
+
 if __name__ == "__main__":
     print(type(Config().get("node.mem_pool_size")))

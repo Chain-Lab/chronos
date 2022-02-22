@@ -37,7 +37,7 @@ class BlockHeader(object):
                                           self.hash,
                                           self.nonce,
                                           self.height
-        )
+                                          )
 
     def serialize(self):
         return self.__dict__

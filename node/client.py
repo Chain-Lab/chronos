@@ -1,16 +1,17 @@
 import json
+import logging
 import socket
 import time
 
-from core.txmempool import TxMemPool
-from core.block_chain import BlockChain
 from core.block import Block
-from core.transaction import Transaction
+from core.block_chain import BlockChain
 from core.config import Config
-from utils.dbutil import DBUtil
-from node.message import Message
+from core.transaction import Transaction
+from core.txmempool import TxMemPool
 from node.constants import STATUS
+from node.message import Message
 from node.pot import ProofOfTime
+from utils.dbutil import DBUtil
 
 
 class Client(object):
@@ -19,6 +20,7 @@ class Client(object):
         self.sock = socket.socket()
 
         self.sock.connect((ip, port))
+        logging.info("Connect to server ip: {} port: {}".format(ip, port))
         self.vote = {}
         self.tx_pool = TxMemPool()
 
@@ -101,6 +103,12 @@ class Client(object):
             self.handle_get_block(message)
         elif code == STATUS.TRANSACTION_MSG:
             self.handle_transaction(message)
+        elif code == STATUS.POT:
+            self.handle_pot(message)
+        elif code == STATUS.SYNC_MSG:
+            self.handle_sync(message)
+        elif code == STATUS.UPDATE_MSG:
+            self.handle_update(message)
 
     def handle_shake(self, message: dict):
         """
@@ -137,7 +145,7 @@ class Client(object):
     @staticmethod
     def handle_get_block(message: dict):
         """
-        状态码为STAUS.GET_BLOCK_MSG = 2, 处理服务器发送过来的区块数据
+        状态码为STATUS.GET_BLOCK_MSG = 2, 处理服务器发送过来的区块数据
         :param message: 包含区块数据的消息
         :return: None
         """

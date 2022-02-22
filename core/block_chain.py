@@ -1,14 +1,15 @@
 import json
+import logging
 
 from couchdb import ResourceNotFound
 
-from core.config import Config
-from utils.dbutil import DBUtil
 from core.block import Block
-from core.merkle import MerkleTree
 from core.block_header import BlockHeader
-from core.utxo import UTXOSet
+from core.config import Config
+from core.merkle import MerkleTree
 from core.transaction import Transaction
+from core.utxo import UTXOSet
+from utils.dbutil import DBUtil
 
 
 class BlockChain(object):
@@ -31,6 +32,7 @@ class BlockChain(object):
         if index <= height:
             return self.get_block_by_height(index)
         else:
+            logging.warning("Index overflow while get block #{}".format(index))
             raise IndexError('Index overflow')
 
     def add_new_block(self, transactions: list, vote: dict):
@@ -44,7 +46,7 @@ class BlockChain(object):
         block_header = BlockHeader(merkle_tree.root_hash, height, prev_hash)
 
         coin_base_tx = Transaction.coinbase_tx(vote)
-        transactions.insert(coin_base_tx)
+        transactions.insert(coin_base_tx, 0)
 
         # coinbase 钱包和节点耦合， 可以考虑将挖矿、钱包、全节点服务解耦
         # upd: 节点和挖矿耦合， 但是可以在配置中设置是否为共识节点
@@ -52,7 +54,7 @@ class BlockChain(object):
         block = Block(block_header, txs)
 
         if not self.verify_block(block):
-            pass
+            logging.error("Block verify failed. Block struct: {}".format(block))
             # todo： 抛出交易验证失败错误
 
         block.set_header_hash()
@@ -72,6 +74,8 @@ class BlockChain(object):
             transactions = [transaction]
             genesis_block = Block.new_genesis_block(transactions)
             genesis_block.set_header_hash()
+
+            logging.info("Create genesis block : {}".format(genesis_block))
 
             self.set_latest_hash(genesis_block.block_header.hash)
             self.db.create(genesis_block.block_header.hash, genesis_block.serialize())
@@ -149,24 +153,32 @@ class BlockChain(object):
     def add_block_from_peers(self, block):
         """
         从邻居节点接收到区块， 更新本地区块
-        :param block:
-        :return:
+        :param block: 从邻居节点接收到的区块
+        :return: Nonoe
         """
+        logging.info("Receive block from neighborhood, try to add block to local db.")
         latest_block, prev_hash = self.get_latest_block()
+        peer_height = block.block_header.height
+        peer_hash = block.header_hash
         if latest_block:
             latest_height = latest_block.block_header.height
-            if block.block_header.height < latest_height:
+            if peer_height < latest_height:
                 # 从邻居节点收到的区块高度低于本地， 抛出错误
+                logging.warning("Neighborhood height {} lower than local height {}.".format(peer_height, latest_height))
                 raise ValueError('Block height error')
             if not self.verify_block(block):
+                logging.error("Block#{} verify failed.".format(block.block_header.height))
                 raise ValueError('Block invalid.')
 
-            if block.block_header.height == latest_block and block != latest_block:
-                UTXOSet().roll_back()
+            if peer_height == latest_block and block != latest_block:
+                # 高度相同但是数据不一致， 回滚本地区块
+                logging.error("Same height but different data, rollback local blockchain data.")
+                UTXOSet().roll_back(block)
                 self.roll_back()
-            if block.block_header.height == latest_block + 1 and block.block_header.prev_block_hash == latest_block.block_header.hash:
-                self.db.create(block.block_header.hash, block.serialize())
-                latest_hash = block.block_header.hash
+
+            if peer_height == latest_block + 1 and peer_hash == latest_block.block_header.hash:
+                self.db.create(peer_hash, block.serialize())
+                latest_hash = peer_hash
                 self.set_latest_hash(latest_hash)
                 UTXOSet().update(block)
         else:
@@ -186,8 +198,8 @@ class BlockChain(object):
         try:
             self.db.delete(doc)
         except ResourceNotFound as e:
-            # todo: 错误显示方式fix
-            print(e)
+            logging.error(e)
+        # 回滚时没有查询到对应hash的记录， 原逻辑可以照常执行
         block = self.get_block_by_height(latest_height - 1)
         self.set_latest_hash(block.block_header.hash)
 

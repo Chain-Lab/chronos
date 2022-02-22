@@ -1,4 +1,6 @@
 import asyncio
+import logging
+
 from kademlia.network import Server
 
 from core.config import Config
@@ -11,7 +13,13 @@ class P2p(object):
 
     def run(self):
         port = int(Config().get('node.listen_port'))
-        host = Config().get('node.bootstrap_host')
+        bootstrap = int(Config().get('node.is_bootstrap'))
+        if bootstrap:
+            host = Config().get('node.listen_ip')
+        else:
+            host = Config().get('node.bootstrap_host')
+
+        logging.info("Start p2p bootstrap server to ip: {} port: {}".format(host, port))
         loop = asyncio.get_event_loop()
         self.loop = loop
         loop.run_until_complete(self.server.listen(port))
