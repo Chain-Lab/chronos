@@ -8,8 +8,136 @@ servers:
 tags:
   - name: node
     description: Node Openapi
-  - name: transactions
+  - name: block
+    description: None
+  - name: transaction
     description: None
   - name: address
     description: None
 paths:
+  '/node/status':
+    get:
+      tags:
+        - node
+      summary: Node Status
+      description: Return node status
+      operationId: getNodeStatus
+      responses:
+        '200':
+          description: successful operation
+          content:
+            schema:
+              $ref: '#/components/schemas/NodeStatus'
+  '/block/{height}':
+    get:
+      tags:
+        - block
+      summary: Get Block by height
+      description: Get Block by height
+      operationId: getBlockByHeight
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            $ref: '#/components/schemas/Block'
+        '404':
+          description: Block is not found
+  'block/{hash}':
+    get:
+      tags:
+        - block
+      summary: Get Block by hash
+      description: Get Block by hash
+      operationId: getBlockByHash
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            $ref: '#/components/schemas/Block'
+        '404':
+          description: Block is not found
+  '/transaction/{txid}':
+    get:
+      tags:
+        - transaction
+      summary: Get Transaction
+      description: Get Transaction by txid
+      operationId: getTransaction
+      responses:
+        '200':
+          description: successful operation
+          content:
+            schema:
+              $ref: '#/components/schemas/Transaction'
+        '404':
+          description: Transaction not found
+  '/transaction/submit':
+    post:
+      tags:
+        - transaction
+      summary: Submit Transaction
+      description: Submit transaction to node
+      operationId: submitTransaction
+      responses:
+        '202':
+          description: Transaction submitted
+        '400':
+          description: Transaction verify failed
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignedTransaction'
+        description: Sumbit signed transaction
+        required: true
+components:
+  schemas:
+    NodeStatus:
+      type: object
+      properties:
+        time:
+          type: string
+          format: date-time
+          example: 2022-01-22T07:57:57Z
+        height:
+          type: integer
+          format: int64
+          example: 102482
+    Block:
+      type: object
+      properties:
+        height:
+          type: integer
+          format: int64
+        hash:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        prev_block_hash:
+          type: string
+        transactions:
+          type: array
+          items:
+            '#/components/schemas/Transaction'
+    Transaction:
+      type: object
+      properties:
+        hash:
+          type: string
+        address:
+          type: string
+        inputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Inputs'
+        outputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Outputs'
+    Inputs:
+      type: object
+    Outputs:
+      type: object
+    SignedTransaction:
+      type: object
