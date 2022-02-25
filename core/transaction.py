@@ -3,6 +3,7 @@ import binascii
 import ecdsa
 
 from core.config import Config
+from utils.decorators import transaction_data_verify
 from utils import funcs
 
 
@@ -81,6 +82,7 @@ class Transaction(object):
         }
 
     @classmethod
+    @transaction_data_verify
     def deserialize(cls, data: dict):
         """
         反序列化, 先按照原有的方法进行反序列化

@@ -26,6 +26,7 @@ class Client(object):
 
     def add_transaction(self, transaction):
         self.txs.append(transaction)
+        logging.debug(self.txs)
 
     def send(self, message):
         rec_message = None

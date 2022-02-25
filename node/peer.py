@@ -26,7 +26,9 @@ class Peer(Singleton):
                 if node not in self.nodes:
                     ip = node.ip
                     port = node.port
-                    time.sleep(0.5)
+
+                    # 可能是存在异步问题， 在不进行sleep的情况下不能正确匹配ip地址
+                    time.sleep(1)
                     if local_ip == ip:
                         continue
                     # todo: 自身节点的判断方法存在问题
@@ -40,6 +42,7 @@ class Peer(Singleton):
 
     def broadcast(self, transaction):
         peer: Client
+        logging.debug("Peer start broadcast transaction")
 
         for peer in self.peers:
             peer.add_transaction(transaction)
