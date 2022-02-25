@@ -1,6 +1,9 @@
+import logging
+
 from couchdb import ResourceConflict, ResourceNotFound
 
 from core.config import Config
+from core.transaction import TxOutput
 from utils.dbutil import DBUtil
 from utils.singleton import Singleton
 
@@ -138,6 +141,32 @@ class UTXOSet(Singleton):
                             print(e)
         self.set_latest_height(block.block_header.height - 1)
 
+    def find_utxo(self, address):
+        query = {
+            "selector": {
+                "_id": {
+                    "$regex": "^UTXO"
+                },
+                "pub_key_hash": address
+            }
+        }
+        docs = self.db.find(query)
+        utxos = []
+        for doc in docs:
+            index = doc.get('index', None)
+            if index is None:
+                continue
+            doc_id = doc.id
+            txid_index_str = doc_id.replace(self.FLAG, '')
+            _flag_index = txid_index_str.find('-')
+            txid = txid_index_str[:_flag_index]
+            utxos.append({
+                "txid": txid,
+                "output": doc,
+                "index": index
+            })
+        return utxos
+
     @staticmethod
     def clear_transactions(transactions):
         used_utxo = []
@@ -150,3 +179,10 @@ class UTXOSet(Singleton):
                     used_utxo.append(utxo)
                     txs.append(tx)
         return txs
+
+
+class FullTXOutput(object):
+    def __init__(self, txid, txoutput, index):
+        self.txid = txid
+        self.txoutput = txoutput
+        self.index = index
