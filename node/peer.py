@@ -5,6 +5,7 @@ import time
 
 from node.client import Client
 from utils.singleton import Singleton
+from core.config import Config
 
 
 class Peer(Singleton):
@@ -15,7 +16,8 @@ class Peer(Singleton):
             self.nodes = []
 
     def find_nodes(self, p2p_server):
-        local_ip = socket.gethostbyname(socket.getfqdn(socket.gethostname()))
+        # local_ip = socket.gethostbyname(socket.getfqdn(socket.gethostname()))
+        local_ip = Config().get('node.listen_ip')
         logging.debug("Local ip address is: {}".format(local_ip))
 
         while True:
@@ -24,9 +26,10 @@ class Peer(Singleton):
                 if node not in self.nodes:
                     ip = node.ip
                     port = node.port
+                    time.sleep(0.5)
                     if local_ip == ip:
                         continue
-
+                    # todo: 自身节点的判断方法存在问题
                     logging.info("Detect new node: ip {} port {}".format(ip, port))
                     client = Client(ip, port)
                     thread = threading.Thread(target=client.shake_loop)

@@ -42,15 +42,15 @@ class Client(object):
                 address = data.get('address', '')
                 if address != "":
                     db = DBUtil(Config().get('database.url'))
-
-                    time = data.get('time', '')
-                    # id = data.get('id', '')
-                    # todo: 涉及到钱包操作， 可能需要进行特殊处理
                     old_wallets = db.get('wallets')
+
+                    if old_wallets is None:
+                        logging.info('Remote node wallet is not created in database, create new record.')
+                        db.create('wallets', {})
+                        old_wallets = db.get('wallets')
                     old_wallets.update({
                         address: {
-                            'time': time,
-                            # todo: 修改节点id
+                            'time': data.get('time', ''),
                             'id': int(Config().get('node.id'))
                         }
                     })
@@ -90,7 +90,7 @@ class Client(object):
                     data['genesis_block'] = genesis_block.serialize()
 
                 send_message = Message(STATUS.HAND_SHAKE_MSG, data)
-                print("send message:", data)
+                logging.debug("Send message: {}".format(data))
                 self.send(send_message)
                 time.sleep(10)
 
@@ -227,6 +227,10 @@ class Client(object):
         address = Config().get('node.address')
         bc = BlockChain()
         latest_block, prev_hash = bc.get_latest_block()
+
+        if latest_block is None:
+            return
+
         local_height = latest_block.block_header.height
         for i in range(height + 1, local_height + 1):
             block = bc.get_block_by_height(i)

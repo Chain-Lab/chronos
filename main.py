@@ -1,8 +1,11 @@
 import os
+import threading
+
 import yaml
 
 import fire
 import logging.config
+# from flask import Flask
 
 from core.block_chain import BlockChain
 from core.utxo import UTXOSet
@@ -12,6 +15,7 @@ from node.server import Server
 from node.peer_to_peer import P2p
 from node.peer import Peer
 from utils.dbutil import DBUtil
+# from openapi.transaction import transaction_blueprint
 
 
 def setup_logger(default_path="logging.yaml", default_level=logging.DEBUG, env_key="LOG_CFG"):
@@ -34,15 +38,22 @@ def run():
     bc = BlockChain()
     utxo_set = UTXOSet()
     utxo_set.reindex(bc)
+    logging.info("UTXO set reindex finish...")
 
     tcpserver = Server()
     tcpserver.listen()
     tcpserver.run()
+    logging.info("TCP Server start running...")
 
     p2p = P2p()
-    server = Peer()
-    server.run(p2p)
-    p2p.run()
+    thread = threading.Thread(target=p2p.task)
+    thread.start()
+    logging.info("P2P Server start running...")
+    thread.join()
+
+    # app = Flask(__name__)
+    # app.register_blueprint(transaction_blueprint)
+    # app.run()
 
 
 def genesis():

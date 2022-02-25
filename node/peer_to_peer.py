@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import threading
 
 from kademlia.network import Server
 
+from node.peer import Peer
 from core.config import Config
 
 
@@ -28,6 +30,9 @@ class P2p(object):
 
     def get_nodes(self):
         nodes = []
-        for bucket in self.server.protocol.router.buckets:
-            nodes.extend(bucket.get_nodes())
+        try:
+            for bucket in self.server.protocol.router.buckets:
+                nodes.extend(bucket.get_nodes())
+        except AttributeError:
+            logging.error("Router is NoneType.")
         return nodes

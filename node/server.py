@@ -219,7 +219,6 @@ class Server(object):
             result_data = {
                 'vote': local_address + ' ' + final_address,
                 'address': local_address,
-                # todo: 数据信息待确定
                 'time': time.time(),
                 'id': int(Config().get('node.id'))
             }
