@@ -31,9 +31,9 @@ def transaction_data_verify(func):
     todo: 可以编写一个**通用的**装饰器来进行校验
     """
     def wrapper(cls, data: dict):
-        txid = data.get('txid', None)
-        inputs = data.get('vins', None)
-        outputs = data.get('vouts', None)
+        txid = data.get('tx_hash', None)
+        inputs = data.get('inputs', None)
+        outputs = data.get('outputs', None)
 
         if txid is None or inputs is None or outputs is None:
             return None
