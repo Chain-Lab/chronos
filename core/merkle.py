@@ -1,3 +1,5 @@
+import binascii
+
 from utils.funcs import sum256_byte
 
 
@@ -34,4 +36,4 @@ class MerkleTree(object):
 
     @property
     def root_hash(self):
-        return self.root_node.data
+        return binascii.b2a_hex(self.root_node.data).decode()

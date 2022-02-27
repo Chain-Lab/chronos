@@ -67,6 +67,7 @@ class Server(object):
         :return: 消息处理完成后应该返回的数据
         """
         code = message.get('code', 0)
+        logging.debug("Receive message code is: {}".format(code))
         if code == STATUS.HAND_SHAKE_MSG:
             result_message = self.handle_handshake(message)
         elif code == STATUS.GET_BLOCK_MSG:
@@ -77,7 +78,7 @@ class Server(object):
             self.handle_sync_vote(message)
             result_message = Message(STATUS.NODE_MSG, "4")
         elif code == STATUS.UPDATE_MSG:
-            result_message = Message(STATUS.NODE_MSG, "6")
+            result_message = self.handle_update(message)
         else:
             result_message = Message.empty_message()
         return json.dumps(result_message.__dict__)
@@ -111,7 +112,7 @@ class Server(object):
         :return:
         """
         data = message.get("data", "")
-        logging.debug("Receive data: {}".format(message))
+        # logging.debug("Receive data: {}".format(message))
         # todo: 用于共识的投票信息， 后续在设计完成相关的共识RPC接口后再接入
         vote_data = data.get("vote", {})
         height = data.get("latest_height", 0)
@@ -149,6 +150,7 @@ class Server(object):
             genesis_block = bc[0]
         except IndexError as e:
             genesis_block = None
+            logging.error("Get genesis block error: IndexError")
 
         result_data = {
             "last_height": -1,
@@ -246,7 +248,7 @@ class Server(object):
                 self.vote[final_address] = lst
 
     @staticmethod
-    def update_msg(message: dict):
+    def handle_update(message: dict):
         """
         状态码为STATUS.UPDATE_MSG = 6, 从邻居节点更新区块
         :param message: 需要处理的message
@@ -260,3 +262,4 @@ class Server(object):
         except ValueError as e:
             # todo: 日志记录
             print(e)
+        return Message(STATUS.NODE_MSG, "6")

@@ -16,8 +16,9 @@ class Peer(Singleton):
             self.nodes = []
 
     def find_nodes(self, p2p_server):
-        # local_ip = socket.gethostbyname(socket.getfqdn(socket.gethostname()))
+        # local_ip = socket.getaddrinfo(socket.gethostname(), None)
         local_ip = Config().get('node.listen_ip')
+
         logging.debug("Local ip address is: {}".format(local_ip))
 
         while True:
@@ -27,11 +28,8 @@ class Peer(Singleton):
                     ip = node.ip
                     port = node.port
 
-                    # 可能是存在异步问题， 在不进行sleep的情况下不能正确匹配ip地址
-                    time.sleep(1)
-                    if local_ip == ip:
+                    if ip == local_ip:
                         continue
-                    # todo: 自身节点的判断方法存在问题
                     logging.info("Detect new node: ip {} port {}".format(ip, port))
                     client = Client(ip, port)
                     thread = threading.Thread(target=client.shake_loop)

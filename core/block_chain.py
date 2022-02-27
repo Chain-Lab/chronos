@@ -46,7 +46,7 @@ class BlockChain(object):
         block_header = BlockHeader(merkle_tree.root_hash, height, prev_hash)
 
         coin_base_tx = Transaction.coinbase_tx(vote)
-        transactions.insert(coin_base_tx, 0)
+        transactions.insert(0, coin_base_tx)
 
         # coinbase 钱包和节点耦合， 可以考虑将挖矿、钱包、全节点服务解耦
         # upd: 节点和挖矿耦合， 但是可以在配置中设置是否为共识节点
@@ -59,8 +59,11 @@ class BlockChain(object):
 
         block.set_header_hash()
         latest_hash = block.block_header.hash
-        self.set_latest_hash(latest_hash)
+        logging.debug("Create block {} in database.".format(block.block_header.hash))
+        logging.debug(block.serialize())
+        # 先添加块再更新最新哈希， 避免添加区块时出现问题更新数据库
         self.db.create(block.block_header.hash, block.serialize())
+        self.set_latest_hash(latest_hash)
 
         UTXOSet().update(block)
 
@@ -93,6 +96,7 @@ class BlockChain(object):
 
         latest_block_hash = latest_block_hash_doc.get('hash', '')
         block_data = self.db.get(latest_block_hash)
+        # logging.debug(block_data)
         block = Block.deserialize(block_data)
         return block, latest_block_hash
 
@@ -159,7 +163,7 @@ class BlockChain(object):
         logging.info("Receive block from neighborhood, try to add block to local db.")
         latest_block, prev_hash = self.get_latest_block()
         peer_height = block.block_header.height
-        peer_hash = block.header_hash
+        peer_hash = block.block_header.prev_block_hash
         if latest_block:
             latest_height = latest_block.block_header.height
             if peer_height < latest_height:
@@ -170,15 +174,17 @@ class BlockChain(object):
                 logging.error("Block#{} verify failed.".format(block.block_header.height))
                 raise ValueError('Block invalid.')
 
-            if peer_height == latest_block and block != latest_block:
+            if peer_height == latest_height and block != latest_block:
                 # 高度相同但是数据不一致， 回滚本地区块
                 logging.error("Same height but different data, rollback local blockchain data.")
                 UTXOSet().roll_back(block)
                 self.roll_back()
 
-            if peer_height == latest_block + 1 and peer_hash == latest_block.block_header.hash:
-                self.db.create(peer_hash, block.serialize())
+            if peer_height == latest_height + 1 and peer_hash == latest_block.block_header.hash:
+                logging.debug("Local height: {}, Neighborhood height: {}".format(latest_height, peer_height))
                 latest_hash = peer_hash
+                logging.debug("Insert new block data: {}".format(block.serialize()))
+                self.db.create(peer_hash, block.serialize())
                 self.set_latest_hash(latest_hash)
                 UTXOSet().update(block)
         else:
@@ -219,23 +225,23 @@ class BlockChain(object):
         for height in range(latest_height, -1, -1):
             block = self.get_block_by_height(height)
             for tx in block.transactions:
-                txid = tx.txid
+                tx_hash = tx.tx_hash
 
-                for index, vout in enumerate(tx.vouts):
-                    txos = spent_txos.get(txid, [])
-                    if index in txos:
+                for idx, output in enumerate(tx.outputs):
+                    txos = spent_txos.get(tx_hash, [])
+                    if idx in txos:
                         continue
-                    old_vouts = unspent_txs.get(txid, [])
-                    old_vouts.append([index, vout])
-                    unspent_txs[tx.txid] = old_vouts
+                    old_outputs = unspent_txs.get(tx_hash, [])
+                    old_outputs.append([idx, output])
+                    unspent_txs[tx.tx_hash] = old_outputs
 
                 if not tx.is_coinbase():
-                    for vin in tx.vins:
-                        vin_txid = vin.txid
-                        txid_vouts = spent_txos.get(vin_txid, [])
-                        if vin.vout not in txid_vouts:
-                            txid_vouts.append(vin.vout)
-                        spent_txos[vin_txid] = txid_vouts
+                    for _input in tx.inputs:
+                        input_tx_hash = _input.tx_hash
+                        tx_hash_outputs = spent_txos.get(input_tx_hash, [])
+                        if _input.index not in tx_hash_outputs:
+                            tx_hash_outputs.append(_input.index)
+                        spent_txos[input_tx_hash] = tx_hash_outputs
         return unspent_txs
 
     def verify_block(self, block: Block):
@@ -247,8 +253,8 @@ class BlockChain(object):
     def verify_transaction(self, transaction: Transaction):
         prev_txs = {}
         for _input in transaction.inputs:
-            prev_tx = self.get_transaction_by_txid(_input.txid)
+            prev_tx = self.get_transaction_by_txid(_input.tx_hash)
             if not prev_tx:
                 continue
-            prev_txs[prev_tx.txid] = prev_tx
+            prev_txs[prev_tx.tx_hash] = prev_tx
         return transaction.verify(prev_txs)

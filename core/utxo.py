@@ -178,9 +178,9 @@ class UTXOSet(Singleton):
         used_utxo = []
         txs = []
         for tx in transactions:
-            for vin in tx.vins:
-                vin_txid = vin.txid
-                utxo = (vin_txid, vin.vout)
+            for _input in tx.inputs:
+                input_tx_hash = _input.tx_hash
+                utxo = (input_tx_hash, _input.index)
                 if utxo not in used_utxo:
                     used_utxo.append(utxo)
                     txs.append(tx)

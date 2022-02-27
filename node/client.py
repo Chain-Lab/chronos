@@ -26,12 +26,15 @@ class Client(object):
 
     def add_transaction(self, transaction):
         self.txs.append(transaction)
-        logging.debug(self.txs)
 
     def send(self, message):
         rec_message = None
         data = json.dumps(message.__dict__)
-        self.sock.sendall(data.encode())
+        try:
+            self.sock.sendall(data.encode())
+        except BrokenPipeError:
+            logging.info("Lost connect, client close.")
+            return True
 
         try:
             rec_data = self.sock.recv(4096 * 2)
@@ -58,16 +61,23 @@ class Client(object):
                     db.update([old_wallets])
         except json.decoder.JSONDecodeError as e:
             print(e)
+        except BrokenPipeError:
+            logging.info("Lost connect, client close.")
+            return True
 
         if rec_message is not None:
             self.handle(rec_message)
+
+        return False
 
     def shake_loop(self):
         while True:
             if self.txs:
                 data = self.txs[0].serialize()
                 message = Message(STATUS.TRANSACTION_MSG, data)
-                self.send(message)
+                is_closed = self.send(message)
+                if is_closed:
+                    break
                 self.txs.clear()
             else:
                 bc = BlockChain()
@@ -87,11 +97,12 @@ class Client(object):
                 }
 
                 if genesis_block:
+                    # logging.debug(genesis_block.transactions)
                     data['latest_height'] = latest_block.block_header.height
                     data['genesis_block'] = genesis_block.serialize()
 
                 send_message = Message(STATUS.HAND_SHAKE_MSG, data)
-                logging.debug("Send message: {}".format(data))
+                # logging.debug("Send message: {}".format(data))
                 self.send(send_message)
                 time.sleep(10)
 

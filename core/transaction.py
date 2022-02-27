@@ -32,7 +32,7 @@ class Transaction(object):
         根据输入只有一个且输入的交易id向量为0以及没有输出来进行判断
         :return: 如果是coinbase交易， 返回True
         """
-        return len(self.inputs) == 1 and len(self.inputs[0].txid) == 0 and self.inputs[0].vout == -1
+        return len(self.inputs) == 1 and len(self.inputs[0].tx_hash) == 0 and self.inputs[0].index == -1
 
     def verify(self, prev_txs):
         """
@@ -45,12 +45,12 @@ class Transaction(object):
 
         tx_copy = copy.deepcopy(self)
 
-        for idx, _input in enumerate(tx_copy.inputs):
-            prev_tx = prev_txs.get(_input.txid, None)
+        for idx, _input in enumerate(self.inputs):
+            prev_tx = prev_txs.get(_input.tx_hash, None)
             if not prev_tx:
                 raise ValueError('Previous transaction error.')
             tx_copy.inputs[idx].signature = None
-            tx_copy.inputs[idx].pub_key = prev_tx.vouts[_input.vout].pub_key_hash
+            tx_copy.inputs[idx].pub_key = prev_tx.outputs[_input.index].pub_key_hash
             tx_copy.set_id()
             tx_copy.inputs[idx].pub_key = None
 
@@ -89,11 +89,13 @@ class Transaction(object):
         outputs = []
         is_coinbase = True
 
-        for vin_data in inputs_data:
+        for input_data in inputs_data:
             if is_coinbase:
-                inputs.append(CoinBaseInput.deserialize(vin_data))
+                inputs.append(CoinBaseInput.deserialize(input_data))
             else:
-                inputs.append(TxInput.deserialize(vin_data))
+                inputs.append(TxInput.deserialize(input_data))
+
+            is_coinbase = False
 
         for output_data in outputs_data:
             outputs.append(TxOutput.deserialize(output_data))
@@ -119,9 +121,9 @@ class Transaction(object):
         return tx
 
     def __repr__(self):
-        return 'Transaction(txid={}, ' \
-               'vins={}, ' \
-               'vouts={})'.format(self.tx_hash, self.inputs, self.outputs)
+        return 'Transaction(tx_hash={}, ' \
+               'inputs={}, ' \
+               'outputs={})'.format(self.tx_hash, self.inputs, self.outputs)
 
 
 class TxInput(object):
