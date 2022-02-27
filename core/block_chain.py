@@ -132,7 +132,7 @@ class BlockChain(object):
         block = Block.deserialize(data)
         return block
 
-    def get_transaction_by_txid(self, txid):
+    def get_transaction_by_txid(self, tx_hash):
         """
         通过交易的txid来检索得到交易
         但是这里遍历区块的方式较为暴力， 需要进行优化
@@ -146,7 +146,7 @@ class BlockChain(object):
         for height in range(latest_height, -1, -1):
             block = self.get_block_by_height(height)
             for tx in block.transactions:
-                if tx.txid == txid:
+                if tx.tx_hash == tx_hash:
                     return tx
         return None
 
@@ -246,8 +246,8 @@ class BlockChain(object):
 
     def verify_transaction(self, transaction: Transaction):
         prev_txs = {}
-        for vin in transaction.vins:
-            prev_tx = self.get_transaction_by_txid(vin.txid)
+        for _input in transaction.inputs:
+            prev_tx = self.get_transaction_by_txid(_input.txid)
             if not prev_tx:
                 continue
             prev_txs[prev_tx.txid] = prev_tx

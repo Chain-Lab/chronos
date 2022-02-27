@@ -1,4 +1,5 @@
 import binascii
+import copy
 
 import ecdsa
 
@@ -8,22 +9,22 @@ from utils import funcs
 
 
 class Transaction(object):
-    def __init__(self, vins, vouts):
-        self.txid = ''
-        self.vins = vins
-        self.vouts = vouts
+    def __init__(self, inputs, outputs):
+        self.tx_hash = ''
+        self.inputs = inputs
+        self.outputs = outputs
 
     def set_id(self):
         """
         设置当前交易的交易id，根据输入和输出的数据哈希得到
         :return: None
         """
-        data_list = [str(vin) for vin in self.vins]
-        vout_list = [str(vout) for vout in self.vouts]
-        data_list.extend(vout_list)
+        data_list = [str(_) for _ in self.inputs]
+        output_list = [str(_) for _ in self.outputs]
+        data_list.extend(output_list)
         data = ''.join(data_list)
-        hash = funcs.sum256_hex(data)
-        self.txid = hash
+        tx_hash = funcs.sum256_hex(data)
+        self.tx_hash = tx_hash
 
     def is_coinbase(self):
         """
@@ -31,41 +32,32 @@ class Transaction(object):
         根据输入只有一个且输入的交易id向量为0以及没有输出来进行判断
         :return: 如果是coinbase交易， 返回True
         """
-        return len(self.vins) == 1 and len(self.vins[0].txid) == 0 and self.vins[0].vout == -1
-
-    def __trimmed_copy(self):
-        inputs = []
-        outputs = []
-
-        for vin in self.vins:
-            inputs.append(TxInput(vin.txid, vin.vout, None))
-
-        for vout in self.vouts:
-            outputs.append(TxOutput(vout.value, vout.pub_key_hash))
-
-        result = Transaction(inputs, outputs)
-        result.txid = self.txid
-        return result
+        return len(self.inputs) == 1 and len(self.inputs[0].txid) == 0 and self.inputs[0].vout == -1
 
     def verify(self, prev_txs):
+        """
+        对交易进行验证, 填入链上的输出地址进行验证， 而提交的交易由提交者自己填入地址
+        :param prev_txs: 当前交易的各个input对应哈希的交易
+        :return: 验证是否通过
+        """
         if self.is_coinbase():
             return True
 
-        tx_copy = self.__trimmed_copy()
+        tx_copy = copy.deepcopy(self)
 
-        for index, vin in enumerate(tx_copy.vins):
-            prev_tx = prev_txs.get(vin.txid, None)
+        for idx, _input in enumerate(tx_copy.inputs):
+            prev_tx = prev_txs.get(_input.txid, None)
             if not prev_tx:
                 raise ValueError('Previous transaction error.')
-            tx_copy.vins[index].signature = None
-            tx_copy.vins[index].pub_key = prev_tx.vouts[vin.vout].pub_key_hash
+            tx_copy.inputs[idx].signature = None
+            tx_copy.inputs[idx].pub_key = prev_tx.vouts[_input.vout].pub_key_hash
             tx_copy.set_id()
-            tx_copy.vins[index].pub_key = None
+            tx_copy.inputs[idx].pub_key = None
 
-            signature = binascii.a2b_hex(self.vins[index].signature)
-            vk = ecdsa.VerifyingKey.from_string(binascii.a2b_hex(vin.pub_key), curve=ecdsa.SECP256k1)
+            signature = binascii.a2b_hex(self.inputs[idx].signature)
+            vk = ecdsa.VerifyingKey.from_string(binascii.a2b_hex(_input.pub_key), curve=ecdsa.SECP256k1)
 
-            if not vk.verify(signature, tx_copy.txid.encode()):
+            if not vk.verify(signature, tx_copy.tx_hash.encode()):
                 return False
 
         return True
@@ -76,9 +68,9 @@ class Transaction(object):
         :return: 序列化后的字典
         """
         return {
-            "txid": self.txid,
-            "vins": [vin.serialize() for vin in self.vins],
-            "vouts": [vout.serialize() for vout in self.vouts]
+            "tx_hash": self.tx_hash,
+            "inputs": [_.serialize() for _ in self.inputs],
+            "outputs": [_.serialize() for _ in self.outputs]
         }
 
     @classmethod
@@ -90,47 +82,57 @@ class Transaction(object):
         :param data:
         :return:
         """
-        txid = data.get('txid', '')
-        vins_data = data.get('vins', [])
-        vouts_data = data.get('vouts', [])
-        vins = []
-        vouts = []
+        tx_hash = data.get('tx_hash', '')
+        inputs_data = data.get('inputs', [])
+        outputs_data = data.get('outputs', [])
+        inputs = []
+        outputs = []
         is_coinbase = True
 
-        for vin_data in vins_data:
+        for vin_data in inputs_data:
             if is_coinbase:
-                vins.append(CoinBaseInput.deserialize(vin_data))
+                inputs.append(CoinBaseInput.deserialize(vin_data))
             else:
-                vins.append(TxInput.deserialize(vin_data))
+                inputs.append(TxInput.deserialize(vin_data))
 
-        for vout_data in vouts_data:
-            vouts.append(TxOutput.deserialize(vout_data))
+        for output_data in outputs_data:
+            outputs.append(TxOutput.deserialize(output_data))
 
-        tx = cls(vins, vouts)
-        tx.txid = txid
+        tx = cls(inputs, outputs)
+        tx.tx_hash = tx_hash
         return tx
 
     @classmethod
-    def coinbase_tx(cls, data):
+    def coinbase_tx(cls, data: dict):
+        """
+        coinbase交易生成
+        :param data: 传入的dict数据
+        :return: 返回生成的coinbase交易
+        """
         vote_node = data
-        txin = CoinBaseInput('', -1, Config().get('node.public_key'))
-        txin.vote_info = vote_node
-        txout = TxOutput(int(Config().get('node.coinbase_reward')),
+        _input = CoinBaseInput('', -1, Config().get('node.public_key'))
+        _input.vote_info = vote_node
+        output = TxOutput(int(Config().get('node.coinbase_reward')),
                          Config().get('node.address'))
-        tx = cls([txin], [txout])
+        tx = cls([_input], [output])
         tx.set_id()
         return tx
 
     def __repr__(self):
         return 'Transaction(txid={}, ' \
                'vins={}, ' \
-               'vouts={})'.format(self.txid, self.vins, self.vouts)
+               'vouts={})'.format(self.tx_hash, self.inputs, self.outputs)
 
 
 class TxInput(object):
-    def __init__(self, txid=None, vout=None, pub_key=None):
-        self.txid = txid
-        self.vout = vout
+    def __init__(self, tx_hash=None, index=None, pub_key=None):
+        """
+        :param tx_hash: input的交易hash
+        :param index: 对应交易的index
+        :param pub_key: input的签名公钥
+        """
+        self.tx_hash = tx_hash
+        self.index = index
         self.signature = ''
         self.pub_key = pub_key
 
@@ -151,7 +153,7 @@ class TxInput(object):
         # 先直接输出json信息， 后面再重新进行修改
         return str(self.__dict__)
 
-    # 直接更新dict进行初始化
+    # 直接更新dict进行初始化, 后面需要通过json-schema校验
     @classmethod
     def deserialize(cls, data: dict):
         result = cls()
@@ -187,8 +189,8 @@ class TxOutput(object):
 
 
 class CoinBaseInput(TxInput):
-    def __init__(self, txid=None, vout=None, pub_key=None):
-        super().__init__(txid, vout, pub_key)
+    def __init__(self, tx_hash=None, inputs=None, outputs=None):
+        super().__init__(tx_hash, inputs, outputs)
         self.vote_info = {}
 
     def set_vote(self, address, node_id, vote_count, vote_node):

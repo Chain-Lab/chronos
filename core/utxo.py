@@ -22,8 +22,8 @@ class UTXOSet(Singleton):
             utxos = bc.find_utxo()
             if not latest_block:
                 return
-            for txid, index_vouts in utxos.items():
-                key = self.FLAG + txid
+            for tx_hash, index_vouts in utxos.items():
+                key = self.FLAG + tx_hash
 
                 for index_vout in index_vouts:
                     index = index_vout[0]
@@ -62,21 +62,21 @@ class UTXOSet(Singleton):
 
     def update(self, block):
         for tx in block.transactions:
-            txid = tx.txid
-            key = self.FLAG + txid
+            tx_hash = tx.tx_hash
+            key = self.FLAG + tx_hash
 
-            for vout_index, vout in enumerate(tx.vouts):
-                vout_dict = vout.serialize()
-                vout_dict.update({'index': vout_index})
-                tmp_key = key + '-' + str(vout_index)
+            for idx, outputs in enumerate(tx.outputs):
+                output_dict = outputs.serialize()
+                output_dict.update({'index': idx})
+                tmp_key = key + '-' + str(idx)
                 try:
-                    self.db.create(tmp_key, vout_dict)
+                    self.db.create(tmp_key, output_dict)
                 except ResourceConflict as e:
                     print(e)
 
-            for vin in tx.vins:
-                vin_txid = vin.txid
-                key = self.FLAG + vin_txid + '-' + str(vin.vout)
+            for _input in tx.inputs:
+                input_tx_hash = _input.tx_hash
+                key = self.FLAG + input_tx_hash + '-' + str(_input.index)
                 doc = self.db.get(key)
 
                 if not doc:
@@ -89,11 +89,11 @@ class UTXOSet(Singleton):
 
     def roll_back(self, block):
         for transaction in block.transactions:
-            txid = transaction.txud
-            key = self.FLAG + txid
+            tx_hash = transaction.tx_hash
+            key = self.FLAG + tx_hash
 
-            for index, vout in enumerate(transaction.vouts):
-                tmp_key = key + '-' + str(index)
+            for idx, output in enumerate(transaction.output):
+                tmp_key = key + '-' + str(idx)
                 doc = self.db.get(tmp_key)
                 if not doc:
                     continue
@@ -102,15 +102,15 @@ class UTXOSet(Singleton):
                 except ResourceNotFound as e:
                     print(e)
 
-            for vin in transaction.vins:
-                vin_txid = vin.txid
-                vout_index = vin.vout
-                key = self.FLAG + vin_txid + '-' + str(vin.vout)
+            for _input in transaction.inputs:
+                vin_tx_hash = _input.tx_hash
+                output_index = _input.index
+                key = self.FLAG + vin_tx_hash + '-' + str(output_index)
                 query = {
                     "selector": {
                         "transactions": {
                             "$elemMatch": {
-                                "txid": vin_txid
+                                "tx_hash": vin_tx_hash
                             }
                         }
                     }
@@ -125,15 +125,15 @@ class UTXOSet(Singleton):
                 transactions = doc.get("transactions", [])
                 # todo:命名规则变更, 原有代码中和外部循环变量一致
                 for tx in transactions:
-                    if tx.get('txid', '') == txid:
-                        vouts = tx.get('vouts', [])
-                        if len(vouts) <= vout_index:
+                    if tx.get('tx_hash', '') == tx_hash:
+                        outputs = tx.get('outputs', [])
+                        if len(outputs) <= output_index:
                             continue
 
-                        vout = vouts[vout_index]
+                        vout = outputs[output_index]
                         vout_dict = vout.serialize()
-                        vout_dict.update({'index': vout_index})
-                        tmp_key = key + '-' + str(vout_index)
+                        vout_dict.update({'index': output_index})
+                        tmp_key = key + '-' + str(output_index)
 
                         try:
                             self.db.create(tmp_key, vout_dict)
@@ -142,6 +142,11 @@ class UTXOSet(Singleton):
         self.set_latest_height(block.block_header.height - 1)
 
     def find_utxo(self, address):
+        """
+        开放给openapi用于查询utxo的方法
+        :param address: 需要查询的地址
+        :return: 对应地址的utxo
+        """
         query = {
             "selector": {
                 "_id": {
@@ -160,6 +165,7 @@ class UTXOSet(Singleton):
             txid_index_str = doc_id.replace(self.FLAG, '')
             _flag_index = txid_index_str.find('-')
             txid = txid_index_str[:_flag_index]
+            logging.debug("{}, {}, {}".format(txid_index_str, _flag_index, txid))
             utxos.append({
                 "txid": txid,
                 "output": doc,
