@@ -163,7 +163,8 @@ class BlockChain(object):
         logging.info("Receive block from neighborhood, try to add block to local db.")
         latest_block, prev_hash = self.get_latest_block()
         peer_height = block.block_header.height
-        peer_hash = block.block_header.prev_block_hash
+        peer_hash = block.header_hash
+        peer_prev_hash = block.block_header.prev_block_hash
         if latest_block:
             latest_height = latest_block.block_header.height
             if peer_height < latest_height:
@@ -180,7 +181,7 @@ class BlockChain(object):
                 UTXOSet().roll_back(block)
                 self.roll_back()
 
-            if peer_height == latest_height + 1 and peer_hash == latest_block.block_header.hash:
+            if peer_height == latest_height + 1 and peer_prev_hash == latest_block.block_header.hash:
                 logging.debug("Local height: {}, Neighborhood height: {}".format(latest_height, peer_height))
                 latest_hash = peer_hash
                 logging.debug("Insert new block data: {}".format(block.serialize()))
