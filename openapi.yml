@@ -6,19 +6,19 @@ servers:
   - url: https://example.com/v1
     description: example
 tags:
-  - name: node
+  - name: Node
     description: Node Openapi
-  - name: block
+  - name: Block
     description: None
-  - name: transaction
+  - name: Transaction
     description: None
-  - name: address
+  - name: Address
     description: None
 paths:
   '/node/status':
     get:
       tags:
-        - node
+        - Node
       summary: Node Status
       description: Return node status
       operationId: getNodeStatus
@@ -31,7 +31,7 @@ paths:
   '/block/{height}':
     get:
       tags:
-        - block
+        - Block
       summary: Get Block by height
       description: Get Block by height
       operationId: getBlockByHeight
@@ -45,7 +45,7 @@ paths:
   'block/{hash}':
     get:
       tags:
-        - block
+        - Block
       summary: Get Block by hash
       description: Get Block by hash
       operationId: getBlockByHash
@@ -59,7 +59,7 @@ paths:
   '/transaction/{txid}':
     get:
       tags:
-        - transaction
+        - Transaction
       summary: Get Transaction
       description: Get Transaction by txid
       operationId: getTransaction
@@ -74,7 +74,7 @@ paths:
   '/transaction/submit':
     post:
       tags:
-        - transaction
+        - Transaction
       summary: Submit Transaction
       description: Submit transaction to node
       operationId: submitTransaction
