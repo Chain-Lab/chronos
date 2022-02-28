@@ -19,7 +19,7 @@ class Transaction(object):
         设置当前交易的交易id，根据输入和输出的数据哈希得到
         :return: None
         """
-        data_list = [str(TxInput(_)) for _ in self.inputs]
+        data_list = [str(_) for _ in self.inputs]
         output_list = [str(_) for _ in self.outputs]
         data_list.extend(output_list)
         data = ''.join(data_list)
@@ -154,7 +154,8 @@ class TxInput(object):
 
     def __repr__(self):
         result = self.__dict__
-        result.pop("vote_info")
+        if "vote_info" in self.__dict__.keys():
+            result.pop("vote_info")
         return str(result)
 
     # 直接更新dict进行初始化, 后面需要通过json-schema校验
@@ -205,6 +206,9 @@ class CoinBaseInput(TxInput):
 
     def __repr__(self):
         """
-        重写方法， 相比input多了投票信息， 在签名时可能存在问题
+        重写方法， 相比tx_input多了投票信息, 去掉投票信息
         """
-        return str(self.__dict__)
+        result = self.__dict__
+        if "vote_info" in self.__dict__.keys():
+            result.pop("vote_info")
+        return str(result)

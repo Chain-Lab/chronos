@@ -18,7 +18,7 @@ def submit():
     transaction_json = request.get_json()
 
     # 校验接收到的交易是否满足格式
-    if json_validator("/schemas/transaction.json", transaction_json):
+    if json_validator("./schemas/transaction.json", transaction_json):
         transaction = Transaction.deserialize(transaction_json)
     else:
         logging.error("Receive transaction invalid.")

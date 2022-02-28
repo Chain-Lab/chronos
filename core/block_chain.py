@@ -132,7 +132,7 @@ class BlockChain(object):
         docs = self.db.find(query)
         block = None
         for block_data in docs:
-            logging.debug("Get block data: {}".format(block_data))
+            # logging.debug("Get block data: {}".format(block_data))
             block = Block.deserialize(block_data)
         return block
 
@@ -259,7 +259,7 @@ class BlockChain(object):
     def verify_transaction(self, transaction: Transaction):
         prev_txs = {}
         for _input in transaction.inputs:
-            prev_tx = self.get_transaction_by_txid(_input.tx_hash)
+            prev_tx = self.get_transaction_by_tx_hash(_input.tx_hash)
             if not prev_tx:
                 continue
             prev_txs[prev_tx.tx_hash] = prev_tx

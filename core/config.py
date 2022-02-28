@@ -8,7 +8,6 @@ class Config(Singleton):
     def __init__(self):
         self.parser = ConfigParser()
         self.parser.read("config.ini", "utf-8")
-        logging.info("Config file is loaded.")
 
     def get(self, key: str, default=None):
         """

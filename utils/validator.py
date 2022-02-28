@@ -14,7 +14,7 @@ def json_validator(schema_file: str, data: dict):
     """
 
     with open(schema_file, "r") as f:
-        schema = json.loads(f)
+        schema = json.load(f)
 
     try:
         validate(instance=data, schema=schema)
