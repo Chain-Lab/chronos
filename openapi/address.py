@@ -8,9 +8,9 @@ from core.utxo import UTXOSet
 address_blueprint = Blueprint("address", __name__, url_prefix="/address")
 
 
-@address_blueprint.route("/utxos", methods=["GET"])
-def utxos():
-    address = request.args.get("address", None)
+@address_blueprint.route("/utxos/<address>", methods=["GET"])
+def utxos(address):
+    assert address == request.view_args.get("address", None)
 
     if address is None:
         return "Params is invalid", STATUS.BAD_REQUEST
