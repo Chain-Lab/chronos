@@ -5,6 +5,7 @@ from flask import Flask
 from core.config import Config
 from openapi.transaction import transaction_blueprint
 from openapi.address import address_blueprint
+from openapi.block import block_blueprint
 
 
 def server():
@@ -14,6 +15,7 @@ def server():
     app = Flask(__name__)
     app.register_blueprint(transaction_blueprint)
     app.register_blueprint(address_blueprint)
+    app.register_blueprint(block_blueprint)
 
     thread = threading.Thread(target=app.run, args=("0.0.0.0", ))
     thread.start()

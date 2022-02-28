@@ -118,6 +118,10 @@ class BlockChain(object):
             self.db.update([latest_block_hash_doc])
 
     def get_block_by_height(self, height):
+        """
+        通过高度获取区块
+        :param height: 所需要获取的区块的高度
+        """
         query = {
             "selector": {
                 "block_header": {
@@ -128,6 +132,7 @@ class BlockChain(object):
         docs = self.db.find(query)
         block = None
         for block_data in docs:
+            logging.debug("Get block data: {}".format(block_data))
             block = Block.deserialize(block_data)
         return block
 
@@ -136,12 +141,12 @@ class BlockChain(object):
         block = Block.deserialize(data)
         return block
 
-    def get_transaction_by_txid(self, tx_hash):
+    def get_transaction_by_tx_hash(self, tx_hash):
         """
-        通过交易的txid来检索得到交易
+        通过交易的tx_hash来检索得到交易
         但是这里遍历区块的方式较为暴力， 需要进行优化
         在区块达到一定高度后可能存在一定的问题
-        :param txid: 需要检索的交易id
+        :param tx_hash: 需要检索的交易id
         :return: 检索到交易返回交易， 否则返回None
         """
         latest_block, prev_hash = self.get_latest_block()
