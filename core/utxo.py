@@ -15,10 +15,15 @@ class UTXOSet(Singleton):
         self.db = DBUtil(Config().get('database.url'))
 
     def reindex(self, bc):
+        """
+        更新数据库的UTXO， 将UTXO和链进行同步
+        :param bc: Blockchain的实例
+        """
         key = self.FLAG + 'latest'
         latest_block, prev_hash = bc.get_latest_block()
 
         if key not in self.db:
+            # 通过blockchain查询到未使用的交易
             utxos = bc.find_utxo()
             if not latest_block:
                 return
@@ -35,7 +40,7 @@ class UTXOSet(Singleton):
                     try:
                         self.db.create(tmp_key, vout_dict)
                     except ResourceConflict as e:
-                        print(e)
+                        logging.error(e)
             self.set_latest_height(latest_block.block_header.height)
         else:
             latest_utxo_height = self.get_latest_height()
@@ -45,6 +50,10 @@ class UTXOSet(Singleton):
                 self.update(block)
 
     def set_latest_height(self, height):
+        """
+        设置本地UTXO的最新高度
+        :param height: 需要设置的高度， 更新到数据库
+        """
         key = self.FLAG + 'latest'
         if key not in self.db:
             latest_height_dict = {'height': height}
@@ -61,6 +70,10 @@ class UTXOSet(Singleton):
         return 0
 
     def update(self, block):
+        """
+        更新数据库中的UTXO， 添加新的UTXO， 并且删除已被使用的UTXO
+        """
+        logging.debug("Update UTXO set.")
         for tx in block.transactions:
             tx_hash = tx.tx_hash
             key = self.FLAG + tx_hash
@@ -162,12 +175,11 @@ class UTXOSet(Singleton):
             if index is None:
                 continue
             doc_id = doc.id
-            txid_index_str = doc_id.replace(self.FLAG, '')
-            _flag_index = txid_index_str.find('-')
-            txid = txid_index_str[:_flag_index]
-            logging.debug("{}, {}, {}".format(txid_index_str, _flag_index, txid))
+            tx_hash_index_str = doc_id.replace(self.FLAG, '')
+            _flag_index = tx_hash_index_str.find('-')
+            tx_hash = tx_hash_index_str[:_flag_index]
             utxos.append({
-                "txid": txid,
+                "tx_hash": tx_hash,
                 "output": doc,
                 "index": index
             })

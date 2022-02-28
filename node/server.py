@@ -47,19 +47,30 @@ class Server(object):
 
     def handle_loop(self, conn, address):
         rec_msg = None
+        continue_server = True
         while True:
             try:
                 rec_data = conn.recv(4096 * 2)
                 rec_msg = json.loads(rec_data.decode('utf-8'))
 
             except ValueError as e:
-                conn.sendall('{"code": 0, "data": ""}'.encode())
+                try:
+                    conn.sendall('{"code": 0, "data": ""}'.encode())
+                except BrokenPipeError:
+                    logging.info("Client lost connect, close server.")
+                    continue_server = False
 
             if rec_msg is not None:
                 send_data = self.handle(rec_msg)
-                conn.sendall(send_data.encode())
-
-            time.sleep(5)
+                try:
+                    conn.sendall(send_data.encode())
+                except BrokenPipeError:
+                    logging.info("Client lost connect, close server.")
+                    continue_server = False
+            if continue_server:
+                time.sleep(5)
+            else:
+                break
 
     def handle(self, message: dict):
         """

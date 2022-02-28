@@ -73,7 +73,12 @@ class Client(object):
     def shake_loop(self):
         while True:
             if self.txs:
+                # 如果本地存在交易， 将交易发送到邻居节点
+                # todo： 如果有多个交易的情况下需要进行处理， 目前仅仅针对一个交易
+                #  修改clear的逻辑
+                logging.debug("Send transaction to peer.")
                 data = self.txs[0].serialize()
+                self.tx_pool.add(self.txs[0])
                 message = Message(STATUS.TRANSACTION_MSG, data)
                 is_closed = self.send(message)
                 if is_closed:
@@ -103,7 +108,9 @@ class Client(object):
 
                 send_message = Message(STATUS.HAND_SHAKE_MSG, data)
                 # logging.debug("Send message: {}".format(data))
-                self.send(send_message)
+                is_closed = self.send(send_message)
+                if is_closed:
+                    break
                 time.sleep(10)
 
     def handle(self, message: dict):
