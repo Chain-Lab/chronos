@@ -9,13 +9,13 @@ tags:
   - name: Node
     description: Node Openapi
   - name: Block
-    description: None
+    description: Block Openapi
   - name: Transaction
-    description: None
+    description: Transaction Openapi
   - name: Address
-    description: None
+    description: Address Openapi
 paths:
-  '/node/status':
+  /node/status:
     get:
       tags:
         - Node
@@ -26,56 +26,103 @@ paths:
         '200':
           description: successful operation
           content:
-            schema:
-              $ref: '#/components/schemas/NodeStatus'
-  '/block/{height}':
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeStatus'
+  /block/height/{height}:
     get:
       tags:
         - Block
-      summary: Get Block by height
-      description: Get Block by height
+      parameters:
+        - name: height
+          in: path
+          description: Block Height
+          required: true
+          allowEmptyValue: false
+          schema:
+            type: integer
+            format: int64
+            example: 12475
+      summary: Get block by height
+      description: Get block by height
       operationId: getBlockByHeight
       responses:
         '200':
           description: successful operation
-          schema:
-            $ref: '#/components/schemas/Block'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Block'
         '404':
           description: Block is not found
-  'block/{hash}':
+  /block/hash/{hash}:
     get:
       tags:
         - Block
-      summary: Get Block by hash
-      description: Get Block by hash
+      parameters:
+        - name: hash
+          in: path
+          description: Block Hash
+          required: true
+          allowEmptyValue: false
+          schema:
+            type: string
+      summary: Get block by hash
+      description: Get block by hash
       operationId: getBlockByHash
       responses:
         '200':
           description: successful operation
-          schema:
-            $ref: '#/components/schemas/Block'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Block'
         '404':
           description: Block is not found
-  '/transaction/{txid}':
+  /block/latest:
+    get:
+      tags:
+        - Block
+      summary: Get latest block
+      operationId: getLatestBlock
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Block'
+        '400':
+          description: Get latest block error
+  /transaction/{txid}:
     get:
       tags:
         - Transaction
-      summary: Get Transaction
-      description: Get Transaction by txid
+      parameters:
+        - name: hash
+          in: path
+          description: Transaction Hash
+          required: true
+          allowEmptyValue: false
+          schema:
+            type: string
+      summary: Get transaction by hash
+      description: Get transaction by hash
       operationId: getTransaction
       responses:
         '200':
           description: successful operation
           content:
-            schema:
-              $ref: '#/components/schemas/Transaction'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
         '404':
           description: Transaction not found
-  '/transaction/submit':
+  /transaction/submit:
     post:
       tags:
         - Transaction
-      summary: Submit Transaction
+      summary: Submit transaction
       description: Submit transaction to node
       operationId: submitTransaction
       responses:
@@ -84,12 +131,23 @@ paths:
         '400':
           description: Transaction verify failed
       requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SignedTransaction'
-        description: Sumbit signed transaction
-        required: true
+        $ref: '#/components/requestBodies/SignedTransaction'
+  /address/utxos/{address}:
+    get:
+      tags:
+        - Address
+      summary: Get address utxos
+      description: Get address utxos
+      operationId: getAddressUtxo
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Utxo'
 components:
   schemas:
     NodeStatus:
@@ -103,23 +161,30 @@ components:
           type: integer
           format: int64
           example: 102482
+    BlockHeader:
+      type: object
+      properties:
+        hash:
+          type: string
+          example: 898434381f7ba8561c43acbea15f42e78793615d848b3bdd21c346bcc348bf70
+        merkele_root:
+          type: string
+          example: 4aaf432ec97e907515970f8fc8d8061a3ed492972fa05853dff99a14f23b74c0
+        height:
+          type: integer
+          example: 1
+        prev_block_hash:
+          type: string
+          example: 5927506bf3b945c4bf8c1146466192e6bfaf57ec50912d7d4b72e5564f90089b
     Block:
       type: object
       properties:
-        height:
-          type: integer
-          format: int64
-        hash:
-          type: string
-        timestamp:
-          type: integer
-          format: int64
-        prev_block_hash:
-          type: string
+        blockheader:
+          $ref: '#/components/schemas/BlockHeader'
         transactions:
           type: array
           items:
-            '#/components/schemas/Transaction'
+            $ref: '#/components/schemas/Transaction'
     Transaction:
       type: object
       properties:
@@ -130,14 +195,68 @@ components:
         inputs:
           type: array
           items:
-            $ref: '#/components/schemas/Inputs'
+            $ref: '#/components/schemas/Input'
         outputs:
           type: array
           items:
-            $ref: '#/components/schemas/Outputs'
-    Inputs:
+            $ref: '#/components/schemas/Output'
+    Input:
       type: object
-    Outputs:
+    Output:
       type: object
+      properties:
+        index:
+          type: integer
+        pub_key_hash:
+          type: string
+          description: Public address
+        value:
+          type: integer
+    SignedInput:
+      type: object
+      properties:
+        tx_hash:
+          type: string
+        index:
+          type: integer
+        signature:
+          type: string
+        pub_key:
+          type: string
+        vote_info:
+          type: object
+    SignedOutput:
+      type: object
+      properties:
+        value:
+          type: integer
+        pub_key_hash:
+          type: string
+    Utxo:
+      type: object
+      properties:
+        index:
+          type: integer
+        output:
+          $ref: '#/components/schemas/Output'
+        tx_hash:
+          type: string
     SignedTransaction:
       type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SignedInput'
+        outputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SignedOutput'
+  requestBodies:
+    SignedTransaction:
+      content:
+        application/json:
+          schema:
+            allOf:
+              - description: Signed Transaction
+              - $ref: '#/components/schemas/SignedTransaction'
