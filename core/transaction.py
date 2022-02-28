@@ -74,7 +74,6 @@ class Transaction(object):
         }
 
     @classmethod
-    @transaction_data_verify
     def deserialize(cls, data: dict):
         """
         反序列化, 先按照原有的方法进行反序列化

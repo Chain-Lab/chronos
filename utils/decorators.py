@@ -24,20 +24,3 @@ def scrub_base58_input(func):
 
     return wrapper
 
-
-def transaction_data_verify(func):
-    """
-    校验交易的结构，如果不合法返回None
-    todo: 可以编写一个**通用的**装饰器来进行校验
-    """
-    def wrapper(cls, data: dict):
-        txid = data.get('tx_hash', None)
-        inputs = data.get('inputs', None)
-        outputs = data.get('outputs', None)
-
-        if txid is None or inputs is None or outputs is None:
-            return None
-
-        return func(cls, data)
-
-    return wrapper

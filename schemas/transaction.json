@@ -1,0 +1,43 @@
+{
+  "$schema":"http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tx_hash", "index", "signature"],
+        "properties": {
+          "tx_hash": {
+            "type": "string"
+          },
+          "index": {
+            "type": "integer"
+          },
+          "signature": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["value", "pub_key_hash"],
+        "properties": {
+          "value": {
+            "type": "integer"
+          },
+          "pub_key_hash": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tx_hash": {
+      "type": "string"
+    }
+  },
+  "required": ["inputs", "outputs", "tx_hash"]
+}
