@@ -7,15 +7,17 @@ from core.block_chain import BlockChain
 from core.transaction import Transaction
 from node.peer import Peer
 from openapi.statuscode import STATUS
+from openapi.constant import VERSION
 from utils.validator import json_validator
 
-transaction_blueprint = Blueprint("transaction", __name__, url_prefix="/transaction")
+transaction_blueprint = Blueprint("transaction", __name__, url_prefix="/{}/transaction".format(VERSION))
 
 
 @transaction_blueprint.route("/submit", methods=["POST"])
 def submit():
     transaction_json = request.get_json()
 
+    # 校验接收到的交易是否满足格式
     if json_validator("/schemas/transaction.json", transaction_json):
         transaction = Transaction.deserialize(transaction_json)
     else:

@@ -7,20 +7,20 @@ servers:
     description: example
 tags:
   - name: Node
-    description: Node Openapi
+    description: 节点相关的openapi接口
   - name: Block
-    description: Block Openapi
+    description: 区块相关的openapi接口
   - name: Transaction
-    description: Transaction Openapi
+    description: 交易相关的openapi接口
   - name: Address
-    description: Address Openapi
+    description: 地址相关的openapi接口
 paths:
   /node/status:
     get:
       tags:
         - Node
-      summary: Node Status
-      description: Return node status
+      summary: 获取节点状态
+      description: 调用该接口， 获取当前节点的运行状态
       operationId: getNodeStatus
       responses:
         '200':
@@ -36,15 +36,15 @@ paths:
       parameters:
         - name: height
           in: path
-          description: Block Height
+          description: 所需获取区块的区块高度
           required: true
           allowEmptyValue: false
           schema:
             type: integer
             format: int64
             example: 12475
-      summary: Get block by height
-      description: Get block by height
+      summary: 通过高度拉取区块
+      description: 传入区块高度， 获取区块信息
       operationId: getBlockByHeight
       responses:
         '200':
@@ -62,13 +62,13 @@ paths:
       parameters:
         - name: hash
           in: path
-          description: Block Hash
+          description: 所需获取区块的区块哈希
           required: true
           allowEmptyValue: false
           schema:
             type: string
-      summary: Get block by hash
-      description: Get block by hash
+      summary: 通过区块的哈希值获取对应区块
+      description: 通过区块的哈希值获取对应区块
       operationId: getBlockByHash
       responses:
         '200':
@@ -83,7 +83,7 @@ paths:
     get:
       tags:
         - Block
-      summary: Get latest block
+      summary: 获取最新的区块
       operationId: getLatestBlock
       responses:
         '200':
@@ -101,13 +101,13 @@ paths:
       parameters:
         - name: tx_hash
           in: path
-          description: Transaction Hash
+          description: 所需获取交易的交易哈希值
           required: true
           allowEmptyValue: false
           schema:
             type: string
-      summary: Get transaction by hash
-      description: Get transaction by hash
+      summary: 通过交易哈希值获取交易的相关信息
+      description: 通过交易哈希值获取交易的相关信息
       operationId: getTransaction
       responses:
         '200':
@@ -122,8 +122,8 @@ paths:
     post:
       tags:
         - Transaction
-      summary: Submit transaction
-      description: Submit transaction to node
+      summary: 提交交易到当前节点
+      description: 将将以提交到节点
       operationId: submitTransaction
       responses:
         '202':
@@ -139,13 +139,13 @@ paths:
       parameters:
         - name: address
           in: path
-          description: Require address
+          description: 所需要获取utxo的地址
           required: true
           allowEmptyValue: false
           schema:
             type: string
-      summary: Get address utxos
-      description: Get address utxos
+      summary: 通过地址获取得到utxo
+      description: 通过地址获取得到utxo
       operationId: getAddressUtxo
       responses:
         '200':
@@ -215,9 +215,10 @@ components:
       properties:
         index:
           type: integer
+          description: 交易输出所在输出的index
         pub_key_hash:
           type: string
-          description: Public address
+          description: 钱包地址
         value:
           type: integer
     SignedInput:
@@ -225,22 +226,22 @@ components:
       properties:
         tx_hash:
           type: string
-          example: 29c79a73819ac5dcd8c5d83a27743d44e026ccd3ae175b38e1fa1447196988a5
+          description: 输入交易的哈希值
         index:
           type: integer
-          example: 0
+          description: 输入交易所在输出的index
         signature:
           type: string
-          example: e2d684b95c76ffdea57789ac6ab0beeab2886f4b62e15c517c64ae2256d3ebee320e939ce6258f98e69be54659d547a95986b314f6922c77ce069a5511e944b4
+          description: 签名信息
     SignedOutput:
       type: object
       properties:
         value:
           type: integer
-          example: 10
+          description: 交易的输出
         pub_key_hash:
           type: string
-          example: 1DGA4UvmUmmkyjgdxe88BbYWQUTgCw7Cai
+          description: 交易输出的地址
     Utxo:
       type: object
       properties:
@@ -263,7 +264,6 @@ components:
             $ref: '#/components/schemas/SignedOutput'
         tx_hash:
           type: string
-          example: 10af41176a31b50d5feee3e2f7b7797bcecb37e9594f951fea9583777ac26cf5
   requestBodies:
     SignedTransaction:
       content:

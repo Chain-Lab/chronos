@@ -3,9 +3,10 @@ from flask import Blueprint
 from flask import jsonify
 
 from openapi.statuscode import STATUS
+from openapi.constant import VERSION
 from core.utxo import UTXOSet
 
-address_blueprint = Blueprint("address", __name__, url_prefix="/address")
+address_blueprint = Blueprint("address", __name__, url_prefix="/{}/address".format(VERSION))
 
 
 @address_blueprint.route("/utxos/<address>", methods=["GET"])

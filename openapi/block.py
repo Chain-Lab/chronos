@@ -4,9 +4,10 @@ from flask import Blueprint
 from flask import request
 
 from openapi.statuscode import STATUS
+from openapi.constant import VERSION
 from core.block_chain import BlockChain
 
-block_blueprint = Blueprint("block", __name__, url_prefix="/block")
+block_blueprint = Blueprint("block", __name__, url_prefix="/{}/block".format(VERSION))
 
 
 @block_blueprint.route("/height/<height>", methods=["GET"])
