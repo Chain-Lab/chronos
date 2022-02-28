@@ -101,11 +101,14 @@ class UTXOSet(Singleton):
         self.set_latest_height(block.block_header.height)
 
     def roll_back(self, block):
+        """
+        UTXO集合回滚逻辑， 遍历当前最高区块的交易进行回滚
+        """
         for transaction in block.transactions:
             tx_hash = transaction.tx_hash
             key = self.FLAG + tx_hash
 
-            for idx, output in enumerate(transaction.output):
+            for idx, output in enumerate(transaction.outputs):
                 tmp_key = key + '-' + str(idx)
                 doc = self.db.get(tmp_key)
                 if not doc:
@@ -116,14 +119,14 @@ class UTXOSet(Singleton):
                     print(e)
 
             for _input in transaction.inputs:
-                vin_tx_hash = _input.tx_hash
+                input_tx_hash = _input.tx_hash
                 output_index = _input.index
-                key = self.FLAG + vin_tx_hash + '-' + str(output_index)
+                key = self.FLAG + input_tx_hash + '-' + str(output_index)
                 query = {
                     "selector": {
                         "transactions": {
                             "$elemMatch": {
-                                "tx_hash": vin_tx_hash
+                                "tx_hash": input_tx_hash
                             }
                         }
                     }
@@ -136,22 +139,22 @@ class UTXOSet(Singleton):
                     continue
 
                 transactions = doc.get("transactions", [])
-                # todo:命名规则变更, 原有代码中和外部循环变量一致
+                # 外部循环使用了transaction作为变量名， 局部变量名使用tx
                 for tx in transactions:
                     if tx.get('tx_hash', '') == tx_hash:
                         outputs = tx.get('outputs', [])
                         if len(outputs) <= output_index:
                             continue
 
-                        vout = outputs[output_index]
-                        vout_dict = vout.serialize()
-                        vout_dict.update({'index': output_index})
+                        output = outputs[output_index]
+                        output_dict = output.serialize()
+                        output_dict.update({'index': output_index})
                         tmp_key = key + '-' + str(output_index)
 
                         try:
-                            self.db.create(tmp_key, vout_dict)
+                            self.db.create(tmp_key, output_dict)
                         except ResourceConflict as e:
-                            print(e)
+                            logging.error("Utxo set rollback error: resource conflict")
         self.set_latest_height(block.block_header.height - 1)
 
     def find_utxo(self, address):

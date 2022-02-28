@@ -1,3 +1,4 @@
+import logging
 from configparser import ConfigParser, NoOptionError
 
 from utils.singleton import Singleton
@@ -5,9 +6,9 @@ from utils.singleton import Singleton
 
 class Config(Singleton):
     def __init__(self):
-        # todo: 添加日志记录
         self.parser = ConfigParser()
         self.parser.read("config.ini", "utf-8")
+        logging.info("Config file is loaded.")
 
     def get(self, key: str, default=None):
         """

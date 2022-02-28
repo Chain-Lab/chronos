@@ -55,7 +55,7 @@ class BlockChain(object):
 
         if not self.verify_block(block):
             logging.error("Block verify failed. Block struct: {}".format(block))
-            # todo： 抛出交易验证失败错误
+            return
 
         block.set_header_hash()
         latest_hash = block.block_header.hash

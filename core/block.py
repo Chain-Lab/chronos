@@ -11,11 +11,7 @@ class Block(object):
         self._magic_no = Config().get('node.magic_no')
 
     # todo: 待调整, 需要后面确认blockchain的方法
-
     def mine(self):
-        pass
-
-    def validate(self):
         pass
 
     def set_header_hash(self):

@@ -1,10 +1,10 @@
 import binascii
 import copy
+import logging
 
 import ecdsa
 
 from core.config import Config
-from utils.decorators import transaction_data_verify
 from utils import funcs
 
 
@@ -19,10 +19,11 @@ class Transaction(object):
         设置当前交易的交易id，根据输入和输出的数据哈希得到
         :return: None
         """
-        data_list = [str(_) for _ in self.inputs]
+        data_list = [str(TxInput(_)) for _ in self.inputs]
         output_list = [str(_) for _ in self.outputs]
         data_list.extend(output_list)
         data = ''.join(data_list)
+        logging.debug(data)
         tx_hash = funcs.sum256_hex(data)
         self.tx_hash = tx_hash
 
@@ -36,6 +37,7 @@ class Transaction(object):
 
     def verify(self, prev_txs):
         """
+        todo: 存在coinbase交易时需要修改vote_info， 通过openapi是无法获取到投票信息的
         对交易进行验证, 填入链上的输出地址进行验证， 而提交的交易由提交者自己填入地址
         :param prev_txs: 当前交易的各个input对应哈希的交易
         :return: 验证是否通过
@@ -151,8 +153,9 @@ class TxInput(object):
         return self.__dict__
 
     def __repr__(self):
-        # 先直接输出json信息， 后面再重新进行修改
-        return str(self.__dict__)
+        result = self.__dict__
+        result.pop("vote_info")
+        return str(result)
 
     # 直接更新dict进行初始化, 后面需要通过json-schema校验
     @classmethod
@@ -199,3 +202,9 @@ class CoinBaseInput(TxInput):
         self.vote_info[address]['node_id'] = node_id
         self.vote_info[address]['vote_count'] = vote_count
         self.vote_info[address][vote_node] = vote_node
+
+    def __repr__(self):
+        """
+        重写方法， 相比input多了投票信息， 在签名时可能存在问题
+        """
+        return str(self.__dict__)
