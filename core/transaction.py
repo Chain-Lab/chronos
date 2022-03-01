@@ -116,7 +116,7 @@ class Transaction(object):
         _input = CoinBaseInput('', -1, Config().get('node.public_key'))
         _input.vote_info = vote_node
         output = TxOutput(int(Config().get('node.coinbase_reward')),
-                         Config().get('node.address'))
+                          Config().get('node.address'))
         tx = cls([_input], [output])
         tx.set_id()
         return tx

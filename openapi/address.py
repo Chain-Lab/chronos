@@ -1,10 +1,10 @@
-from flask import request
 from flask import Blueprint
 from flask import jsonify
+from flask import request
 
-from openapi.statuscode import STATUS
-from openapi.constant import VERSION
 from core.utxo import UTXOSet
+from openapi.constant import VERSION
+from openapi.statuscode import STATUS
 
 address_blueprint = Blueprint("address", __name__, url_prefix="/{}/address".format(VERSION))
 

@@ -1,4 +1,3 @@
-import logging
 from configparser import ConfigParser, NoOptionError
 
 from utils.singleton import Singleton

@@ -2,10 +2,9 @@ import threading
 
 from flask import Flask
 
-from core.config import Config
-from openapi.transaction import transaction_blueprint
 from openapi.address import address_blueprint
 from openapi.block import block_blueprint
+from openapi.transaction import transaction_blueprint
 
 
 def server():
@@ -17,5 +16,5 @@ def server():
     app.register_blueprint(address_blueprint)
     app.register_blueprint(block_blueprint)
 
-    thread = threading.Thread(target=app.run, args=("0.0.0.0", ))
+    thread = threading.Thread(target=app.run, args=("0.0.0.0",))
     thread.start()

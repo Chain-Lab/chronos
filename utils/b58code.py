@@ -1,9 +1,9 @@
 from hashlib import sha256
+
 from utils.decorators import scrub_base58_input
 
 
 class Base58Code(object):
-
     alphabet = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
     # python2
@@ -116,6 +116,7 @@ class Base58Code(object):
             raise ValueError("Invalid checksum")
 
         return result
+
 
 if __name__ == "__main__":
     print(Base58Code.encode("2334234234"))

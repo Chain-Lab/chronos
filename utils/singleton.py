@@ -1,7 +1,7 @@
 import threading
 
 
-# 单例父类
+# 单例父类, 目前存在问题， 子类的__init__会被调用两次
 class Singleton(object):
     _instance_lock = threading.Lock()
     __instance = None

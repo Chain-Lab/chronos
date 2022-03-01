@@ -3,7 +3,6 @@ import logging
 from couchdb import ResourceConflict, ResourceNotFound
 
 from core.config import Config
-from core.transaction import TxOutput
 from utils.dbutil import DBUtil
 from utils.singleton import Singleton
 

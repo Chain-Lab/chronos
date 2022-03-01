@@ -23,4 +23,3 @@ def json_validator(schema_file: str, data: dict):
         return False
 
     return True
-

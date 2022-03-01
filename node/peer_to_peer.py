@@ -1,10 +1,8 @@
 import asyncio
 import logging
-import threading
 
 from kademlia.network import Server
 
-from node.peer import Peer
 from core.config import Config
 
 

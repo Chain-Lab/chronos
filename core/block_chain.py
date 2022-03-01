@@ -163,7 +163,7 @@ class BlockChain(object):
         """
         从邻居节点接收到区块， 更新本地区块
         :param block: 从邻居节点接收到的区块
-        :return: Nonoe
+        :return: None
         """
         logging.info("Receive block from neighborhood, try to add block to local db.")
         latest_block, prev_hash = self.get_latest_block()

@@ -31,4 +31,3 @@ def sum256_hex(*args):
         else:
             m.update(arg)
     return m.hexdigest()
-

@@ -1,11 +1,10 @@
 import logging
-import socket
 import threading
 import time
 
+from core.config import Config
 from node.client import Client
 from utils.singleton import Singleton
-from core.config import Config
 
 
 class Peer(Singleton):

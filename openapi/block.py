@@ -3,9 +3,9 @@ import logging
 from flask import Blueprint
 from flask import request
 
-from openapi.statuscode import STATUS
-from openapi.constant import VERSION
 from core.block_chain import BlockChain
+from openapi.constant import VERSION
+from openapi.statuscode import STATUS
 
 block_blueprint = Blueprint("block", __name__, url_prefix="/{}/block".format(VERSION))
 
@@ -45,7 +45,6 @@ def get_block_by_hash(hash):
 
 @block_blueprint.route("/latest", methods=["GET"])
 def get_latest_block():
-
     bc = BlockChain()
     block, _ = bc.get_latest_block()
 
