@@ -9,10 +9,9 @@ from utils.singleton import Singleton
 
 class Peer(Singleton):
     def __init__(self):
-        if not hasattr(self, 'peers'):
-            self.peers = []
-        if not hasattr(self, 'nodes'):
-            self.nodes = []
+        # 消除多次__init__问题后可以直接初始化
+        self.peers = []
+        self.nodes = []
 
     def find_nodes(self, p2p_server):
         # local_ip = socket.getaddrinfo(socket.gethostname(), None)
@@ -27,6 +26,7 @@ class Peer(Singleton):
                     ip = node.ip
                     port = node.port
 
+                    # todo: 判定自身ip的存在问题， 需要修改
                     if ip == local_ip:
                         continue
                     logging.info("Detect new node: ip {} port {}".format(ip, port))

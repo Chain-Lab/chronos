@@ -32,20 +32,38 @@ class Server(object):
         self.tx_pool = TxMemPool()
 
     def listen(self):
+        """
+        监听端口， 绑定ip和端口
+        :return: None
+        """
         self.sock.bind((self.ip, self.port))
         self.sock.listen(10)
 
     def listen_loop(self):
+        """
+        监听循环， 监听到连接则开一个线程进行处理
+        :return: None
+        """
         while True:
             conn, address = self.sock.accept()
             thread = threading.Thread(target=self.handle_loop, args=(conn, address))
             thread.start()
 
     def run(self):
+        """
+        类的运行函数， 开一个线程进行监听
+        :return: None
+        """
         thread = threading.Thread(target=self.listen_loop, args=())
         thread.start()
 
     def handle_loop(self, conn, address):
+        """
+        处理client信息的循环， 接收消息并返回信息
+        :param conn: 与client的socket连接
+        :param address:
+        :return: None
+        """
         rec_msg = None
         continue_server = True
         while True:
@@ -55,6 +73,7 @@ class Server(object):
 
             except ValueError as e:
                 try:
+                    # 发送信息， 如果出现错误说明连接断开
                     conn.sendall('{"code": 0, "data": ""}'.encode())
                 except BrokenPipeError:
                     logging.info("Client lost connect, close server.")
@@ -63,6 +82,7 @@ class Server(object):
             if rec_msg is not None:
                 send_data = self.handle(rec_msg)
                 try:
+                    # 发送信息， 如果出现错误说明连接断开
                     conn.sendall(send_data.encode())
                 except BrokenPipeError:
                     logging.info("Client lost connect, close server.")
@@ -124,23 +144,27 @@ class Server(object):
         """
         data = message.get("data", "")
         vote_data = data.get("vote", {})
-        height = data.get("latest_height", 0)
+        remote_height = data.get("latest_height", 0)
 
         bc = BlockChain()
         block, prev_hash = bc.get_latest_block()
         local_height = -1
 
+        # 获取本地高度之前检查是否存在区块
         if block:
             local_height = block.block_header.height
 
-        if local_height != height:
+        # 本地高度不等于远端高度， 清除交易和投票信息
+        if local_height != remote_height:
             self.txs.clear()
             self.vote.clear()
 
-        if local_height < height:
+        # 本地高度低于邻居高度， 拉取区块
+        if local_height < remote_height:
             result = Message(STATUS.UPDATE_MSG, local_height)
             return result
 
+        # 投票信息同步完成
         flg = self.check_vote_synced(vote_data)
 
         if flg:
@@ -150,6 +174,7 @@ class Server(object):
             return result
 
         if self.txs:
+            # 如果服务器存在交易， 发送给client
             result = Message(STATUS.TRANSACTION_MSG, self.txs[0])
             time.sleep(2)
             self.txs = self.txs[1:]

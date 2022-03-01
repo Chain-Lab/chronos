@@ -33,6 +33,10 @@ class Client(object):
         self.txs.append(transaction)
 
     def send(self, message):
+        """
+        发送信息给邻居节点， 在出现Broke异常的情况下说明连接端口
+        :param message: 待发送信息
+        """
         rec_message = None
         data = json.dumps(message.__dict__)
         try:
@@ -76,6 +80,10 @@ class Client(object):
         return False
 
     def shake_loop(self):
+        """
+        握手循环， 如果存在交易的情况下就发送交易
+        :return:
+        """
         while True:
             if self.txs:
                 # 如果本地存在交易， 将交易发送到邻居节点
@@ -239,6 +247,11 @@ class Client(object):
                 self.vote[final_address] = lst
 
     def handle_sync(self, message: dict):
+        """
+        状态码为STATUS.SYNC_MSG = 5, 该节点为共识节点， 生成新区块
+        :param message: 待处理的message
+        :return: None
+        """
         data = message.get('data', '')
         address = Config().get('node.address')
         if data == address:
