@@ -216,6 +216,9 @@ class BlockChain(object):
         self.set_latest_hash(block.block_header.hash)
 
     def find_utxo(self):
+        """
+        查找未被使用的utxo
+        """
         spent_txos = {}
         unspent_txs = {}
         latest_block, prev_hash = self.get_latest_block()
@@ -251,12 +254,22 @@ class BlockChain(object):
         return unspent_txs
 
     def verify_block(self, block: Block):
+        """
+        校验区块， 主要校验包含的交易的签名信息是否正确
+        :param block: 待校验区块
+        :return: 是否校验通过
+        """
         for tx in block.transactions:
             if not self.verify_transaction(tx):
                 return False
         return True
 
     def verify_transaction(self, transaction: Transaction):
+        """
+        校验交易， 在链上拉取到当前交易输入下的交易调用verify方法进行校验
+        :param transaction: 待校验的交易
+        :return: 是否校验通过
+        """
         prev_txs = {}
         for _input in transaction.inputs:
             prev_tx = self.get_transaction_by_tx_hash(_input.tx_hash)

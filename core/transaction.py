@@ -208,7 +208,7 @@ class CoinBaseInput(TxInput):
         """
         重写方法， 相比tx_input多了投票信息, 去掉投票信息
         """
-        result = self.__dict__
-        if "vote_info" in self.__dict__.keys():
+        result = copy.deepcopy(self.__dict__)
+        if "vote_info" in result.keys():
             result.pop("vote_info")
         return str(result)
