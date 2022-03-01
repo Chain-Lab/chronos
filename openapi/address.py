@@ -11,6 +11,12 @@ address_blueprint = Blueprint("address", __name__, url_prefix="/{}/address".form
 
 @address_blueprint.route("/utxos/<address>", methods=["GET"])
 def utxos(address):
+    """
+    通过地址拉取utxo的接口， 调用Utxoset的方法进行查询
+    返回json数据
+    :param address: 待查询的address
+    :return: 返回json数据， 200状态码
+    """
     assert address == request.view_args.get("address", None)
 
     if address is None:
@@ -20,7 +26,6 @@ def utxos(address):
     result = utxo_set.find_utxo(address)
     utxo: dict
 
-    # todo: 清除查询到的_id, _rev, 应该可以在query中进行返回信息配置
     for utxo in result:
         utxo["output"].pop("_id")
         utxo["output"].pop("_rev")

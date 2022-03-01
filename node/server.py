@@ -123,8 +123,6 @@ class Server(object):
         :return:
         """
         data = message.get("data", "")
-        # logging.debug("Receive data: {}".format(message))
-        # todo: 用于共识的投票信息， 后续在设计完成相关的共识RPC接口后再接入
         vote_data = data.get("vote", {})
         height = data.get("latest_height", 0)
 
@@ -166,7 +164,6 @@ class Server(object):
         result_data = {
             "last_height": -1,
             "genesis_block": "",
-            # todo: 用于进行共识的信息， 后续根据对应接口进行操作
             "address": Config().get('node.address'),
             "time": time.time(),
             "id": int(Config().get('node.id')),
@@ -271,6 +268,5 @@ class Server(object):
         try:
             bc.add_block_from_peers(block)
         except ValueError as e:
-            # todo: 日志记录
-            print(e)
+            logging.error(e)
         return Message(STATUS.NODE_MSG, "6")

@@ -37,7 +37,6 @@ class Transaction(object):
 
     def verify(self, prev_txs):
         """
-        todo: 存在coinbase交易时需要修改vote_info， 通过openapi是无法获取到投票信息的
         对交易进行验证, 填入链上的输出地址进行验证， 而提交的交易由提交者自己填入地址
         :param prev_txs: 当前交易的各个input对应哈希的交易
         :return: 验证是否通过

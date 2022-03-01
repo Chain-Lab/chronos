@@ -24,6 +24,10 @@ def sum256_byte(*args):
 
 
 def sum256_hex(*args):
+    """
+    对数据进行sha256哈希
+    :return: 16进制格式的哈希字符串
+    """
     m = hashlib.sha256()
     for arg in args:
         if isinstance(arg, str):

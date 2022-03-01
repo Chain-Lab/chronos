@@ -1,4 +1,7 @@
-class STATUS:
+class STATUS(object):
+    """
+    HTTP状态码
+    """
     OK = 200
     CREATED = 201
     ACCEPTED = 202

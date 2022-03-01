@@ -29,13 +29,13 @@ def get_block_by_height(height):
         return "Block is not exists.", STATUS.NOT_FOUNT
 
 
-@block_blueprint.route("/hash/<hash>", methods=["GET"])
-def get_block_by_hash(hash):
-    assert hash == request.view_args.get("hash", None)
+@block_blueprint.route("/hash/<block_hash>", methods=["GET"])
+def get_block_by_hash(block_hash):
+    assert block_hash == request.view_args.get("block_hash", None)
 
-    logging.info("Receive request block #{}".format(hash))
+    logging.info("Receive request block #{}".format(block_hash))
     bc = BlockChain()
-    block = bc.get_block_by_hash(hash)
+    block = bc.get_block_by_hash(block_hash)
 
     if block:
         return block.serialize(), STATUS.OK

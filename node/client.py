@@ -25,6 +25,11 @@ class Client(object):
         self.tx_pool = TxMemPool()
 
     def add_transaction(self, transaction):
+        """
+        添加交易到本地client, 即直接append到txs列表中
+        :param transaction: 待添加的交易
+        :return: None
+        """
         self.txs.append(transaction)
 
     def send(self, message):
@@ -176,8 +181,7 @@ class Client(object):
         try:
             bc.add_block_from_peers(block)
         except ValueError as e:
-            # todo: 错误处理
-            print(e)
+            logging.error(e)
 
     def handle_transaction(self, message: dict):
         """
@@ -217,6 +221,9 @@ class Client(object):
             self.send(send_message)
 
     def handle_pot(self, message: dict):
+        """
+        状态码为STATUS.POT = 4, 进行时间共识投票
+        """
         data = message.get('data', {})
         vote_data = data.get('vote', '')
         address, final_address = vote_data.split(' ')
@@ -242,6 +249,11 @@ class Client(object):
             self.txs = []
 
     def handle_update(self, message: dict):
+        """
+        状态码为STATUS.POT = 6, 拉取最新的区块发送给server
+        :param message: 待处理的message
+        :return: None
+        """
         height = message.get('data', '')
         address = Config().get('node.address')
         bc = BlockChain()
