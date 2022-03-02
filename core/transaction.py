@@ -33,7 +33,7 @@ class Transaction(object):
         根据输入只有一个且输入的交易id向量为0以及没有输出来进行判断
         :return: 如果是coinbase交易， 返回True
         """
-        return len(self.inputs) == 1 and len(self.inputs[0].tx_hash) == 0 and self.inputs[0].index == -1
+        return len(self.inputs) == 1 and len(self.inputs[0].tx_hash) == '' and self.inputs[0].index == -1
 
     def verify(self, prev_txs):
         """
@@ -58,7 +58,10 @@ class Transaction(object):
             signature = binascii.a2b_hex(self.inputs[idx].signature)
             vk = ecdsa.VerifyingKey.from_string(binascii.a2b_hex(_input.pub_key), curve=ecdsa.SECP256k1)
 
-            if not vk.verify(signature, tx_copy.tx_hash.encode()):
+            try:
+                if not vk.verify(signature, tx_copy.tx_hash.encode()):
+                    return False
+            except ecdsa.keys.BadSignatureError:
                 return False
 
         return True

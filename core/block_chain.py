@@ -45,6 +45,7 @@ class BlockChain(object):
         merkle_tree = MerkleTree(data)
         block_header = BlockHeader(merkle_tree.root_hash, height, prev_hash)
 
+        logging.debug("Vote info: {}".format(vote))
         coin_base_tx = Transaction.coinbase_tx(vote)
         transactions.insert(0, coin_base_tx)
 

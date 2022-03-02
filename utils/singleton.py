@@ -15,7 +15,7 @@ class Singleton(object):
         else:
             # 如果实例存在，说明已经初始化过了， pass掉__init__
             # fixed: 多线程的情况下多次__init__导致出现NoneType问题
-            def init_pass(self): pass
+            def init_pass(self, *args, **kwargs): pass
             cls.__init__ = init_pass
 
         return cls.__instance
