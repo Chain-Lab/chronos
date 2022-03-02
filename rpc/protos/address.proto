@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+service Address {
+  rpc get_address_utxo(UtxoRequest) returns (UtxoRespond);
+}
+
+message UtxoRequest {
+  optional string address = 1;
+}
+
+message UtxoRespond {
+  optional int32 status = 1;
+  optional string utxos = 2;
+}

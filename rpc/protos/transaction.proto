@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+service Transaction {
+  rpc get_transaction(GetTransactionRequest) returns (GetTransactionRespond);
+  rpc submit_transaction(SubmitTransactionRequest) returns (SubmitTransactionRespond);
+}
+
+message GetTransactionRequest {
+  optional string hash = 1;
+}
+
+message GetTransactionRespond {
+  optional int32 status = 1;
+  optional string transaction = 2;
+}
+
+message SubmitTransactionRequest{
+  optional string signedTransaction = 1;
+}
+
+message SubmitTransactionRespond{
+  optional int32 status = 1;
+}

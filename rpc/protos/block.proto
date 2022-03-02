@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+service Block {
+  rpc get_block(BlockRequest) returns (BlockRespond);
+}
+
+message BlockRequest {
+  // 拉取区块的三种方法，根据高度、哈希以及最新进行拉取
+  enum Type {
+    HEIGHT = 0;
+    HASH = 1;
+    LATEST = 2;
+  }
+  optional Type type = 1;
+  optional int64 height = 2;
+  optional string hash = 3;
+}
+
+message BlockRespond {
+  // 返回状态， 冗余
+  optional int32 status = 1;
+  optional string block = 2;
+}
