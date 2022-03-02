@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from rpc.grpc import transaction_pb2 as rpc_dot_protos_dot_transaction__pb2
+from rpc.grpcs import transaction_pb2 as rpc_dot_protos_dot_transaction__pb2
 
 
 class TransactionStub(object):
@@ -12,7 +12,7 @@ class TransactionStub(object):
         """Constructor.
 
         Args:
-            channel: A grpc.Channel.
+            channel: A grpcs.Channel.
         """
         self.get_transaction = channel.unary_unary(
                 '/Transaction/get_transaction',

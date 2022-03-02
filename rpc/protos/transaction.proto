@@ -20,4 +20,5 @@ message SubmitTransactionRequest{
 
 message SubmitTransactionRespond{
   optional int32 status = 1;
+  optional string error = 2;
 }

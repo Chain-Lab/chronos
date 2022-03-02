@@ -4,13 +4,14 @@ service Block {
   rpc get_block(BlockRequest) returns (BlockRespond);
 }
 
+enum Type {
+  HEIGHT = 0;
+  HASH = 1;
+  LATEST = 2;
+}
+
 message BlockRequest {
   // 拉取区块的三种方法，根据高度、哈希以及最新进行拉取
-  enum Type {
-    HEIGHT = 0;
-    HASH = 1;
-    LATEST = 2;
-  }
   optional Type type = 1;
   optional int64 height = 2;
   optional string hash = 3;

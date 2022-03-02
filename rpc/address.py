@@ -1,8 +1,8 @@
 import json
 import logging
 
-from rpc.grpc import address_pb2
-from rpc.grpc import address_pb2_grpc
+from rpc.grpcs import address_pb2
+from rpc.grpcs import address_pb2_grpc
 from core.utxo import UTXOSet
 
 

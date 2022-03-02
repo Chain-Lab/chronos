@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from rpc.grpc import address_pb2 as rpc_dot_protos_dot_address__pb2
+from rpc.grpcs import address_pb2 as rpc_dot_protos_dot_address__pb2
 
 
 class AddressStub(object):
@@ -12,7 +12,7 @@ class AddressStub(object):
         """Constructor.
 
         Args:
-            channel: A grpc.Channel.
+            channel: A grpcs.Channel.
         """
         self.get_address_utxo = channel.unary_unary(
                 '/Address/get_address_utxo',

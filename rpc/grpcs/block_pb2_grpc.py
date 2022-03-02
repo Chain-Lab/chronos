@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from rpc.grpc import block_pb2 as rpc_dot_protos_dot_block__pb2
+from rpc.protos import block_pb2 as rpc_dot_protos_dot_block__pb2
 
 
 class BlockStub(object):
@@ -12,7 +12,7 @@ class BlockStub(object):
         """Constructor.
 
         Args:
-            channel: A grpc.Channel.
+            channel: A grpcs.Channel.
         """
         self.get_block = channel.unary_unary(
                 '/Block/get_block',
