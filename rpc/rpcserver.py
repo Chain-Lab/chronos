@@ -12,6 +12,10 @@ from rpc.transaction import TransactionService
 
 
 class RPCServer(object):
+    """
+    暴露给服务器内部的RPC接口服务
+    主要保证与其他模块进行解耦
+    """
 
     def __init__(self):
         # 配置rpc服务的最大worker数量， 可以放入配置文件
