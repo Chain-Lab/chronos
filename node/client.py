@@ -83,6 +83,7 @@ class Client(object):
         """
         握手循环， 如果存在交易的情况下就发送交易
         :return:
+        :return:
         """
         while True:
             if self.txs:

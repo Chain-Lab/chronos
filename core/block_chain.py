@@ -60,7 +60,6 @@ class BlockChain(object):
 
         block.set_header_hash()
         latest_hash = block.block_header.hash
-        logging.debug("Create block {} in database.".format(block.block_header.hash))
         logging.debug(block.serialize())
         # 先添加块再更新最新哈希， 避免添加区块时出现问题更新数据库
         self.db.create(block.block_header.hash, block.serialize())
@@ -190,7 +189,6 @@ class BlockChain(object):
             if peer_height == latest_height + 1 and peer_prev_hash == latest_block.block_header.hash:
                 logging.debug("Local height: {}, Neighborhood height: {}".format(latest_height, peer_height))
                 latest_hash = peer_hash
-                logging.debug("Insert new block data: {}".format(block.serialize()))
                 self.db.create(peer_hash, block.serialize())
                 self.set_latest_hash(latest_hash)
                 UTXOSet().update(block)

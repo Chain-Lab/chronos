@@ -1,3 +1,5 @@
+import threading
+
 import couchdb
 
 from utils.singleton import Singleton

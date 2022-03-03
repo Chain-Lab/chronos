@@ -39,7 +39,7 @@ class UTXOSet(Singleton):
                     try:
                         self.db.create(tmp_key, vout_dict)
                     except ResourceConflict as e:
-                        logging.error(e)
+                        logging.error("Database resource conflict while create utxo.")
             self.set_latest_height(latest_block.block_header.height)
         else:
             latest_utxo_height = self.get_latest_height()
@@ -84,7 +84,7 @@ class UTXOSet(Singleton):
                 try:
                     self.db.create(tmp_key, output_dict)
                 except ResourceConflict as e:
-                    print(e)
+                    logging.error("Database resource conflict while create utxo.")
 
             for _input in tx.inputs:
                 input_tx_hash = _input.tx_hash

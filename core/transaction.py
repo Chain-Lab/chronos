@@ -23,7 +23,6 @@ class Transaction(object):
         output_list = [str(_) for _ in self.outputs]
         data_list.extend(output_list)
         data = ''.join(data_list)
-        logging.debug(data)
         tx_hash = funcs.sum256_hex(data)
         self.tx_hash = tx_hash
 

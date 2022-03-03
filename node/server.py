@@ -122,6 +122,7 @@ class Server(object):
         """
         if vote_data == {} or len(vote_data) != len(self.vote):
             return False
+        logging.debug("vote_data: {}".format(vote_data))
         for address in vote_data:
             a = self.vote[address]
             b = vote_data[address]
