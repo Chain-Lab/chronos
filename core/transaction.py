@@ -33,7 +33,7 @@ class Transaction(object):
         根据输入只有一个且输入的交易id向量为0以及没有输出来进行判断
         :return: 如果是coinbase交易， 返回True
         """
-        return len(self.inputs) == 1 and len(self.inputs[0].tx_hash) == '' and self.inputs[0].index == -1
+        return len(self.inputs) == 1 and len(self.inputs[0].tx_hash) == 0 and self.inputs[0].index == -1
 
     def verify(self, prev_txs):
         """
@@ -42,6 +42,7 @@ class Transaction(object):
         :return: 验证是否通过
         """
         if self.is_coinbase():
+            logging.debug("Transaction is coinbase tx.")
             return True
 
         tx_copy = copy.deepcopy(self)
