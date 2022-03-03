@@ -95,8 +95,9 @@ class UTXOSet(Singleton):
                     continue
                 try:
                     self.db.delete(doc)
+                    logging.debug("utxo {} cleaned.".format(key))
                 except ResourceConflict as e:
-                    print(e)
+                    logging.error("Database utxo clear resource conflict.")
         self.set_latest_height(block.block_header.height)
 
     def roll_back(self, block):
