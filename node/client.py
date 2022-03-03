@@ -3,6 +3,8 @@ import logging
 import socket
 import time
 
+import couchdb
+
 from core.block import Block
 from core.block_chain import BlockChain
 from core.config import Config
@@ -59,7 +61,10 @@ class Client(object):
 
                     if old_wallets is None:
                         logging.info('Remote node wallet is not created in database, create new record.')
-                        db.create('wallets', {})
+                        try:
+                            db.create('wallets', {})
+                        except couchdb.ResourceConflict:
+                            logging.error("Database wallet: resource conflict")
                         old_wallets = db.get('wallets')
                     old_wallets.update({
                         address: {
