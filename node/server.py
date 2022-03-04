@@ -126,8 +126,10 @@ class Server(object):
         """
         if vote_data == {} or len(vote_data) != len(self.vote):
             return False
-        logging.debug("vote_data: {}".format(vote_data))
+        logging.debug("Receive vote_data: {}".format(vote_data))
         for address in vote_data:
+            if address not in self.vote.keys():
+                return False
             a = self.vote[address]
             b = vote_data[address]
             if len(a) == 0 or len(b) == 0 or len(a) != len(b):

@@ -1,27 +1,23 @@
 import binascii
-import os
-import threading
-
-import yaml
-
-import fire
-import socket
 import logging.config
-# from flask import Flask
+import os
+import socket
 
-from openapi import app
+import couchdb
+import fire
+import yaml
+from ecdsa import SigningKey, SECP256k1
+
 from core.block_chain import BlockChain
-from core.utxo import UTXOSet
-from core.transaction import Transaction
 from core.config import Config
-from node.server import Server
-from node.peer_to_peer import P2p
+from core.transaction import Transaction
+from core.utxo import UTXOSet
 from node.peer import Peer
-from utils.dbutil import DBUtil
+from node.peer_to_peer import P2p
+from node.server import Server
+from openapi import app
 from utils import funcs
 from utils.b58code import Base58Code
-from ecdsa import SigningKey, SECP256k1
-# from openapi.transaction import transaction_blueprint
 
 """
 注意： 该文件仅用于测试
@@ -98,7 +94,8 @@ def init(node_id, main_node):
 
 
 def clear():
-    db = DBUtil(Config().get('database.url'))
+    db_url = Config().get("database.url")
+    db = couchdb.Server(db_url)
     db.delete('block_chain1')
 
 
