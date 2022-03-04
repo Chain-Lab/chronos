@@ -12,3 +12,8 @@
   > server的验证投票完成逻辑存在问题， 需要进行修改
 * main函数添加配置文件初始化函数， 去除测试时其他节点的配置的繁琐问题
 * couchdb考虑使用docker， 避免每次服务器都需要安装couchdb
+
+## 2022/3/4
+
+* main命令行测试函数中新增init函数
+  > `python3 main.py init --node_id=2 --main_node=0`

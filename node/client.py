@@ -91,6 +91,34 @@ class Client(object):
         :return:
         """
         while True:
+            if self.tx_pool.is_full() and self.vote == {}:
+                address = Config().get('node.address')
+                pot = ProofOfTime()
+                final_address = pot.local_vote()
+
+                # todo: 这一部分出现了三次， 可以考虑挪动进行代码复用
+                if final_address not in self.vote:
+                    self.vote[final_address] = [address, 1]
+                else:
+                    lst = self.vote[final_address]
+                    if address not in lst:
+                        lst.insert(0, address)
+                        num = lst[-1]
+                        num += 1
+                        lst[-1] = num
+                        self.vote[final_address] = lst
+
+                message_data = {
+                    'vote': address + ' ' + final_address,
+                    'address': address,
+                    'time': time.time(),
+                    'id': int(Config().get('node.id'))
+                }
+                send_message = Message(STATUS.POT, message_data)
+                self.send(send_message)
+                self.tx_pool.clear()
+
+
             if self.txs:
                 # 如果本地存在交易， 将交易发送到邻居节点
                 # todo： 如果有多个交易的情况下需要进行处理， 目前仅仅针对一个交易

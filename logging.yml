@@ -2,7 +2,7 @@ version: 1
 disable_existing_loggers: False
 formatters:
   normal:
-    format: "[%(levelname)-8s - %(asctime)s] %(message)s (%(filename)s: %(lineno)d)"
+    format: "[%(levelname)-8s - %(asctime)s] %(message)s (%(threadName)s - %(filename)s: %(lineno)d)"
 handlers:
   console:
     class: logging.StreamHandler
