@@ -70,7 +70,7 @@ def genesis():
     bc.new_genesis_block(tx)
 
 
-def init(node_id):
+def init(node_id, main_node):
     """
     配置文件初始化命令
     !!! 注意：不保存私钥， 仅用于测试
@@ -93,6 +93,7 @@ def init(node_id):
     Config().set("node.pub_key", public_key)
     Config().set("node.listen_ip", ip_address)
     Config().set("node.id", str(node_id))
+    Config().set("node.is_bootstrap", str(main_node))
     Config().save()
 
 
