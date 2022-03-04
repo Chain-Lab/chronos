@@ -7,6 +7,7 @@ from utils.singleton import Singleton
 class Config(Singleton):
     def __init__(self):
         self.parser = ConfigParser()
+        self.path = "config.ini"
         self.parser.read("config.ini", "utf-8")
         logging.info("Config file loaded.")
 
@@ -29,6 +30,21 @@ class Config(Singleton):
             return self.parser.get(section, option)
         except NoOptionError:
             return default
+
+    def set(self, key: str, value: str):
+        map_key = key.split('.')
+        if len(map_key) < 2:
+            return
+        section = map_key[0]
+        if not self.parser.has_section(section):
+            return
+
+        option = '.'.join(map_key[1:])
+        self.parser.set(section, option, value)
+
+    def save(self):
+        with open(self.path, "w") as config_file:
+            self.parser.write(config_file)
 
 
 if __name__ == "__main__":
