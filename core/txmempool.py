@@ -35,4 +35,4 @@ class TxMemPool(Singleton):
         """
         if tx_hash in self.tx_hashes:
             self.tx_hashes.remove(tx_hash)
-            self.txs.pop(self.tx_hashes)
+            self.txs.pop(tx_hash)
