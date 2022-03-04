@@ -12,7 +12,6 @@ class Singleton(object):
             with Singleton._instance_lock:
                 cls.__instance = super(
                     Singleton, cls).__new__(cls)
-                cls.__init__(cls)
         else:
             # 如果实例存在，说明已经初始化过了， pass掉__init__
             # fixed: 多线程的情况下多次__init__导致出现NoneType问题
