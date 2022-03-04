@@ -16,18 +16,22 @@ class VoteCenter(Singleton):
 
         self.__has_voted = False
         self.__final_address = None
+        self.__vote = {}
         self.__lock = threading.Lock()
+        self.__lock_height = threading.Lock()
+        self.__lock_vote = threading.Lock()
 
     def refresh_height(self, latest_height):
-        self.__lock.acquire()
+        self.__lock_height.acquire()
         self.__local_height = latest_height
         self.__final_address = None
         self.__has_voted = False
-        self.__lock.release()
+        self.__lock_height.release()
 
     def clear(self):
-        self.__final_address = None
-        self.__has_voted = False
+        self.__lock_vote.acquire()
+        self.__vote.clear()
+        self.__lock_vote.release()
 
     def vote(self, height):
         self.__lock.acquire()
@@ -41,3 +45,24 @@ class VoteCenter(Singleton):
         result = self.__final_address
         self.__lock.release()
         return result
+
+    def vote_update(self, address, final_address):
+        self.__lock_vote.acquire()
+        if final_address not in self.__vote:
+            self.__vote[final_address] = [address, 1]
+        else:
+            vote_list = self.__vote[final_address]
+            if address not in vote_list:
+                self.__vote[final_address].insert(0, address)
+                vote_list[-1] += 1
+        self.__lock_vote.release()
+
+    def vote_sync(self, vote_data):
+        self.__lock_vote.acquire()
+        for address in vote_data:
+            self.__vote[address] = vote_data[address]
+        self.__lock_vote.release()
+
+    @property
+    def vote(self):
+        return self.__vote

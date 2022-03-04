@@ -23,7 +23,6 @@ class Client(object):
 
         self.sock.connect((ip, port))
         logging.info("Connect to server ip: {} port: {}".format(ip, port))
-        self.vote = {}
         self.tx_pool = TxMemPool()
 
     def add_transaction(self, transaction):
@@ -93,10 +92,11 @@ class Client(object):
         while True:
             bc = BlockChain()
             latest_block, prev_hash = bc.get_latest_block()
-            if self.tx_pool.is_full() and self.vote == {}:
+            if self.tx_pool.is_full() and VoteCenter().vote == {}:
                 address = Config().get('node.address')
                 final_address = VoteCenter().vote(latest_block.block_header.height)
-                self.vote_update(final_address)
+                VoteCenter().vote_update(address, final_address)
+                logging.debug("Local txpool is full, local address {} vote address {}.".format(address, final_address))
 
                 message_data = {
                     'vote': address + ' ' + final_address,
@@ -133,7 +133,7 @@ class Client(object):
                     "address": Config().get('node.address'),
                     "time": time.time(),
                     "id": Config().get('node.id'),
-                    "vote": self.vote
+                    "vote": VoteCenter().vote
                 }
 
                 if genesis_block:
@@ -176,11 +176,10 @@ class Client(object):
         vote_data = data['vote']
 
         if vote_data == {}:
-            self.vote.clear()
+            VoteCenter().clear()
             self.txs.clear()
         else:
-            for address in vote_data:
-                self.vote[address] = vote_data[address]
+            VoteCenter().vote_sync(vote_data)
 
         bc = BlockChain()
         latest_block, prev_hash = bc.get_latest_block()
@@ -234,7 +233,7 @@ class Client(object):
             address = Config().get('node.address')
             final_address = VoteCenter().vote(latest_block.block_header.height)
 
-            self.vote_update(final_address)
+            VoteCenter().vote_update(address, final_address)
 
             message_data = {
                 'vote': address + ' ' + final_address,
@@ -252,7 +251,7 @@ class Client(object):
         data = message.get('data', {})
         vote_data = data.get('vote', '')
         address, final_address = vote_data.split(' ')
-        self.vote_update(final_address)
+        VoteCenter().vote_update(address, final_address)
 
     def handle_sync(self, message: dict):
         """
@@ -265,8 +264,8 @@ class Client(object):
         if data == address:
             transactions = self.tx_pool.package()
             bc = BlockChain()
-            bc.add_new_block([transactions], self.vote)
-            self.vote = {}
+            bc.add_new_block([transactions], VoteCenter().vote)
+            VoteCenter().clear()
             self.txs = []
 
     def handle_update(self, message: dict):
@@ -295,17 +294,3 @@ class Client(object):
 
     def close(self):
         self.sock.close()
-
-    def vote_update(self, final_address):
-        """
-        更新本地投票信息
-        :return: dict消息， 本地投票信息
-        """
-        address = Config().get("node.address")
-        if final_address not in self.vote:
-            self.vote[final_address] = [address, 1]
-        else:
-            vote_list = self.vote[final_address]
-            if address not in vote_list:
-                self.vote[final_address].insert(0, address)
-                vote_list[-1] += 1
