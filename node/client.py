@@ -214,10 +214,6 @@ class Client(object):
 
         try:
             bc.add_block_from_peers(block)
-            VoteCenter().refresh_height(block.block_header.height)
-            for tx in block.transactions:
-                tx_hash = tx.tx_hash
-                self.tx_pool.remove(tx_hash)
         except ValueError as e:
             # todo: 这里应该需要进行回滚， 但是回滚涉及到线程安全问题， 需要重新考虑
             logging.error(e)

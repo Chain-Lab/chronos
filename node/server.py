@@ -10,6 +10,7 @@ from core.config import Config
 from core.pot import ProofOfTime
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
+from core.vote_center import VoteCenter
 from node.constants import STATUS
 from node.message import Message
 
@@ -294,8 +295,7 @@ class Server(object):
                 lst[-1] = num
                 self.vote[final_address] = lst
 
-    @staticmethod
-    def handle_update(message: dict):
+    def handle_update(self, message: dict):
         """
         状态码为STATUS.UPDATE_MSG = 6, 从邻居节点更新区块
         :param message: 需要处理的message
@@ -306,6 +306,11 @@ class Server(object):
         bc = BlockChain()
         try:
             bc.add_block_from_peers(block)
+            logging.debug("Receive block, refresh vote center.")
+            VoteCenter().refresh_height(block.block_header.height)
+            for tx in block.transactions:
+                tx_hash = tx.tx_hash
+                self.tx_pool.remove(tx_hash)
         except ValueError as e:
             logging.error(e)
         return Message(STATUS.NODE_MSG, "6")
