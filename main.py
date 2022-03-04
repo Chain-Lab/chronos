@@ -97,9 +97,9 @@ def init(node_id, main_node):
     Config().save()
 
 
-def db_test(key):
+def clear():
     db = DBUtil(Config().get('database.url'))
-    print(db.get(key))
+    db.delete('block_chain1')
 
 
 if __name__ == "__main__":
