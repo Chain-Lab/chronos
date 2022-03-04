@@ -33,7 +33,7 @@ class VoteCenter(Singleton):
         self.__vote.clear()
         self.__lock_vote.release()
 
-    def vote(self, height):
+    def local_vote(self, height):
         self.__lock.acquire()
         if height > self.__local_height:
             self.refresh_height(height)
@@ -66,3 +66,7 @@ class VoteCenter(Singleton):
     @property
     def vote(self):
         return self.__vote
+
+    @property
+    def has_vote(self):
+        return self.__has_voted

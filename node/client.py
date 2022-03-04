@@ -24,6 +24,7 @@ class Client(object):
         self.sock.connect((ip, port))
         logging.info("Connect to server ip: {} port: {}".format(ip, port))
         self.tx_pool = TxMemPool()
+        self.send_vote = False
 
     def add_transaction(self, transaction):
         """
@@ -92,9 +93,10 @@ class Client(object):
         while True:
             bc = BlockChain()
             latest_block, prev_hash = bc.get_latest_block()
-            if self.tx_pool.is_full() and VoteCenter().vote == {}:
+            if (self.tx_pool.is_full() and VoteCenter().vote == {}) or (
+                    VoteCenter().has_vote and not self.send_vote):
                 address = Config().get('node.address')
-                final_address = VoteCenter().vote(latest_block.block_header.height)
+                final_address = VoteCenter().local_vote(latest_block.block_header.height)
                 VoteCenter().vote_update(address, final_address)
                 logging.debug("Local txpool is full, local address {} vote address {}.".format(address, final_address))
 
@@ -106,6 +108,7 @@ class Client(object):
                 }
                 send_message = Message(STATUS.POT, message_data)
                 self.send(send_message)
+                self.send_vote = True
                 self.tx_pool.clear()
 
             if self.txs:
@@ -177,6 +180,7 @@ class Client(object):
 
         if vote_data == {}:
             VoteCenter().clear()
+            self.send_vote = False
             self.txs.clear()
         else:
             VoteCenter().vote_sync(vote_data)
@@ -231,7 +235,7 @@ class Client(object):
 
         if self.tx_pool.is_full():
             address = Config().get('node.address')
-            final_address = VoteCenter().vote(latest_block.block_header.height)
+            final_address = VoteCenter().local_vote(latest_block.block_header.height)
 
             VoteCenter().vote_update(address, final_address)
 
@@ -266,6 +270,7 @@ class Client(object):
             bc = BlockChain()
             bc.add_new_block([transactions], VoteCenter().vote)
             VoteCenter().clear()
+            self.send_vote = False
             self.txs = []
 
     def handle_update(self, message: dict):
