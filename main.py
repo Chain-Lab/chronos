@@ -90,7 +90,7 @@ def init(node_id, main_node):
     s.close()
 
     Config().set("node.address", address)
-    Config().set("node.pub_key", public_key)
+    Config().set("node.public_key", public_key)
     Config().set("node.listen_ip", ip_address)
     Config().set("node.id", str(node_id))
     Config().set("node.is_bootstrap", str(main_node))

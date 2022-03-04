@@ -10,9 +10,9 @@ from core.block_chain import BlockChain
 from core.config import Config
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
+from core.vote_center import VoteCenter
 from node.constants import STATUS
 from node.message import Message
-from node.pot import ProofOfTime
 from utils.dbutil import DBUtil
 
 
@@ -91,22 +91,12 @@ class Client(object):
         :return:
         """
         while True:
+            bc = BlockChain()
+            latest_block, prev_hash = bc.get_latest_block()
             if self.tx_pool.is_full() and self.vote == {}:
                 address = Config().get('node.address')
-                pot = ProofOfTime()
-                final_address = pot.local_vote()
-
-                # todo: 这一部分出现了三次， 可以考虑挪动进行代码复用
-                if final_address not in self.vote:
-                    self.vote[final_address] = [address, 1]
-                else:
-                    lst = self.vote[final_address]
-                    if address not in lst:
-                        lst.insert(0, address)
-                        num = lst[-1]
-                        num += 1
-                        lst[-1] = num
-                        self.vote[final_address] = lst
+                final_address = VoteCenter().vote(latest_block.block_header.height)
+                self.vote_update(final_address)
 
                 message_data = {
                     'vote': address + ' ' + final_address,
@@ -117,7 +107,6 @@ class Client(object):
                 send_message = Message(STATUS.POT, message_data)
                 self.send(send_message)
                 self.tx_pool.clear()
-
 
             if self.txs:
                 # 如果本地存在交易， 将交易发送到邻居节点
@@ -133,8 +122,6 @@ class Client(object):
                     break
                 self.txs.clear()
             else:
-                bc = BlockChain()
-                latest_block, prev_hash = bc.get_latest_block()
                 try:
                     genesis_block = bc[0]
                 except IndexError as e:
@@ -224,7 +211,9 @@ class Client(object):
 
         try:
             bc.add_block_from_peers(block)
+            VoteCenter().refresh_height(block.block_header.height)
         except ValueError as e:
+            # todo: 这里应该需要进行回滚， 但是回滚涉及到线程安全问题， 需要重新考虑
             logging.error(e)
 
     def handle_transaction(self, message: dict):
@@ -238,22 +227,14 @@ class Client(object):
         transaction = Transaction.deserialize(data)
         self.tx_pool.add(transaction)
 
+        bc = BlockChain()
+        latest_block, _ = bc.get_latest_block()
+
         if self.tx_pool.is_full():
             address = Config().get('node.address')
-            pot = ProofOfTime()
-            final_address = pot.local_vote()
+            final_address = VoteCenter().vote(latest_block.block_header.height)
 
-            # todo: 这一部分出现了三次， 可以考虑挪动进行代码复用
-            if final_address not in self.vote:
-                self.vote[final_address] = [address, 1]
-            else:
-                lst = self.vote[final_address]
-                if address not in lst:
-                    lst.insert(0, address)
-                    num = lst[-1]
-                    num += 1
-                    lst[-1] = num
-                    self.vote[final_address] = lst
+            self.vote_update(final_address)
 
             message_data = {
                 'vote': address + ' ' + final_address,
@@ -271,16 +252,7 @@ class Client(object):
         data = message.get('data', {})
         vote_data = data.get('vote', '')
         address, final_address = vote_data.split(' ')
-        if final_address not in self.vote:
-            self.vote[final_address] = [address, 1]
-        else:
-            lst = self.vote[final_address]
-            if address not in lst:
-                lst.insert(0, address)
-                num = lst[-1]
-                num += 1
-                lst[-1] = num
-                self.vote[final_address] = lst
+        self.vote_update(final_address)
 
     def handle_sync(self, message: dict):
         """
@@ -299,7 +271,7 @@ class Client(object):
 
     def handle_update(self, message: dict):
         """
-        状态码为STATUS.POT = 6, 拉取最新的区块发送给server
+        状态码为STATUS.UPDATE_MSG = 6, 拉取最新的区块发送给server
         :param message: 待处理的message
         :return: None
         """
@@ -323,3 +295,17 @@ class Client(object):
 
     def close(self):
         self.sock.close()
+
+    def vote_update(self, final_address):
+        """
+        更新本地投票信息
+        :return: dict消息， 本地投票信息
+        """
+        address = Config().get("node.address")
+        if final_address not in self.vote:
+            self.vote[final_address] = [address, 1]
+        else:
+            vote_list = self.vote[final_address]
+            if address not in vote_list:
+                self.vote[final_address].insert(0, address)
+                vote_list[-1] += 1

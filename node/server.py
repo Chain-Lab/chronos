@@ -7,11 +7,11 @@ import time
 from core.block import Block
 from core.block_chain import BlockChain
 from core.config import Config
+from core.pot import ProofOfTime
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
 from node.constants import STATUS
 from node.message import Message
-from node.pot import ProofOfTime
 
 
 class Server(object):
@@ -98,17 +98,21 @@ class Server(object):
         :return: 消息处理完成后应该返回的数据
         """
         code = message.get('code', 0)
-        logging.debug("Receive message code is: {}".format(code))
         if code == STATUS.HAND_SHAKE_MSG:
+            logging.debug("Receive message code: HANDSHAKE")
             result_message = self.handle_handshake(message)
         elif code == STATUS.GET_BLOCK_MSG:
+            logging.debug("Receive message code: GET_BLOCK")
             result_message = self.handle_get_block(message)
         elif code == STATUS.TRANSACTION_MSG:
+            logging.debug("Receive message code: TRANSACTION")
             result_message = self.handle_transaction(message)
         elif code == STATUS.POT:
+            logging.debug("Receive message code: POT")
             self.handle_sync_vote(message)
             result_message = Message(STATUS.NODE_MSG, "4")
         elif code == STATUS.UPDATE_MSG:
+            logging.debug("Receive message code: UPDATE")
             result_message = self.handle_update(message)
         else:
             result_message = Message.empty_message()
@@ -270,7 +274,7 @@ class Server(object):
 
     def handle_sync_vote(self, message: dict):
         """
-        状态码为STATUS.POT = 4， 同步时间共识的投票信息
+        状态码为STATUS.POT = 4， 同步时间共识的投票信息, 将远端的投票信息加入本地
         :param message: 需要处理的message
         :return: None
         """

@@ -24,8 +24,6 @@ def submit():
         logging.error("Receive transaction invalid.")
         return "Transaction data is invalid", STATUS.BAD_REQUEST
 
-    logging.debug(transaction.inputs)
-
     if transaction is None:
         return "Transaction data is invalid", STATUS.BAD_REQUEST
 
