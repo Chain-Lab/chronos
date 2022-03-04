@@ -185,7 +185,9 @@ class Server(object):
             genesis_block = bc[0]
         except IndexError as e:
             genesis_block = None
-            logging.error("Get genesis block error: IndexError")
+            logging.error("Get genesis block error: IndexError, return empty message.")
+            result = Message.empty_message()
+            return result
 
         result_data = {
             "last_height": -1,
@@ -240,17 +242,22 @@ class Server(object):
             local_address = Config().get('node.address')
             final_address = ProofOfTime().local_vote()
 
+            logging.debug("Local address {}, final vote address is: {}".format(local_address, final_address))
             if final_address not in self.vote:
                 self.vote[final_address] = [local_address, 1]
             else:
                 lst = self.vote[final_address]
                 if local_address not in lst:
                     lst.insert(0, local_address)
+                    logging.debug("lst[-1] = {}".format(lst[-1]))
+                    logging.debug("lst = {}".format(lst))
                     # todo: 是否能够直接+1， 而不用中间变量
                     #  需查看list的结构再进行处理
                     num = lst[-1]
                     num += 1
                     lst[-1] = num
+                    logging.debug("lst = {}".format(lst))
+                    logging.debug("lst[-1] = {}".format(lst[-1]))
                     self.vote[final_address] = lst
             result_data = {
                 'vote': local_address + ' ' + final_address,

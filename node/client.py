@@ -101,6 +101,7 @@ class Client(object):
                 message = Message(STATUS.TRANSACTION_MSG, data)
                 is_closed = self.send(message)
                 if is_closed:
+                    self.close()
                     break
                 self.txs.clear()
             else:
@@ -129,6 +130,7 @@ class Client(object):
                 # logging.debug("Send message: {}".format(data))
                 is_closed = self.send(send_message)
                 if is_closed:
+                    self.close()
                     break
                 time.sleep(10)
 

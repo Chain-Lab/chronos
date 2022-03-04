@@ -1,9 +1,11 @@
+import binascii
 import os
 import threading
 
 import yaml
 
 import fire
+import socket
 import logging.config
 # from flask import Flask
 
@@ -16,7 +18,14 @@ from node.server import Server
 from node.peer_to_peer import P2p
 from node.peer import Peer
 from utils.dbutil import DBUtil
+from utils import funcs
+from utils.b58code import Base58Code
+from ecdsa import SigningKey, SECP256k1
 # from openapi.transaction import transaction_blueprint
+
+"""
+注意： 该文件仅用于测试
+"""
 
 
 def setup_logger(default_path="logging.yml", default_level=logging.DEBUG, env_key="LOG_CFG"):
@@ -59,6 +68,32 @@ def genesis():
     bc = BlockChain()
     tx = Transaction.coinbase_tx({})
     bc.new_genesis_block(tx)
+
+
+def init(node_id):
+    """
+    配置文件初始化命令
+    !!! 注意：不保存私钥， 仅用于测试
+    :return:
+    """
+    sign_key = SigningKey.generate(curve=SECP256k1)
+    public_key = sign_key.get_verifying_key()
+
+    private_address = b'\0' + funcs.hash_public_key(public_key.to_string())
+    address = Base58Code.encode_check(private_address).decode()
+
+    public_key = binascii.b2a_hex(public_key.to_string()).decode()
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    ip_address = s.getsockname()[0]
+    s.close()
+
+    Config().set("node.address", address)
+    Config().set("node.pub_key", public_key)
+    Config().set("node.listen_ip", ip_address)
+    Config().set("node.id", str(node_id))
+    Config().save()
 
 
 def db_test(key):
