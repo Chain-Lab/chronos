@@ -109,7 +109,6 @@ class Client(object):
                 send_message = Message(STATUS.POT, message_data)
                 self.send(send_message)
                 self.send_vote = True
-                self.tx_pool.clear()
 
             if self.txs:
                 # 如果本地存在交易， 将交易发送到邻居节点

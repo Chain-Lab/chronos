@@ -7,19 +7,19 @@ from utils.singleton import Singleton
 
 class VoteCenter(Singleton):
     def __init__(self):
-        bc = BlockChain()
-        block, _ = bc.get_latest_block()
-        if block is not None:
-            self.__local_height = block.block_header.height
-        else:
-            self.__local_height = -1
-
         self.__has_voted = False
         self.__final_address = None
         self.__vote = {}
         self.__lock = threading.Lock()
         self.__lock_height = threading.Lock()
         self.__lock_vote = threading.Lock()
+
+        bc = BlockChain()
+        block, _ = bc.get_latest_block()
+        if block is not None:
+            self.__local_height = block.block_header.height
+        else:
+            self.__local_height = -1
 
     def refresh_height(self, latest_height):
         self.__lock_height.acquire()
