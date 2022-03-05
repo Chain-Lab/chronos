@@ -12,7 +12,7 @@ class VoteCenter(Singleton):
         self.__vote = {}
         # todo: client连接信息统计， 需解耦
 
-        self.__client_ids = {}
+        self.__client_count = 0
         self.__client_synced = 0
 
         self.__lock = threading.Lock()
@@ -40,8 +40,6 @@ class VoteCenter(Singleton):
 
         self.__lock_client.acquire()
         self.__client_synced = 0
-        for id in self.__client_ids:
-            self.__client_ids[id] = False
         self.__lock_client.release()
 
     def clear(self):
@@ -79,30 +77,23 @@ class VoteCenter(Singleton):
             self.__vote[address] = vote_data[address]
         self.__lock_vote.release()
 
-    def __client_reg(self, node_id):
+    def __client_reg(self):
         self.__lock_client.acquire()
-        self.__client_ids[node_id] = False
+        self.__client_count += 1
         self.__lock_client.release()
 
-    def client_close(self, node_id):
+    def client_close(self):
         self.__lock_client.acquire()
-        self.__client_ids.pop(node_id)
+        self.__client_count -= 1
         self.__lock_client.release()
 
     def client_synced(self, node_id):
-        if node_id not in self.__client_ids:
-            self.__client_reg(node_id)
-
-        if self.__client_ids[node_id]:
-            return
-
         self.__lock_client.acquire()
-        self.__client_ids[node_id] = True
         self.__client_synced += 1
         self.__lock_client.release()
 
     def client_verify(self):
-        return len(self.__client_ids) == self.__client_synced
+        return self.__client_count == self.__client_synced
 
     @property
     def vote(self):
