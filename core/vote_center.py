@@ -10,9 +10,15 @@ class VoteCenter(Singleton):
         self.__has_voted = False
         self.__final_address = None
         self.__vote = {}
+        # todo: client连接信息统计， 需解耦
+
+        self.__client_ids = {}
+        self.__client_synced = 0
+
         self.__lock = threading.Lock()
         self.__lock_height = threading.Lock()
         self.__lock_vote = threading.Lock()
+        self.__lock_client = threading.Lock()
 
         bc = BlockChain()
         block, _ = bc.get_latest_block()
@@ -22,11 +28,21 @@ class VoteCenter(Singleton):
             self.__local_height = -1
 
     def refresh_height(self, latest_height):
+        # 如果vote_center中的两个锁都被锁，直接返回
+        if self.__lock_height.locked() or self.__lock_client.locked():
+            return
+
         self.__lock_height.acquire()
         self.__local_height = latest_height
         self.__final_address = None
         self.__has_voted = False
         self.__lock_height.release()
+
+        self.__lock_client.acquire()
+        self.__client_synced = 0
+        for id in self.__client_ids:
+            self.__client_ids[id] = False
+        self.__lock_client.release()
 
     def clear(self):
         self.__lock_vote.acquire()
@@ -62,6 +78,31 @@ class VoteCenter(Singleton):
         for address in vote_data:
             self.__vote[address] = vote_data[address]
         self.__lock_vote.release()
+
+    def __client_reg(self, node_id):
+        self.__lock_client.acquire()
+        self.__client_ids[node_id] = False
+        self.__lock_client.release()
+
+    def client_close(self, node_id):
+        self.__lock_client.acquire()
+        self.__client_ids.pop(node_id)
+        self.__lock_client.release()
+
+    def client_synced(self, node_id):
+        if node_id not in self.__client_ids:
+            self.__client_reg(node_id)
+
+        if self.__client_ids[node_id]:
+            return
+
+        self.__lock_client.acquire()
+        self.__client_ids[node_id] = True
+        self.__client_synced += 1
+        self.__lock_client.release()
+
+    def client_verify(self):
+        return len(self.__client_ids) == self.__client_synced
 
     @property
     def vote(self):

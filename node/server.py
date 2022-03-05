@@ -283,6 +283,9 @@ class Server(object):
         """
         data = message.get('data', {})
         vote = data.get('vote', '')
+        node_id = data.get('id', -1)
+        if id != -1:
+            VoteCenter().vote_sync(id)
         address, final_address = vote.split(' ')
         if final_address not in self.vote:
             self.vote[final_address] = [address, 1]

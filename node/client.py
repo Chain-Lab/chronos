@@ -135,7 +135,7 @@ class Client(object):
                     "genesis_block": "",
                     "address": Config().get('node.address'),
                     "time": time.time(),
-                    "id": Config().get('node.id'),
+                    "id": int(Config().get('node.id')),
                     "vote": VoteCenter().vote
                 }
 
