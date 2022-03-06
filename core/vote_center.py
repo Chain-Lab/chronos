@@ -77,7 +77,7 @@ class VoteCenter(Singleton):
             self.__vote[address] = vote_data[address]
         self.__lock_vote.release()
 
-    def __client_reg(self):
+    def client_reg(self):
         self.__lock_client.acquire()
         self.__client_count += 1
         self.__lock_client.release()
@@ -87,7 +87,7 @@ class VoteCenter(Singleton):
         self.__client_count -= 1
         self.__lock_client.release()
 
-    def client_synced(self, node_id):
+    def client_synced(self):
         self.__lock_client.acquire()
         self.__client_synced += 1
         self.__lock_client.release()

@@ -22,6 +22,7 @@ class Server(object):
         :param ip: ip地址，一般为localhost
         :param port: 端口
         """
+        self.vote_lock = threading.Lock()
         if ip is None and port is None:
             ip = Config().get('node.listen_ip')
             port = int(Config().get('node.listen_port'))
@@ -31,6 +32,7 @@ class Server(object):
         self.vote = {}
         self.txs = []
         self.tx_pool = TxMemPool()
+        self.thread_local = threading.local()
 
     def listen(self):
         """
@@ -67,6 +69,8 @@ class Server(object):
         """
         rec_msg = None
         continue_server = True
+        self.thread_local.client_id = -1
+        self.thread_local.client_synced = False
         while True:
             try:
                 rec_data = conn.recv(4096 * 2)
@@ -91,6 +95,9 @@ class Server(object):
             if continue_server:
                 time.sleep(5)
             else:
+                # 失去连接， 从vote center中-1
+                VoteCenter().client_close()
+                conn.close()
                 break
 
     def handle(self, message: dict):
@@ -122,13 +129,15 @@ class Server(object):
     def check_vote_synced(self, vote_data):
         """
         将邻居节点发送的投票信息与本地进行对比， 投票完全一致说明投票完成
+        除了需要与client的信息一致， 还需要至少在本轮和每一个client都同步过一次
         :param vote_data:
         :return:
         """
-        if vote_data == {} or len(vote_data) != len(self.vote):
+        if vote_data == {} or len(vote_data) != len(self.vote) or not VoteCenter().client_verify():
             return False
         logging.debug("Receive vote_data: {}".format(vote_data))
         for address in vote_data:
+            # 当前地址的键值不存在， 说明信息没有同步
             if address not in self.vote.keys():
                 return False
             a = self.vote[address]
@@ -150,13 +159,19 @@ class Server(object):
         :param message:
         :return:
         """
-        data = message.get("data", "")
+        data = message.get("data", {})
         vote_data = data.get("vote", {})
         remote_height = data.get("latest_height", 0)
+        node_id = data.get("id")
 
         bc = BlockChain()
         block, prev_hash = bc.get_latest_block()
         local_height = -1
+
+        # 如果当前线程没有同步过client的节点信息， 设置一次并且注册
+        if self.thread_local.client_id == -1:
+            self.thread_local.client_id = node_id
+            VoteCenter().client_reg()
 
         # 获取本地高度之前检查是否存在区块
         if block:
@@ -220,7 +235,7 @@ class Server(object):
     @staticmethod
     def handle_get_block(message: dict):
         """
-        状态码STATUS.GET_BLOCK_MSG = 2， 邻居节点或许所需的区块
+        状态码STATUS.GET_BLOCK_MSG = 2， 发送邻居节点需要的block
         :param message: 需要处理的message
         :return: 返回对方需要的block数据
         """
@@ -250,22 +265,7 @@ class Server(object):
             final_address = ProofOfTime().local_vote()
 
             logging.debug("Local address {}, final vote address is: {}".format(local_address, final_address))
-            if final_address not in self.vote:
-                self.vote[final_address] = [local_address, 1]
-            else:
-                lst = self.vote[final_address]
-                if local_address not in lst:
-                    lst.insert(0, local_address)
-                    logging.debug("lst[-1] = {}".format(lst[-1]))
-                    logging.debug("lst = {}".format(lst))
-                    # todo: 是否能够直接+1， 而不用中间变量
-                    #  需查看list的结构再进行处理
-                    num = lst[-1]
-                    num += 1
-                    lst[-1] = num
-                    logging.debug("lst = {}".format(lst))
-                    logging.debug("lst[-1] = {}".format(lst[-1]))
-                    self.vote[final_address] = lst
+            self.update_vote(local_address, final_address)
             result_data = {
                 'vote': local_address + ' ' + final_address,
                 'address': local_address,
@@ -283,20 +283,13 @@ class Server(object):
         """
         data = message.get('data', {})
         vote = data.get('vote', '')
-        node_id = data.get('id', -1)
         if id != -1:
             VoteCenter().vote_sync(id)
         address, final_address = vote.split(' ')
-        if final_address not in self.vote:
-            self.vote[final_address] = [address, 1]
-        else:
-            lst = self.vote[final_address]
-            if address not in lst:
-                lst.insert(0, address)
-                num = lst[-1]
-                num += 1
-                lst[-1] = num
-                self.vote[final_address] = lst
+        self.update_vote(address, final_address)
+        if not self.thread_local.client_synced:
+            logging.debug("Synced with node {} vote info {}".format(self.thread_local.client_id, vote))
+            self.thread_local.client_synced = True
 
     def handle_update(self, message: dict):
         """
@@ -310,6 +303,9 @@ class Server(object):
         try:
             bc.add_block_from_peers(block)
             logging.debug("Receive block, refresh vote center.")
+            # 从邻居节点更新了区块， 说明一轮共识已经结束或本地区块没有同步
+            # 需要更新vote center中的信息并且设置synced为false
+            self.thread_local.client_synced = False
             VoteCenter().refresh_height(block.block_header.height)
             for tx in block.transactions:
                 tx_hash = tx.tx_hash
@@ -317,3 +313,14 @@ class Server(object):
         except ValueError as e:
             logging.error(e)
         return Message(STATUS.NODE_MSG, "6")
+
+    def update_vote(self, address, final_address):
+        self.vote_lock.acquire()
+        if final_address not in self.vote:
+            self.vote[final_address] = [address, 1]
+        else:
+            lst = self.vote[final_address]
+            if address not in lst:
+                lst.insert(0, address)
+                lst[-1] += 1
+        self.vote_lock.release()

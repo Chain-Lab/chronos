@@ -247,7 +247,8 @@ class Client(object):
             send_message = Message(STATUS.POT, message_data)
             self.send(send_message)
 
-    def handle_pot(self, message: dict):
+    @staticmethod
+    def handle_pot(message: dict):
         """
         状态码为STATUS.POT = 4, 进行时间共识投票
         """
