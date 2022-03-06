@@ -1,7 +1,7 @@
 import json
 import logging
 
-from couchdb import ResourceNotFound
+from couchdb import ResourceNotFound, ResourceConflict
 
 from core.block import Block
 from core.block_header import BlockHeader
@@ -189,14 +189,21 @@ class BlockChain(object):
             if peer_height == latest_height + 1 and peer_prev_hash == latest_block.block_header.hash:
                 logging.debug("Local height: {}, Neighborhood height: {}".format(latest_height, peer_height))
                 latest_hash = peer_hash
-                self.db.create(peer_hash, block.serialize())
-                self.set_latest_hash(latest_hash)
-                UTXOSet().update(block)
+                
+                try:
+                    self.db.create(peer_hash, block.serialize())
+                    self.set_latest_hash(latest_hash)
+                    UTXOSet().update(block)
+                except ResourceConflict:
+                    logging.error("Create block in db resource conflict.")
         else:
-            self.db.create(block.block_header.hash, block.serialize())
-            last_hash = block.block_header.hash
-            self.set_latest_hash(last_hash)
-            UTXOSet().update(block)
+            try:
+                self.db.create(block.block_header.hash, block.serialize())
+                last_hash = block.block_header.hash
+                self.set_latest_hash(last_hash)
+                UTXOSet().update(block)
+            except ResourceConflict:
+                logging.error("Create block in db resource conflict.")
 
     def roll_back(self):
         """

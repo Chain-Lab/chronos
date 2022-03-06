@@ -283,13 +283,12 @@ class Server(object):
         """
         data = message.get('data', {})
         vote = data.get('vote', '')
-        if id != -1:
-            VoteCenter().vote_sync(id)
         address, final_address = vote.split(' ')
         self.update_vote(address, final_address)
         if not self.thread_local.client_synced:
             logging.debug("Synced with node {} vote info {}".format(self.thread_local.client_id, vote))
             self.thread_local.client_synced = True
+            VoteCenter.client_synced()
 
     def handle_update(self, message: dict):
         """
