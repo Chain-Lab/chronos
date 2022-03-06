@@ -307,11 +307,9 @@ class Server(object):
         bc = BlockChain()
         try:
             bc.add_block_from_peers(block)
-            logging.debug("Receive block, refresh vote center.")
             # 从邻居节点更新了区块， 说明一轮共识已经结束或本地区块没有同步
             # 需要更新vote center中的信息并且设置synced为false
             self.thread_local.client_synced = False
-            VoteCenter().refresh_height(block.block_header.height)
             for tx in block.transactions:
                 tx_hash = tx.tx_hash
                 self.tx_pool.remove(tx_hash)

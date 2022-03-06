@@ -17,13 +17,11 @@ class TxMemPool(Singleton):
         return len(self.txs) >= self.SIZE
 
     def add(self, tx):
-        self.pool_lock.acquire()
         tx_hash = tx.tx_hash
         if tx_hash not in self.tx_hashes:
             self.txs[tx_hash] = tx
             self.tx_hashes.append(tx_hash)
             logging.debug("Add tx#{} in memory pool.".format(tx_hash))
-        self.pool_lock.release()
 
     def clear(self):
         self.pool_lock.acquire()
@@ -34,13 +32,13 @@ class TxMemPool(Singleton):
     def package(self):
         logging.debug("Package pool, pool status:")
         logging.debug(self.tx_hashes)
-        if self.pool_lock.locked():
+        if self.pool_lock.locked() or len(self.tx_hashes) == 0:
             return None
 
         self.pool_lock.acquire()
         tx_hash = self.tx_hashes.pop()
         result = self.txs.pop(tx_hash)
-        self.pool_lock.release()
+        logging.debug(self.tx_hashes)
         return result
 
     def remove(self, tx_hash):

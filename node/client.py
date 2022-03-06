@@ -193,8 +193,8 @@ class Client(object):
             local_height = -1
 
         if self.height != local_height:
-            VoteCenter().clear()
             logging.debug("Synced height #{}, latest height #{}, clear information.".format(self.height, local_height))
+            VoteCenter().refresh_height(local_height)
             self.send_vote = False
             self.height = latest_block.block_header.height
 
@@ -279,7 +279,6 @@ class Client(object):
 
             bc = BlockChain()
             bc.add_new_block([transactions], VoteCenter().vote)
-            VoteCenter().clear()
             self.txs = []
 
     def handle_update(self, message: dict):
