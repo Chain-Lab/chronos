@@ -47,11 +47,7 @@ class VoteCenter(Singleton):
         self.__vote.clear()
         self.__lock_vote.release()
 
-    def local_vote(self, height):
-        self.__lock.acquire()
-        if height > self.__local_height:
-            self.refresh_height(height)
-
+    def local_vote(self):
         if not self.__has_voted:
             pot = ProofOfTime()
             final_address = pot.local_vote()

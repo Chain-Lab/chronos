@@ -97,7 +97,7 @@ class Client(object):
             if (self.tx_pool.is_full() and VoteCenter().vote == {}) or (
                     VoteCenter().has_vote and not self.send_vote):
                 address = Config().get('node.address')
-                final_address = VoteCenter().local_vote(latest_block.block_header.height)
+                final_address = VoteCenter().local_vote()
                 VoteCenter().vote_update(address, final_address)
                 logging.debug("Local txpool is full, local address {} vote address {}.".format(address, final_address))
 
@@ -239,7 +239,7 @@ class Client(object):
 
         if self.tx_pool.is_full():
             address = Config().get('node.address')
-            final_address = VoteCenter().local_vote(latest_block.block_header.height)
+            final_address = VoteCenter().local_vote()
 
             VoteCenter().vote_update(address, final_address)
 

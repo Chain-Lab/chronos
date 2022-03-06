@@ -137,21 +137,22 @@ class Server(object):
         if vote_data == {} or len(vote_data) != len(self.vote) or not VoteCenter().client_verify():
             return False
         logging.debug("Receive vote_data: {}".format(vote_data))
-        for address in vote_data:
-            # 当前地址的键值不存在， 说明信息没有同步
-            if address not in self.vote.keys():
-                return False
-            a = self.vote[address]
-            b = vote_data[address]
-            if len(a) == 0 or len(b) == 0 or len(a) != len(b):
-                return False
-            a = a[: -1]
-            b = b[: -1]
-            a.sort()
-            b.sort()
-            if a != b:
-                return False
-        return True
+        with self.vote_lock:
+            for address in vote_data:
+                # 当前地址的键值不存在， 说明信息没有同步
+                if address not in self.vote.keys():
+                    return False
+                a = self.vote[address]
+                b = vote_data[address]
+                if len(a) == 0 or len(b) == 0 or len(a) != len(b):
+                    return False
+                a = a[: -1]
+                b = b[: -1]
+                a.sort()
+                b.sort()
+                if a != b:
+                    return False
+            return True
 
     def handle_handshake(self, message: dict):
         """
