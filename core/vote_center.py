@@ -55,6 +55,7 @@ class VoteCenter(Singleton):
         if not self.__has_voted:
             pot = ProofOfTime()
             final_address = pot.local_vote()
+            self.__has_voted = True
             self.__final_address = final_address
         result = self.__final_address
         self.__lock.release()

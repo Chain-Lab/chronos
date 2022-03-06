@@ -71,6 +71,7 @@ class Server(object):
         continue_server = True
         self.thread_local.client_id = -1
         self.thread_local.client_synced = False
+        self.thread_local.height = -1
         while True:
             try:
                 rec_data = conn.recv(4096 * 2)
@@ -182,6 +183,11 @@ class Server(object):
             self.txs.clear()
             self.vote.clear()
 
+        # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
+        if self.thread_local.height != local_height:
+            self.thread_local.height = local_height
+            self.thread_local.client_synced = False
+
         # 本地高度低于邻居高度， 拉取区块
         if local_height < remote_height:
             result = Message(STATUS.UPDATE_MSG, local_height)
@@ -288,7 +294,7 @@ class Server(object):
         if not self.thread_local.client_synced:
             logging.debug("Synced with node {} vote info {}".format(self.thread_local.client_id, vote))
             self.thread_local.client_synced = True
-            VoteCenter.client_synced()
+            VoteCenter().client_synced()
 
     def handle_update(self, message: dict):
         """

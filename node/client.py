@@ -25,6 +25,7 @@ class Client(object):
         logging.info("Connect to server ip: {} port: {}".format(ip, port))
         self.tx_pool = TxMemPool()
         self.send_vote = False
+        self.height = -1
 
     def add_transaction(self, transaction):
         """
@@ -109,7 +110,7 @@ class Client(object):
                 send_message = Message(STATUS.POT, message_data)
                 self.send(send_message)
                 self.send_vote = True
-                self.tx_pool.clear()
+                # self.tx_pool.clear()
 
             if self.txs:
                 # 如果本地存在交易， 将交易发送到邻居节点
@@ -175,12 +176,10 @@ class Client(object):
         :return: None
         """
         data = message.get('data', {})
-        latest_height = data.get('latest_height', 0)
+        remote_height = data.get('latest_height', 0)
         vote_data = data['vote']
 
         if vote_data == {}:
-            VoteCenter().clear()
-            self.send_vote = False
             self.txs.clear()
         else:
             VoteCenter().vote_sync(vote_data)
@@ -193,10 +192,16 @@ class Client(object):
         else:
             local_height = -1
 
-        if local_height >= latest_height:
+        if self.height != local_height:
+            VoteCenter().clear()
+            logging.debug("Synced height #{}, latest height #{}, clear information.".format(self.height, local_height))
+            self.send_vote = False
+            self.height = latest_block.block_header.height
+
+        if local_height >= remote_height:
             return
         start_height = 0 if local_height == -1 else local_height
-        for i in range(start_height, latest_height + 1):
+        for i in range(start_height, remote_height + 1):
             send_msg = Message(STATUS.GET_BLOCK_MSG, i)
             self.send(send_msg)
 
@@ -267,10 +272,14 @@ class Client(object):
         address = Config().get('node.address')
         if data == address:
             transactions = self.tx_pool.package()
+
+            # 如果取出的交易数据是None， 说明另外一个线程已经打包了， 就不用再管
+            if transactions is None:
+                return
+
             bc = BlockChain()
             bc.add_new_block([transactions], VoteCenter().vote)
             VoteCenter().clear()
-            self.send_vote = False
             self.txs = []
 
     def handle_update(self, message: dict):

@@ -1,3 +1,6 @@
+import logging
+import threading
+
 from core.config import Config
 from utils.singleton import Singleton
 
@@ -6,6 +9,7 @@ class TxMemPool(Singleton):
     def __init__(self):
         self.txs = {}
         self.tx_hashes = []
+        self.pool_lock = threading.Lock()
         # todo: 存在潜在的类型转换错误，如果config文件配置错误可能抛出错误
         self.SIZE = int(Config().get("node.mem_pool_size"))
 
@@ -13,26 +17,40 @@ class TxMemPool(Singleton):
         return len(self.txs) >= self.SIZE
 
     def add(self, tx):
+        self.pool_lock.acquire()
         tx_hash = tx.tx_hash
-        if tx_hash not in self.txs.keys():
+        if tx_hash not in self.tx_hashes:
             self.txs[tx_hash] = tx
             self.tx_hashes.append(tx_hash)
+            logging.debug("Add tx#{} in memory pool.".format(tx_hash))
+        self.pool_lock.release()
 
     def clear(self):
+        self.pool_lock.acquire()
         self.txs.clear()
         self.tx_hashes.clear()
+        self.pool_lock.release()
 
     def package(self):
+        logging.debug("Package pool, pool status:")
+        logging.debug(self.tx_hashes)
+        if self.pool_lock.locked():
+            return None
+
+        self.pool_lock.acquire()
         tx_hash = self.tx_hashes.pop()
         result = self.txs.pop(tx_hash)
+        self.pool_lock.release()
         return result
 
     def remove(self, tx_hash):
         """
-        从交易吃池移出交易
+        从交易池移出交易
         :param tx_hash:
         :return:
         """
+        self.pool_lock.acquire()
         if tx_hash in self.tx_hashes:
             self.tx_hashes.remove(tx_hash)
             self.txs.pop(tx_hash)
+        self.pool_lock.release()
