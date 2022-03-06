@@ -71,6 +71,7 @@ class Server(object):
         continue_server = True
         self.thread_local.client_id = -1
         self.thread_local.client_synced = False
+        self.thread_local.server_synced = False
         self.thread_local.height = -1
         while True:
             try:
@@ -134,25 +135,29 @@ class Server(object):
         :param vote_data:
         :return:
         """
+        logging.debug("Receive vote_data: {}".format(vote_data))
         if vote_data == {} or len(vote_data) != len(self.vote) or not VoteCenter().client_verify():
             return False
-        logging.debug("Receive vote_data: {}".format(vote_data))
-        with self.vote_lock:
-            for address in vote_data:
-                # 当前地址的键值不存在， 说明信息没有同步
-                if address not in self.vote.keys():
-                    return False
-                a = self.vote[address]
-                b = vote_data[address]
-                if len(a) == 0 or len(b) == 0 or len(a) != len(b):
-                    return False
-                a = a[: -1]
-                b = b[: -1]
-                a.sort()
-                b.sort()
-                if a != b:
-                    return False
-            return True
+        self.vote_lock.acquire()
+        for address in vote_data:
+            # 当前地址的键值不存在， 说明信息没有同步
+            if address not in self.vote.keys():
+                self.vote_lock.release()
+                return False
+            a = self.vote[address]
+            b = vote_data[address]
+            if len(a) == 0 or len(b) == 0 or len(a) != len(b):
+                self.vote_lock.release()
+                return False
+            a = a[: -1]
+            b = b[: -1]
+            a.sort()
+            b.sort()
+            if a != b:
+                self.vote_lock.release()
+                return False
+        self.vote_lock.release()
+        return True
 
     def handle_handshake(self, message: dict):
         """
@@ -183,14 +188,17 @@ class Server(object):
         if local_height != remote_height:
             self.txs.clear()
             self.vote.clear()
+            logging.debug("Local vote and transaction cleared.")
 
         # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
         if self.thread_local.height != local_height:
             self.thread_local.height = local_height
             self.thread_local.client_synced = False
+            self.thread_local.server_synced = False
 
         # 本地高度低于邻居高度， 拉取区块
         if local_height < remote_height:
+            logging.debug("Local height lower than remote height, pull block.")
             result = Message(STATUS.UPDATE_MSG, local_height)
             return result
 
@@ -269,7 +277,7 @@ class Server(object):
 
         if self.tx_pool.is_full():
             local_address = Config().get('node.address')
-            final_address = ProofOfTime().local_vote()
+            final_address = VoteCenter().local_vote()
 
             logging.debug("Local address {}, final vote address is: {}".format(local_address, final_address))
             self.update_vote(local_address, final_address)
@@ -292,6 +300,12 @@ class Server(object):
         vote = data.get('vote', '')
         address, final_address = vote.split(' ')
         self.update_vote(address, final_address)
+        if not self.thread_local.server_synced:
+            logging.debug("Add local vote information")
+            address = Config().get("node.address")
+            final_address = VoteCenter().local_vote()
+            self.update_vote(address, final_address)
+            self.thread_local.server_synced = True
         if not self.thread_local.client_synced:
             logging.debug("Synced with node {} vote info {}".format(self.thread_local.client_id, vote))
             self.thread_local.client_synced = True
@@ -311,6 +325,7 @@ class Server(object):
             # 从邻居节点更新了区块， 说明一轮共识已经结束或本地区块没有同步
             # 需要更新vote center中的信息并且设置synced为false
             self.thread_local.client_synced = False
+            self.thread_local.server_synced = False
             for tx in block.transactions:
                 tx_hash = tx.tx_hash
                 self.tx_pool.remove(tx_hash)
@@ -327,4 +342,5 @@ class Server(object):
             if address not in lst:
                 lst.insert(0, address)
                 lst[-1] += 1
+        logging.debug("Update local vote info: {}".format(self.vote))
         self.vote_lock.release()

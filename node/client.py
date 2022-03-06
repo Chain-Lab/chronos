@@ -99,7 +99,7 @@ class Client(object):
                 address = Config().get('node.address')
                 final_address = VoteCenter().local_vote()
                 VoteCenter().vote_update(address, final_address)
-                logging.debug("Local txpool is full, local address {} vote address {}.".format(address, final_address))
+                logging.debug("Local address {} vote address {}.".format(address, final_address))
 
                 message_data = {
                     'vote': address + ' ' + final_address,
@@ -110,7 +110,6 @@ class Client(object):
                 send_message = Message(STATUS.POT, message_data)
                 self.send(send_message)
                 self.send_vote = True
-                # self.tx_pool.clear()
 
             if self.txs:
                 # 如果本地存在交易， 将交易发送到邻居节点
@@ -157,6 +156,7 @@ class Client(object):
         code = message.get('code', 0)
 
         if code == STATUS.HAND_SHAKE_MSG:
+            logging.debug("Send HAND_SHAKE_MSG to Server")
             self.handle_shake(message)
         elif code == STATUS.GET_BLOCK_MSG:
             self.handle_get_block(message)
@@ -279,6 +279,7 @@ class Client(object):
 
             bc = BlockChain()
             bc.add_new_block([transactions], VoteCenter().vote)
+            logging.debug("Package new block.")
             self.txs = []
 
     def handle_update(self, message: dict):

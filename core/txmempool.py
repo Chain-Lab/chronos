@@ -39,6 +39,7 @@ class TxMemPool(Singleton):
         tx_hash = self.tx_hashes.pop()
         result = self.txs.pop(tx_hash)
         logging.debug(self.tx_hashes)
+        self.pool_lock.release()
         return result
 
     def remove(self, tx_hash):

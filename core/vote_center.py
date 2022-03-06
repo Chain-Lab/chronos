@@ -36,6 +36,7 @@ class VoteCenter(Singleton):
         self.__local_height = latest_height
         self.__final_address = None
         self.__has_voted = False
+        self.__vote.clear()
         self.__lock_height.release()
 
         self.__lock_client.acquire()
@@ -45,9 +46,12 @@ class VoteCenter(Singleton):
     def clear(self):
         self.__lock_vote.acquire()
         self.__vote.clear()
+        self.__has_voted = False
         self.__lock_vote.release()
 
     def local_vote(self):
+        self.__lock.acquire()
+
         if not self.__has_voted:
             pot = ProofOfTime()
             final_address = pot.local_vote()
