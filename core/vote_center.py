@@ -1,4 +1,5 @@
 import threading
+import logging
 
 from core.block_chain import BlockChain
 from core.pot import ProofOfTime
@@ -86,6 +87,7 @@ class VoteCenter(Singleton):
     def client_close(self):
         self.__lock_client.acquire()
         self.__client_count -= 1
+        logging.debug("Client connect closed, ")
         self.__lock_client.release()
 
     def client_synced(self):
