@@ -1,0 +1,25 @@
+version: "3"
+services:
+  couchdb:
+    image: couchdb:3.2.1
+    container_name: chronos-db
+    ports:
+      - "5984:5984"
+    environment:
+      - COUCHDB_PASSWORD=couchdb123
+      - COUCHDB_USER=root
+  chronos:
+    image: chronos:beta-1.0.2
+    container_name: chronos-node
+    ports:
+      - "5000:5000"
+      - "50001:50001"
+      - "5678:5678"
+    depends_on:
+      - couchdb
+    links:
+      - couchdb
+    restart: always
+    volumes:
+      - /usr/src/app/config.ini:/home/ubuntu/config/config.ini
+~                                                                 
