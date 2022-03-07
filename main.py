@@ -2,6 +2,7 @@ import binascii
 import logging.config
 import os
 import socket
+import random
 
 import couchdb
 import fire
@@ -52,7 +53,7 @@ def run():
     logging.info("TCP Server start running")
 
     app.server()
-    logging.info("Falsk restful openapi start")
+    logging.info("Flask restful openapi start")
 
     p2p = P2p()
     server = Peer()
@@ -66,12 +67,16 @@ def genesis():
     bc.new_genesis_block(tx)
 
 
-def init(node_id, main_node):
+def init():
     """
     配置文件初始化命令
     !!! 注意：不保存私钥， 仅用于测试
     :return:
     """
+    # 生成随机节点id
+    node_id = random.randint(2, 100)
+
+    # 生成本地密钥对
     sign_key = SigningKey.generate(curve=SECP256k1)
     public_key = sign_key.get_verifying_key()
 
@@ -80,6 +85,7 @@ def init(node_id, main_node):
 
     public_key = binascii.b2a_hex(public_key.to_string()).decode()
 
+    # 获取网卡ip地址（仅针对云服务器进行使用）
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
     ip_address = s.getsockname()[0]
@@ -89,7 +95,7 @@ def init(node_id, main_node):
     Config().set("node.public_key", public_key)
     Config().set("node.listen_ip", ip_address)
     Config().set("node.id", str(node_id))
-    Config().set("node.is_bootstrap", str(main_node))
+    Config().set("node.is_bootstrap", str(0))
     Config().save()
 
 
