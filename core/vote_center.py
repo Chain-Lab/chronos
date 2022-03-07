@@ -52,7 +52,6 @@ class VoteCenter(Singleton):
 
     def local_vote(self):
         self.__lock.acquire()
-
         if not self.__has_voted:
             pot = ProofOfTime()
             final_address = pot.local_vote()
@@ -66,11 +65,13 @@ class VoteCenter(Singleton):
         self.__lock_vote.acquire()
         if final_address not in self.__vote:
             self.__vote[final_address] = [address, 1]
+            logging.debug("Vote center update {} vote {}".format(address, final_address))
         else:
             vote_list = self.__vote[final_address]
             if address not in vote_list:
                 self.__vote[final_address].insert(0, address)
                 vote_list[-1] += 1
+                logging.debug("Vote center update {} vote {}".format(address, final_address))
         self.__lock_vote.release()
 
     def vote_sync(self, vote_data):

@@ -94,8 +94,8 @@ class Client(object):
         while True:
             bc = BlockChain()
             latest_block, prev_hash = bc.get_latest_block()
-            if (self.tx_pool.is_full() and VoteCenter().vote == {}) or (
-                    VoteCenter().has_vote and not self.send_vote):
+            if (not self.txs and self.tx_pool.is_full() and VoteCenter().vote == {}) or (
+                    not not self.txs and VoteCenter().has_vote and not self.send_vote):
                 address = Config().get('node.address')
                 final_address = VoteCenter().local_vote()
                 VoteCenter().vote_update(address, final_address)

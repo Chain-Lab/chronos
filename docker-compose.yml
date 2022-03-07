@@ -8,8 +8,10 @@ services:
     environment:
       - COUCHDB_PASSWORD=couchdb123
       - COUCHDB_USER=root
+    volumes:
+      - /home/ubuntu/couchdb/data:/opt/couchdb/data
   chronos:
-    image: chronos:beta-1.0.2
+    image: decision01/chronos:beta-1.0.2
     container_name: chronos-node
     ports:
       - "5000:5000"
@@ -21,5 +23,4 @@ services:
       - couchdb
     restart: always
     volumes:
-      - /usr/src/app/config.ini:/home/ubuntu/config/config.ini
-~                                                                 
+      - /home/ubuntu/config:/usr/src/app/conf
