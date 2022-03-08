@@ -1,2 +1,3 @@
 #!/bin/bash
-python3 main run
+cd /usr/src/app
+python3 main.py run

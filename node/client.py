@@ -180,7 +180,8 @@ class Client(object):
         vote_data = data['vote']
 
         if vote_data == {}:
-            self.txs.clear()
+            # self.txs.clear()
+            pass
         else:
             VoteCenter().vote_sync(vote_data)
 
@@ -281,7 +282,7 @@ class Client(object):
             bc = BlockChain()
             bc.add_new_block([transactions], VoteCenter().vote)
             logging.debug("Package new block.")
-            self.txs = []
+            self.txs.clear()
 
     def handle_update(self, message: dict):
         """

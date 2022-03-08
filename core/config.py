@@ -17,6 +17,7 @@ class Config(Singleton):
         if os.path.exists(self.path):
             self.parser.read("./conf/config.ini", "utf-8")
         else:
+            logging.info("config file is not exists, start initialization.")
             self.__initialization()
             self.parser.read("./conf/config.ini", "utf-8")
         logging.info("Config file loaded.")
@@ -39,6 +40,7 @@ class Config(Singleton):
         self.set("node.listen_ip", "0.0.0.0")
         self.set("node.id", str(node_id))
         self.set("node.is_bootstrap", str(0))
+        self.save()
 
     def get(self, key: str, default=None):
         """

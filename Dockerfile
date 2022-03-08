@@ -5,4 +5,4 @@ RUN pip install -r /usr/src/app/requirements.txt \
     && cd /usr/src/app \
     && chmod +x startup.sh \
     && rm ./conf/config.ini
-ENTRYPOINT ["/startup.sh"]
+ENTRYPOINT ["/usr/src/app/startup.sh"]
