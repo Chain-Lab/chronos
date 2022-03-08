@@ -75,10 +75,10 @@ class VoteCenter(Singleton):
         self.__lock_vote.release()
 
     def vote_sync(self, vote_data):
-        self.__lock_vote.acquire()
-        for address in vote_data:
-            self.__vote[address] = vote_data[address]
-        self.__lock_vote.release()
+        for final_address in vote_data.keys():
+            length = len(vote_data[final_address])
+            for i in range(length - 1):
+                self.vote_update(vote_data[final_address][i], final_address)
 
     def client_reg(self):
         self.__lock_client.acquire()

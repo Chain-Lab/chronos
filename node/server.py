@@ -69,8 +69,11 @@ class Server(object):
         """
         rec_msg = None
         continue_server = True
+        # 连接的client的id
         self.thread_local.client_id = -1
+        # client同步标志， 确认是否和所连接的client同步过一次
         self.thread_local.client_synced = False
+        # server同步标志， 确认本地投票的信息是否放入到vote_center
         self.thread_local.server_synced = False
         self.thread_local.height = -1
         while True:
