@@ -105,7 +105,8 @@ class Client(object):
                     'vote': address + ' ' + final_address,
                     'address': address,
                     'time': time.time(),
-                    'id': int(Config().get('node.id'))
+                    'id': int(Config().get('node.id')),
+                    'height': self.height
                 }
                 send_message = Message(STATUS.POT, message_data)
                 self.send(send_message)
@@ -249,18 +250,23 @@ class Client(object):
                 'vote': address + ' ' + final_address,
                 'address': address,
                 'time': time.time(),
-                'id': int(Config().get('node.id'))
+                'id': int(Config().get('node.id')),
+                'height': self.height
             }
             send_message = Message(STATUS.POT, message_data)
             self.send(send_message)
 
-    @staticmethod
-    def handle_pot(message: dict):
+    def handle_pot(self, message: dict):
         """
         状态码为STATUS.POT = 4, 进行时间共识投票
         """
         data = message.get('data', {})
         vote_data = data.get('vote', '')
+        height = data.get('height', -1)
+
+        if height < self.height:
+            return
+
         address, final_address = vote_data.split(' ')
         VoteCenter().vote_update(address, final_address)
 

@@ -97,7 +97,7 @@ class Server(object):
                     logging.info("Client lost connect, close server.")
                     continue_server = False
             if continue_server:
-                time.sleep(5)
+                time.sleep(1)
             else:
                 # 失去连接， 从vote center中-1
                 Counter().client_close()
@@ -185,6 +185,7 @@ class Server(object):
         if local_height != remote_height:
             self.txs.clear()
             VoteCenter().refresh()
+            Counter().refresh()
             logging.debug("Local vote and transaction cleared.")
 
         # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
@@ -203,16 +204,16 @@ class Server(object):
         flg = self.check_vote_synced(vote_data)
 
         if flg:
-            a = sorted(VoteCenter().vote.items(), key=lambda x: x[-1], reverse=False)
+            a = sorted(VoteCenter().vote.items(), key=lambda x: x[-1], reverse=True)
             address = a[0][0]
             result = Message(STATUS.SYNC_MSG, address)
             return result
 
         if self.txs:
             # 如果服务器存在交易， 发送给client
-            result = Message(STATUS.TRANSACTION_MSG, self.txs[0])
-            time.sleep(2)
-            self.txs = self.txs[1:]
+            transaction = self.txs.pop()
+            result = Message(STATUS.TRANSACTION_MSG, transaction)
+            # time.sleep(2)
             return result
 
         try:
@@ -281,7 +282,8 @@ class Server(object):
                 'vote': local_address + ' ' + final_address,
                 'address': local_address,
                 'time': time.time(),
-                'id': int(Config().get('node.id'))
+                'id': int(Config().get('node.id')),
+                'height': self.thread_local.height
             }
             result = Message(STATUS.POT, result_data)
             return result
@@ -294,6 +296,11 @@ class Server(object):
         """
         data = message.get('data', {})
         vote = data.get('vote', '')
+        height = data.get('height', -1)
+
+        if height < self.thread_local.height:
+            return
+
         address, final_address = vote.split(' ')
         VoteCenter().vote_update(address, final_address)
         if not self.thread_local.server_synced:

@@ -2,6 +2,7 @@ import logging
 import threading
 
 from core.config import Config
+from core.block_chain import BlockChain
 from utils.singleton import Singleton
 
 
@@ -10,6 +11,7 @@ class TxMemPool(Singleton):
         self.txs = {}
         self.tx_hashes = []
         self.pool_lock = threading.Lock()
+        self.bc = BlockChain()
         # todo: 存在潜在的类型转换错误，如果config文件配置错误可能抛出错误
         self.SIZE = int(Config().get("node.mem_pool_size"))
 
@@ -18,6 +20,9 @@ class TxMemPool(Singleton):
 
     def add(self, tx):
         tx_hash = tx.tx_hash
+        # 在添加交易到交易池前先检查交易是否存在，如果存在说明已经被打包了
+        if self.bc.get_transaction_by_tx_hash(tx_hash) is not None:
+            return
         if tx_hash not in self.tx_hashes:
             self.txs[tx_hash] = tx
             self.tx_hashes.append(tx_hash)

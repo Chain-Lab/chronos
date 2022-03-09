@@ -10,6 +10,11 @@ class Counter(Singleton):
         self.__client_synced = 0
         self.__lock = threading.Lock()
 
+    def refresh(self):
+        self.__lock.acquire()
+        self.__client_synced = 0
+        self.__lock.release()
+
     def client_reg(self):
         self.__lock.acquire()
         self.__client_count += 1
