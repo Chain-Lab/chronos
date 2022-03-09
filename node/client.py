@@ -10,7 +10,7 @@ from core.block_chain import BlockChain
 from core.config import Config
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
-from core.vote_center import VoteCenter
+from node.vote_center import VoteCenter
 from node.constants import STATUS
 from node.message import Message
 from utils.dbutil import DBUtil
@@ -196,7 +196,7 @@ class Client(object):
         if self.height != local_height:
             # 当前线程最后共识的高度低于最新高度， 更新共识信息
             logging.debug("Synced height #{}, latest height #{}, clear information.".format(self.height, local_height))
-            VoteCenter().refresh_height(local_height)
+            VoteCenter().refresh()
             self.send_vote = False
             self.height = latest_block.block_header.height
 

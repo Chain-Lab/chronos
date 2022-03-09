@@ -7,10 +7,10 @@ import time
 from core.block import Block
 from core.block_chain import BlockChain
 from core.config import Config
-from core.pot import ProofOfTime
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
-from core.vote_center import VoteCenter
+from node.vote_center import VoteCenter
+from node.counter import Counter
 from node.constants import STATUS
 from node.message import Message
 
@@ -29,7 +29,6 @@ class Server(object):
         self.sock = socket.socket()
         self.ip = ip
         self.port = port
-        self.vote = {}
         self.txs = []
         self.tx_pool = TxMemPool()
         self.thread_local = threading.local()
@@ -101,7 +100,7 @@ class Server(object):
                 time.sleep(5)
             else:
                 # 失去连接， 从vote center中-1
-                VoteCenter().client_close()
+                Counter().client_close()
                 conn.close()
                 break
 
@@ -138,28 +137,23 @@ class Server(object):
         :param vote_data:
         :return:
         """
-        logging.debug("Receive vote_data: {}".format(vote_data))
-        if vote_data == {} or len(vote_data) != len(self.vote) or not VoteCenter().client_verify():
+        if vote_data == {} or len(vote_data) != len(VoteCenter().vote) or not Counter().client_verify():
             return False
-        self.vote_lock.acquire()
         for address in vote_data:
             # 当前地址的键值不存在， 说明信息没有同步
-            if address not in self.vote.keys():
-                self.vote_lock.release()
+            if address not in VoteCenter().vote.keys():
                 return False
-            a = self.vote[address]
+            # todo: 由于是浅拷贝，会不会影响到另外一个正在写的线程
+            a = VoteCenter().vote[address]
             b = vote_data[address]
             if len(a) == 0 or len(b) == 0 or len(a) != len(b):
-                self.vote_lock.release()
                 return False
             a = a[: -1]
             b = b[: -1]
             a.sort()
             b.sort()
             if a != b:
-                self.vote_lock.release()
                 return False
-        self.vote_lock.release()
         return True
 
     def handle_handshake(self, message: dict):
@@ -181,7 +175,7 @@ class Server(object):
         # 如果当前线程没有同步过client的节点信息， 设置一次并且注册
         if self.thread_local.client_id == -1:
             self.thread_local.client_id = node_id
-            VoteCenter().client_reg()
+            Counter().client_reg()
 
         # 获取本地高度之前检查是否存在区块
         if block:
@@ -190,7 +184,7 @@ class Server(object):
         # 本地高度不等于远端高度， 清除交易和投票信息
         if local_height != remote_height:
             self.txs.clear()
-            self.vote.clear()
+            VoteCenter().refresh()
             logging.debug("Local vote and transaction cleared.")
 
         # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
@@ -209,7 +203,7 @@ class Server(object):
         flg = self.check_vote_synced(vote_data)
 
         if flg:
-            a = sorted(self.vote.items(), key=lambda x: x[-1], reverse=False)
+            a = sorted(VoteCenter().vote.items(), key=lambda x: x[-1], reverse=False)
             address = a[0][0]
             result = Message(STATUS.SYNC_MSG, address)
             return result
@@ -223,8 +217,7 @@ class Server(object):
 
         try:
             genesis_block = bc[0]
-        except IndexError as e:
-            genesis_block = None
+        except IndexError:
             logging.error("Get genesis block error: IndexError, return empty message.")
             result = Message.empty_message()
             return result
@@ -235,7 +228,7 @@ class Server(object):
             "address": Config().get('node.address'),
             "time": time.time(),
             "id": int(Config().get('node.id')),
-            "vote": self.vote
+            "vote": VoteCenter().vote
         }
 
         if genesis_block:
@@ -245,7 +238,7 @@ class Server(object):
                 "address": Config().get('node.address'),
                 "time": time.time(),
                 "id": int(Config().get('node.id')),
-                "vote": self.vote
+                "vote": VoteCenter()
             }
         result = Message(STATUS.HAND_SHAKE_MSG, result_data)
         return result
@@ -283,7 +276,7 @@ class Server(object):
             final_address = VoteCenter().local_vote()
 
             logging.debug("Local address {}, final vote address is: {}".format(local_address, final_address))
-            self.update_vote(local_address, final_address)
+            VoteCenter().vote_update(local_address, final_address)
             result_data = {
                 'vote': local_address + ' ' + final_address,
                 'address': local_address,
@@ -302,17 +295,17 @@ class Server(object):
         data = message.get('data', {})
         vote = data.get('vote', '')
         address, final_address = vote.split(' ')
-        self.update_vote(address, final_address)
+        VoteCenter().vote_update(address, final_address)
         if not self.thread_local.server_synced:
             logging.debug("Add local vote information")
             address = Config().get("node.address")
             final_address = VoteCenter().local_vote()
-            self.update_vote(address, final_address)
+            VoteCenter().vote_update(address, final_address)
             self.thread_local.server_synced = True
         if not self.thread_local.client_synced:
             logging.debug("Synced with node {} vote info {}".format(self.thread_local.client_id, vote))
             self.thread_local.client_synced = True
-            VoteCenter().client_synced()
+            Counter().client_synced()
 
     def handle_update(self, message: dict):
         """
@@ -335,15 +328,3 @@ class Server(object):
         except ValueError as e:
             logging.error(e)
         return Message(STATUS.NODE_MSG, "6")
-
-    def update_vote(self, address, final_address):
-        self.vote_lock.acquire()
-        if final_address not in self.vote:
-            self.vote[final_address] = [address, 1]
-        else:
-            lst = self.vote[final_address]
-            if address not in lst:
-                lst.insert(0, address)
-                lst[-1] += 1
-        logging.debug("Update local vote info: {}".format(self.vote))
-        self.vote_lock.release()
