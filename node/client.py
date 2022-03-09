@@ -157,7 +157,6 @@ class Client(object):
         code = message.get('code', 0)
 
         if code == STATUS.HAND_SHAKE_MSG:
-            logging.debug("Send HAND_SHAKE_MSG to Server")
             self.handle_shake(message)
         elif code == STATUS.GET_BLOCK_MSG:
             self.handle_get_block(message)

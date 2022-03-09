@@ -18,7 +18,7 @@ class VoteCenter(Singleton):
         self.__has_voted = False
         self.__final_address = None
         self.__vote_lock = threading.Lock()
-        self.thread = threading.Thread(target=self.task, args=())
+        self.thread = threading.Thread(target=self.task, args=(), name="VoteCenterThread")
         self.thread.start()
 
     def vote_update(self, address: str, final_address: str):

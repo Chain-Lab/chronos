@@ -111,20 +111,15 @@ class Server(object):
         """
         code = message.get('code', 0)
         if code == STATUS.HAND_SHAKE_MSG:
-            logging.debug("Receive message code: HANDSHAKE")
             result_message = self.handle_handshake(message)
         elif code == STATUS.GET_BLOCK_MSG:
-            logging.debug("Receive message code: GET_BLOCK")
             result_message = self.handle_get_block(message)
         elif code == STATUS.TRANSACTION_MSG:
-            logging.debug("Receive message code: TRANSACTION")
             result_message = self.handle_transaction(message)
         elif code == STATUS.POT:
-            logging.debug("Receive message code: POT")
             self.handle_sync_vote(message)
             result_message = Message(STATUS.NODE_MSG, "4")
         elif code == STATUS.UPDATE_MSG:
-            logging.debug("Receive message code: UPDATE")
             result_message = self.handle_update(message)
         else:
             result_message = Message.empty_message()
