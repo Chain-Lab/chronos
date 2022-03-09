@@ -238,7 +238,7 @@ class Server(object):
                 "address": Config().get('node.address'),
                 "time": time.time(),
                 "id": int(Config().get('node.id')),
-                "vote": VoteCenter()
+                "vote": VoteCenter().vote
             }
         result = Message(STATUS.HAND_SHAKE_MSG, result_data)
         return result

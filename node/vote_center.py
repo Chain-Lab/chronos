@@ -1,3 +1,4 @@
+import logging
 import threading
 
 from core.pot import ProofOfTime
@@ -31,19 +32,21 @@ class VoteCenter(Singleton):
             self.__cond.notify_all()
 
     def task(self):
-        with self.__cond:
-            while not len(self.__queue):
-                self.__cond.wait()
-            current = self.__queue.pop()
-            address = current
-            final_address = self.__vote_dict[address]
-            if final_address not in self.__vote:
-                self.__vote[final_address] = [address, 1]
-            else:
-                vote_list = self.__vote[final_address]
-                if address not in vote_list:
-                    self.__vote[final_address].insert(0, address)
-                    vote_list[-1] += 1
+        while True:
+            with self.__cond:
+                while not len(self.__queue):
+                    self.__cond.wait()
+                current = self.__queue.pop()
+                address = current
+                final_address = self.__vote_dict[address]
+                logging.debug("Pop task {} vote {}".format(address, final_address))
+                if final_address not in self.__vote:
+                    self.__vote[final_address] = [address, 1]
+                else:
+                    vote_list = self.__vote[final_address]
+                    if address not in vote_list:
+                        self.__vote[final_address].insert(0, address)
+                        vote_list[-1] += 1
 
     def vote_sync(self, vote_data):
         for final_address in vote_data.keys():
