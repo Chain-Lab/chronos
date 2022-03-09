@@ -287,6 +287,7 @@ class Server(object):
             }
             result = Message(STATUS.POT, result_data)
             return result
+        return Message.empty_message()
 
     def handle_sync_vote(self, message: dict):
         """

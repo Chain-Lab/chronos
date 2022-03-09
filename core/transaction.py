@@ -1,6 +1,7 @@
 import binascii
 import copy
 import logging
+import time
 
 import ecdsa
 
@@ -14,17 +15,22 @@ class Transaction(object):
         self.inputs = inputs
         self.outputs = outputs
 
-    def set_id(self):
+    def set_id(self, is_coinbase=False):
         """
         设置当前交易的交易id，根据输入和输出的数据哈希得到
         :return: None
         """
         data_list = [str(_) for _ in self.inputs]
         output_list = [str(_) for _ in self.outputs]
+        # 加入随机数保证同一个节点coinbase交易的hash不一样
+        if is_coinbase:
+            timestamp = str(int(time.time() * 1000))
+            data_list.append(timestamp)
         data_list.extend(output_list)
         data = ''.join(data_list)
         tx_hash = funcs.sum256_hex(data)
         self.tx_hash = tx_hash
+        return tx_hash
 
     def is_coinbase(self):
         """
@@ -120,7 +126,7 @@ class Transaction(object):
         output = TxOutput(int(Config().get('node.coinbase_reward')),
                           Config().get('node.address'))
         tx = cls([_input], [output])
-        tx.set_id()
+        tx.set_id(is_coinbase=True)
         return tx
 
     def __repr__(self):
@@ -209,6 +215,7 @@ class CoinBaseInput(TxInput):
     def __repr__(self):
         """
         重写方法， 相比tx_input多了投票信息, 去掉投票信息
+        保证在出现coinbase交易时与用户的签名信息一致
         """
         result = copy.deepcopy(self.__dict__)
         if "vote_info" in result.keys():
