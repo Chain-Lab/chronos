@@ -89,7 +89,6 @@ class Client(object):
         """
         握手循环， 如果存在交易的情况下就发送交易
         :return:
-        :return:
         """
         while True:
             bc = BlockChain()
@@ -98,8 +97,7 @@ class Client(object):
                     not self.txs and VoteCenter().has_vote and not self.send_vote):
                 address = Config().get('node.address')
                 final_address = VoteCenter().local_vote()
-                VoteCenter().vote_update(address, final_address)
-                logging.debug("Local address {} vote address {}.".format(address, final_address))
+                VoteCenter().vote_update(address, final_address, self.height)
 
                 message_data = {
                     'vote': address + ' ' + final_address,
@@ -183,7 +181,7 @@ class Client(object):
             # self.txs.clear()
             pass
         else:
-            VoteCenter().vote_sync(vote_data)
+            VoteCenter().vote_sync(vote_data, remote_height)
 
         bc = BlockChain()
         latest_block, prev_hash = bc.get_latest_block()
@@ -196,9 +194,9 @@ class Client(object):
         if self.height != local_height:
             # 当前线程最后共识的高度低于最新高度， 更新共识信息
             logging.debug("Synced height #{}, latest height #{}, clear information.".format(self.height, local_height))
-            VoteCenter().refresh()
+            VoteCenter().refresh(local_height)
             self.send_vote = False
-            self.height = latest_block.block_header.height
+            self.height = local_height
 
         if local_height >= remote_height:
             return
@@ -243,7 +241,7 @@ class Client(object):
             address = Config().get('node.address')
             final_address = VoteCenter().local_vote()
 
-            VoteCenter().vote_update(address, final_address)
+            VoteCenter().vote_update(address, final_address, self.height)
 
             message_data = {
                 'vote': address + ' ' + final_address,
@@ -267,7 +265,7 @@ class Client(object):
             return
 
         address, final_address = vote_data.split(' ')
-        VoteCenter().vote_update(address, final_address)
+        VoteCenter().vote_update(address, final_address, height)
 
     def handle_sync(self, message: dict):
         """

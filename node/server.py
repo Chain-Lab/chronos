@@ -176,10 +176,10 @@ class Server(object):
         if block:
             local_height = block.block_header.height
 
-        # 本地高度不等于远端高度， 清除交易和投票信息
-        if local_height != remote_height:
+        # 本地高度远端高度， 清除交易和投票信息
+        if local_height < remote_height:
             self.txs.clear()
-            VoteCenter().refresh()
+            VoteCenter().refresh(remote_height)
             Counter().refresh()
             logging.debug("Local vote and transaction cleared.")
 
@@ -270,9 +270,7 @@ class Server(object):
         if self.tx_pool.is_full():
             local_address = Config().get('node.address')
             final_address = VoteCenter().local_vote()
-
-            logging.debug("Local address {}, final vote address is: {}".format(local_address, final_address))
-            VoteCenter().vote_update(local_address, final_address)
+            VoteCenter().vote_update(local_address, final_address, self.thread_local.height)
             result_data = {
                 'vote': local_address + ' ' + final_address,
                 'address': local_address,
@@ -298,12 +296,12 @@ class Server(object):
             return
 
         address, final_address = vote.split(' ')
-        VoteCenter().vote_update(address, final_address)
+        VoteCenter().vote_update(address, final_address, height)
         if not self.thread_local.server_synced:
             logging.debug("Add local vote information")
             address = Config().get("node.address")
             final_address = VoteCenter().local_vote()
-            VoteCenter().vote_update(address, final_address)
+            VoteCenter().vote_update(address, final_address, height)
             self.thread_local.server_synced = True
         if not self.thread_local.client_synced:
             logging.debug("Synced with node {} vote info {}".format(self.thread_local.client_id, vote))

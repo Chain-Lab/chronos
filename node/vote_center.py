@@ -2,6 +2,7 @@ import logging
 import threading
 
 from core.pot import ProofOfTime
+from core.config import Config
 from utils.singleton import Singleton
 
 
@@ -12,8 +13,7 @@ class VoteCenter(Singleton):
         # 汇总的投票信息
         self.__vote = {}
         self.__queue = []
-        self.total = 0
-        self.done = 0
+        self.__height = -1
 
         self.__has_voted = False
         self.__final_address = None
@@ -21,9 +21,9 @@ class VoteCenter(Singleton):
         self.thread = threading.Thread(target=self.task, args=(), name="VoteCenterThread")
         self.thread.start()
 
-    def vote_update(self, address: str, final_address: str):
+    def vote_update(self, address: str, final_address: str, height: int):
         # 先检查是否在字典中， 字典key查找操作o(1)
-        if address in self.__vote_dict.keys():
+        if height < self.__height or address in self.__vote_dict.keys():
             return
 
         self.__vote_dict[address] = final_address
@@ -48,17 +48,18 @@ class VoteCenter(Singleton):
                         self.__vote[final_address].insert(0, address)
                         vote_list[-1] += 1
 
-    def vote_sync(self, vote_data):
+    def vote_sync(self, vote_data: dict, height: int):
         for final_address in vote_data.keys():
             length = len(vote_data[final_address])
             for i in range(length - 1):
-                self.vote_update(vote_data[final_address][i], final_address)
+                self.vote_update(vote_data[final_address][i], final_address, height)
 
-    def refresh(self):
-        if not self.__has_voted or self.__vote_lock.locked():
+    def refresh(self, height):
+        if not self.__has_voted or self.__vote_lock.locked() or height <= self.__height:
             return
 
         self.__vote_lock.acquire()
+        self.__height = height
         self.__queue.clear()
         self.__vote_dict.clear()
         self.__vote.clear()
@@ -72,6 +73,7 @@ class VoteCenter(Singleton):
             final_address = pot.local_vote()
             self.__has_voted = True
             self.__final_address = final_address
+            logging.debug("Local address {} vote address {}.".format(Config().get("node.address"), final_address))
         result = self.__final_address
         self.__vote_lock.release()
         return result
