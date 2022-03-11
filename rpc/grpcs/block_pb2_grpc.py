@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from rpc.protos import block_pb2 as rpc_dot_protos_dot_block__pb2
+from rpc.grpcs import block_pb2 as rpc_dot_protos_dot_block__pb2
 
 
 class BlockStub(object):

@@ -16,7 +16,6 @@ from core.utxo import UTXOSet
 from node.peer import Peer
 from node.peer_to_peer import P2p
 from node.server import Server
-from openapi import app
 from utils import funcs
 from utils.b58code import Base58Code
 from rpc.rpcserver import RPCServer
