@@ -70,7 +70,7 @@ class Server(object):
         thread_obj = threading.current_thread()
         thread_obj.name = "Server Thread -" + thread_obj.getName().split("-")[-1]
         rec_msg = None
-        continue_server = True
+        server_continue = True
         # 连接的client的id
         self.thread_local.client_id = -1
         # client同步标志， 确认是否和所连接的client同步过一次
@@ -89,7 +89,7 @@ class Server(object):
 
                 rec_msg = json.loads(rec_data.decode('utf-8'))
 
-            except ValueError as e:
+            except ValueError:
                 try:
                     # 发送信息， 如果出现错误说明连接断开
                     conn.sendall('{"code": 0, "data": ""}'.encode())
