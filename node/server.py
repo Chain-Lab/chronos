@@ -68,7 +68,7 @@ class Server(object):
         """
         # 设置线程名， 便于Debug
         thread_obj = threading.current_thread()
-        thread_obj.name = "Server Thread -" + thread_obj.getName().split("-")[-1]
+        thread_obj.name = "Server Thread - " + thread_obj.getName().split("-")[-1]
         rec_msg = None
         server_continue = True
         # 连接的client的id

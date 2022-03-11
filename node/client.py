@@ -94,7 +94,7 @@ class Client(object):
         :return:
         """
         thread_obj = threading.current_thread()
-        thread_obj.name = "Client Thread -" + thread_obj.getName().split("-")[-1]
+        thread_obj.name = "Client Thread - " + thread_obj.getName().split("-")[-1]
         while True:
             bc = BlockChain()
             latest_block, prev_hash = bc.get_latest_block()
