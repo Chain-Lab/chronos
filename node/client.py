@@ -51,6 +51,8 @@ class Client(object):
 
         try:
             rec_data = self.sock.recv(4096 * 2)
+            if rec_data == b"":
+                return True
             rec_message = json.loads(rec_data.decode('utf-8'))
 
             data = rec_message.get('data', '')
@@ -75,11 +77,9 @@ class Client(object):
                         }
                     })
                     db.update([old_wallets])
+        # 在信息错误或连接断开时会产生该错误
         except json.decoder.JSONDecodeError as e:
             print(e)
-        except BrokenPipeError:
-            logging.info("Lost connect, client close.")
-            return True
 
         if rec_message is not None:
             self.handle(rec_message)

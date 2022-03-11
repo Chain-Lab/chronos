@@ -23,7 +23,7 @@ class Counter(Singleton):
     def client_close(self):
         self.__lock.acquire()
         self.__client_count -= 1
-        logging.debug("Client connect closed, ")
+        logging.debug("Client connect closed.")
         self.__lock.release()
 
     def client_synced(self):

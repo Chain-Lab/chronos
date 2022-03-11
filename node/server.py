@@ -82,6 +82,11 @@ class Server(object):
         while True:
             try:
                 rec_data = conn.recv(4096 * 2)
+                if rec_data == b"":
+                    Counter().client_close()
+                    conn.close()
+                    break
+
                 rec_msg = json.loads(rec_data.decode('utf-8'))
 
             except ValueError as e:
@@ -90,7 +95,7 @@ class Server(object):
                     conn.sendall('{"code": 0, "data": ""}'.encode())
                 except BrokenPipeError:
                     logging.info("Client lost connect, close server.")
-                    continue_server = False
+                    server_continue = False
 
             if rec_msg is not None:
                 send_data = self.handle(rec_msg)
@@ -99,8 +104,8 @@ class Server(object):
                     conn.sendall(send_data.encode())
                 except BrokenPipeError:
                     logging.info("Client lost connect, close server.")
-                    continue_server = False
-            if continue_server:
+                    server_continue = False
+            if server_continue:
                 time.sleep(1)
             else:
                 # 失去连接， 从vote center中-1
