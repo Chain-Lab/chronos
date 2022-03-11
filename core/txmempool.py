@@ -22,11 +22,14 @@ class TxMemPool(Singleton):
         tx_hash = tx.tx_hash
         # 在添加交易到交易池前先检查交易是否存在，如果存在说明已经被打包了
         if self.bc.get_transaction_by_tx_hash(tx_hash) is not None:
-            return
+            logging.debug("Transaction #{} existed.".format(tx_hash))
+            return False
         if tx_hash not in self.tx_hashes:
             self.txs[tx_hash] = tx
             self.tx_hashes.append(tx_hash)
             logging.debug("Add tx#{} in memory pool.".format(tx_hash))
+            return True
+        return False
 
     def clear(self):
         self.pool_lock.acquire()

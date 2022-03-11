@@ -1,6 +1,7 @@
 import json
 import logging
 import socket
+import threading
 import time
 
 import couchdb
@@ -90,6 +91,8 @@ class Client(object):
         握手循环， 如果存在交易的情况下就发送交易
         :return:
         """
+        thread_obj = threading.current_thread()
+        thread_obj.name = "Client Thread -" + thread_obj.getName().split("-")[-1]
         while True:
             bc = BlockChain()
             latest_block, prev_hash = bc.get_latest_block()
@@ -199,6 +202,8 @@ class Client(object):
 
         if local_height >= remote_height:
             return
+
+        # 发送邻居节点没有的区块
         start_height = 0 if local_height == -1 else local_height
         for i in range(start_height, remote_height + 1):
             send_msg = Message(STATUS.GET_BLOCK_MSG, i)
@@ -229,9 +234,12 @@ class Client(object):
         :param message: 包含交易数据的消息
         :return: None
         """
+        # 可能出现的问题： 在client更新本地高度之后， 收到服务器发送过来的交易，而此时交易池还没有清空，又以更新完成的高度去进行一次投票
+        # upd： server端接收到其他节点发送的区块后，会从交易池中移除交易，与此同时tx_pool是无法再次添加同一笔交易的, 也无法触发下面的逻辑
         data = message.get('data', {})
         transaction = Transaction.deserialize(data)
-        self.tx_pool.add(transaction)
+        if not self.tx_pool.add(transaction):
+            return
 
         bc = BlockChain()
         latest_block, _ = bc.get_latest_block()
@@ -272,6 +280,7 @@ class Client(object):
         :param message: 待处理的message
         :return: None
         """
+        # 一轮共识结束的第二个标志：本地被投票为打包区块的节点，产生新区块
         data = message.get('data', '')
         address = Config().get('node.address')
         if data == address:

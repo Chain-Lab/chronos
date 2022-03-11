@@ -66,6 +66,9 @@ class Server(object):
         :param address:
         :return: None
         """
+        # 设置线程名， 便于Debug
+        thread_obj = threading.current_thread()
+        thread_obj.name = "Server Thread -" + thread_obj.getName().split("-")[-1]
         rec_msg = None
         continue_server = True
         # 连接的client的id
@@ -75,6 +78,7 @@ class Server(object):
         # server同步标志， 确认本地投票的信息是否放入到vote_center
         self.thread_local.server_synced = False
         self.thread_local.height = -1
+
         while True:
             try:
                 rec_data = conn.recv(4096 * 2)
@@ -176,7 +180,7 @@ class Server(object):
         if block:
             local_height = block.block_header.height
 
-        # 本地高度远端高度， 清除交易和投票信息
+        # 本地高度低于远端高度， 清除交易和投票信息
         if local_height < remote_height:
             self.txs.clear()
             VoteCenter().refresh(remote_height)
@@ -265,7 +269,9 @@ class Server(object):
 
         self.txs.append(transaction_data)
         transaction = Transaction.deserialize(transaction_data)
-        self.tx_pool.add(transaction)
+        # 如果远端的交易添加失败， 说明交易已经存在或上一轮共识结束不进行后面的操作， 避免出现重复发出共识信息
+        if not self.tx_pool.add(transaction):
+            return Message.empty_message()
 
         if self.tx_pool.is_full():
             local_address = Config().get('node.address')
@@ -302,7 +308,7 @@ class Server(object):
             logging.debug("Add local vote information")
             address = Config().get("node.address")
             final_address = VoteCenter().local_vote()
-            VoteCenter().vote_update(address, final_address, height)
+            VoteCenter().vote_update(address, final_address, self.thread_local.height)
             self.thread_local.server_synced = True
         if not self.thread_local.client_synced:
             logging.debug("Synced with node {} vote info {}".format(self.thread_local.client_id, vote))
@@ -319,14 +325,17 @@ class Server(object):
         block = Block.deserialize(data)
         bc = BlockChain()
         try:
+            # 一轮共识结束的第一个标识：收到其他节点发来的新区块
             bc.add_block_from_peers(block)
             # 从邻居节点更新了区块， 说明一轮共识已经结束或本地区块没有同步
             # 需要更新vote center中的信息并且设置synced为false
             self.thread_local.client_synced = False
             self.thread_local.server_synced = False
+            # 从交易池中移除已有的交易
             for tx in block.transactions:
                 tx_hash = tx.tx_hash
                 self.tx_pool.remove(tx_hash)
         except ValueError as e:
+            # todo: 失败的情况下应该进行回滚
             logging.error(e)
         return Message(STATUS.NODE_MSG, "6")
