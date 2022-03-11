@@ -193,7 +193,6 @@ class Client(object):
 
         if self.height != local_height:
             # 当前线程最后共识的高度低于最新高度， 更新共识信息
-            logging.debug("Synced height #{}, latest height #{}, clear information.".format(self.height, local_height))
             VoteCenter().refresh(local_height)
             self.send_vote = False
             self.height = local_height

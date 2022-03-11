@@ -19,6 +19,7 @@ from node.server import Server
 from openapi import app
 from utils import funcs
 from utils.b58code import Base58Code
+from rpc.rpcserver import RPCServer
 
 """
 注意： 该文件仅用于测试
@@ -52,8 +53,9 @@ def run():
     tcpserver.run()
     logging.info("TCP Server start running")
 
-    app.server()
-    logging.info("Flask restful openapi start")
+    rpc = RPCServer()
+    rpc.start()
+    logging.info("RPC server start")
 
     p2p = P2p()
     server = Peer()

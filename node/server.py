@@ -199,7 +199,7 @@ class Server(object):
         flg = self.check_vote_synced(vote_data)
 
         if flg:
-            a = sorted(VoteCenter().vote.items(), key=lambda x: x[-1], reverse=True)
+            a = sorted(VoteCenter().vote.items(), key=lambda x: x[1][-1], reverse=True)
             address = a[0][0]
             result = Message(STATUS.SYNC_MSG, address)
             return result
@@ -296,6 +296,7 @@ class Server(object):
             return
 
         address, final_address = vote.split(' ')
+        # 将client发过来的投票信息添加到本地
         VoteCenter().vote_update(address, final_address, height)
         if not self.thread_local.server_synced:
             logging.debug("Add local vote information")
