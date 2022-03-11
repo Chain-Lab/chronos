@@ -80,6 +80,8 @@ class Client(object):
         # 在信息错误或连接断开时会产生该错误
         except json.decoder.JSONDecodeError as e:
             print(e)
+        except ConnectionResetError:
+            return True
 
         if rec_message is not None:
             self.handle(rec_message)
