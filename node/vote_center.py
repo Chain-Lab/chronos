@@ -59,6 +59,7 @@ class VoteCenter(Singleton):
             return
 
         self.__vote_lock.acquire()
+        logging.debug("Synced height #{}, latest height #{}, clear information.".format(self.height, height))
         self.__height = height
         self.__queue.clear()
         self.__vote_dict.clear()
