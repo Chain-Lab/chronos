@@ -135,7 +135,7 @@ class Client(object):
                     genesis_block = None
 
                 data = {
-                    "last_height": -1,
+                    "latest_height": -1,
                     "genesis_block": "",
                     "address": Config().get('node.address'),
                     "time": time.time(),
@@ -145,6 +145,7 @@ class Client(object):
 
                 if genesis_block:
                     # logging.debug(genesis_block.transactions)
+                    # 考虑一下创世区块的用处
                     data['latest_height'] = latest_block.block_header.height
                     data['genesis_block'] = genesis_block.serialize()
 
