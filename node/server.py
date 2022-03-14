@@ -211,7 +211,8 @@ class Server(object):
         flg = self.check_vote_synced(vote_data)
 
         if flg:
-            a = sorted(VoteCenter().vote.items(), key=lambda x: x[1][-1], reverse=True)
+            a = sorted(VoteCenter().vote.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
+            # 如果同步完成， 按照第一关键字为投票数，第二关键字为地址字典序来进行排序
             address = a[0][0]
             result = Message(STATUS.SYNC_MSG, address)
             return result
