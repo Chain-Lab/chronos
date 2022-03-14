@@ -25,4 +25,8 @@ class Timer(Singleton):
 
     def reach(self):
         now = time.time()
+
+        if self.__next_time < 0:
+            return False
+
         return now >= self.__next_time

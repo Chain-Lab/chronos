@@ -290,7 +290,7 @@ class Client(object):
         data = message.get('data', '')
         address = Config().get('node.address')
         if data == address:
-            transactions = self.tx_pool.package()
+            transactions = self.tx_pool.package(self.height + 1)
 
             # 如果取出的交易数据是None， 说明另外一个线程已经打包了， 就不用再管
             if transactions is None:

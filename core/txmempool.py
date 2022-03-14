@@ -14,6 +14,7 @@ class TxMemPool(Singleton):
         self.bc = BlockChain()
         # todo: 存在潜在的类型转换错误，如果config文件配置错误可能抛出错误
         self.SIZE = int(Config().get("node.mem_pool_size"))
+        self.__height = -1
 
     def is_full(self):
         return len(self.txs) >= self.SIZE
@@ -37,14 +38,23 @@ class TxMemPool(Singleton):
         self.tx_hashes.clear()
         self.pool_lock.release()
 
-    def package(self):
+    def package(self, height):
+        """
+        :params height: 即将打包的区块的高度， 如果小于已打包高度说明已经被打包过
+        :return: 高度高于已打包高度的情况下返回交易列表， 否则返回None
+        """
         result = []
         logging.debug("Package pool, pool status:")
         logging.debug(self.tx_hashes)
-        if self.pool_lock.locked() or len(self.tx_hashes) == 0:
+        if height <= self.__height or self.pool_lock.locked():
             return None
 
         self.pool_lock.acquire()
+        # 拿到锁后再检查一次， 避免某个线程刚好到达这个地方抢到锁
+        if height <= self.__height:
+            self.pool_lock.release()
+            return None
+        self.__height = height
         pool_size = int(Config().get("node.mem_pool_size"))
         count = 0
         length = len(self.tx_hashes)
@@ -56,7 +66,7 @@ class TxMemPool(Singleton):
             count += 1
 
         self.pool_lock.release()
-        return [result]
+        return result
 
     def remove(self, tx_hash):
         """
