@@ -38,17 +38,25 @@ class TxMemPool(Singleton):
         self.pool_lock.release()
 
     def package(self):
+        result = []
         logging.debug("Package pool, pool status:")
         logging.debug(self.tx_hashes)
         if self.pool_lock.locked() or len(self.tx_hashes) == 0:
             return None
 
         self.pool_lock.acquire()
-        tx_hash = self.tx_hashes.pop()
-        result = self.txs.pop(tx_hash)
-        logging.debug(self.tx_hashes)
+        pool_size = int(Config().get("node.mem_pool_size"))
+        count = 0
+        length = len(self.tx_hashes)
+
+        while count < pool_size and count < length:
+            tx_hash = self.tx_hashes.pop()
+            transaction = self.txs.pop(tx_hash)
+            result.append(transaction)
+            count += 1
+
         self.pool_lock.release()
-        return result
+        return [result]
 
     def remove(self, tx_hash):
         """

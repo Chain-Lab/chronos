@@ -14,6 +14,7 @@ from core.txmempool import TxMemPool
 from node.vote_center import VoteCenter
 from node.constants import STATUS
 from node.message import Message
+from node.timer import Timer
 from utils.dbutil import DBUtil
 
 
@@ -99,7 +100,8 @@ class Client(object):
             bc = BlockChain()
             latest_block, prev_hash = bc.get_latest_block()
             if (not self.txs and self.tx_pool.is_full() and VoteCenter().vote == {}) or (
-                    not self.txs and VoteCenter().has_vote and not self.send_vote):
+                    not self.txs and VoteCenter().has_vote and not self.send_vote) or (
+                    not self.txs and Timer().reach() and not self.send_vote):
                 address = Config().get('node.address')
                 final_address = VoteCenter().local_vote()
                 VoteCenter().vote_update(address, final_address, self.height)
@@ -200,6 +202,7 @@ class Client(object):
         if self.height != local_height:
             # 当前线程最后共识的高度低于最新高度， 更新共识信息
             VoteCenter().refresh(local_height)
+            Timer().refresh(local_height)
             self.send_vote = False
             self.height = local_height
 
@@ -294,7 +297,7 @@ class Client(object):
                 return
 
             bc = BlockChain()
-            bc.add_new_block([transactions], VoteCenter().vote)
+            bc.add_new_block(transactions, VoteCenter().vote)
             logging.debug("Package new block.")
             self.txs.clear()
 

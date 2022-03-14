@@ -13,6 +13,7 @@ from node.vote_center import VoteCenter
 from node.counter import Counter
 from node.constants import STATUS
 from node.message import Message
+from node.timer import Timer
 
 
 class Server(object):
@@ -134,7 +135,8 @@ class Server(object):
             result_message = Message.empty_message()
         return json.dumps(result_message.__dict__)
 
-    def check_vote_synced(self, vote_data):
+    @staticmethod
+    def check_vote_synced(vote_data):
         """
         将邻居节点发送的投票信息与本地进行对比， 投票完全一致说明投票完成
         除了需要与client的信息一致， 还需要至少在本轮和每一个client都同步过一次
@@ -190,6 +192,7 @@ class Server(object):
             self.txs.clear()
             VoteCenter().refresh(remote_height)
             Counter().refresh()
+            Timer().refresh(remote_height)
             logging.debug("Local vote and transaction cleared.")
 
         # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
