@@ -5,7 +5,8 @@ from utils.singleton import Singleton
 
 
 class Timer(Singleton):
-    INTERVAL = 10
+    INTERVAL = 30
+    # 便于调试，先设置为30秒
 
     def __init__(self):
         self.__next_time = -1
