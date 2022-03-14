@@ -289,6 +289,7 @@ class Client(object):
         # 一轮共识结束的第二个标志：本地被投票为打包区块的节点，产生新区块
         data = message.get('data', '')
         address = Config().get('node.address')
+        logging.debug("Receive package wallet is: {}".format(data))
         if data == address:
             transactions = self.tx_pool.package(self.height + 1)
 

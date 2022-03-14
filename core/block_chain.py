@@ -39,15 +39,15 @@ class BlockChain(object):
         latest_block, prev_hash = self.get_latest_block()
         height = latest_block.block_header.height + 1
 
+        logging.debug("Vote info: {}".format(vote))
+        coin_base_tx = Transaction.coinbase_tx(vote)
+        transactions.insert(0, coin_base_tx)
+
         data = []
         for tx in transactions:
             data.append(json.dumps(tx.serialize()))
         merkle_tree = MerkleTree(data)
         block_header = BlockHeader(merkle_tree.root_hash, height, prev_hash)
-
-        logging.debug("Vote info: {}".format(vote))
-        coin_base_tx = Transaction.coinbase_tx(vote)
-        transactions.insert(0, coin_base_tx)
 
         # coinbase 钱包和节点耦合， 可以考虑将挖矿、钱包、全节点服务解耦
         # upd: 节点和挖矿耦合， 但是可以在配置中设置是否为共识节点
@@ -168,13 +168,14 @@ class BlockChain(object):
         :param block: 从邻居节点接收到的区块
         :return: None
         """
-        logging.info("Receive block from neighborhood, try to add block to local db.")
         latest_block, prev_hash = self.get_latest_block()
         peer_height = block.block_header.height
         peer_hash = block.header_hash
         peer_prev_hash = block.block_header.prev_block_hash
         if latest_block:
             latest_height = latest_block.block_header.height
+            logging.info("Receive block#{} from neighborhood, local height #{}".format(peer_height, latest_height))
+            logging.info("Receive block#{} from neighborhood, local hash #{}".format(peer_prev_hash, latest_block.block_header.hash))
             if peer_height < latest_height:
                 # 从邻居节点收到的区块高度低于本地， 抛出错误
                 logging.warning("Neighborhood height {} lower than local height {}.".format(peer_height, latest_height))

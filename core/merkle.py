@@ -27,7 +27,7 @@ class MerkleTree(object):
             new_level = []
             for j in range(0, len(nodes), 2):
                 if j + 1 >= len(nodes):
-                    node = MerkleNode(None, nodes[j], "")
+                    node = MerkleNode(None, nodes[j], MerkleNode(""))
                 else:
                     node = MerkleNode(None, nodes[j], nodes[j + 1])
                 new_level.append(node)
