@@ -79,7 +79,7 @@ class Client(object):
                     db.update([old_wallets])
         # 在信息错误或连接断开时会产生该错误
         except json.decoder.JSONDecodeError as e:
-            print(e)
+            logging.error(e)
         except ConnectionResetError:
             return True
 

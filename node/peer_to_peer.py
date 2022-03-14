@@ -14,6 +14,8 @@ class P2p(object):
     def run(self):
         port = int(Config().get('node.listen_port'))
         bootstrap = int(Config().get('node.is_bootstrap'))
+        # 这里是否bootstrap的区别在于： 如果没有其他的节点，那么将本地作为一个初始的p2p索引服务器，其他节点需要先连接该节点进行同步
+        # 如果存在其他的已有的服务器的情况下不再需要bootstrap，可以直接已有的节点
         if bootstrap:
             host = Config().get('node.listen_ip')
         else:
@@ -28,6 +30,8 @@ class P2p(object):
 
     def get_nodes(self):
         nodes = []
+
+        # 处理一下桶是空的情况，在服务器刚开始启动的时候没有属性，会出现报错
         try:
             for bucket in self.server.protocol.router.buckets:
                 nodes.extend(bucket.get_nodes())

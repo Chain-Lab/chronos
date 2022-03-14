@@ -116,7 +116,7 @@ class UTXOSet(Singleton):
                 try:
                     self.db.delete(doc)
                 except ResourceNotFound as e:
-                    print(e)
+                    logging.error(e)
 
             for _input in transaction.inputs:
                 input_tx_hash = _input.tx_hash

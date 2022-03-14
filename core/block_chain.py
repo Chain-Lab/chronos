@@ -58,6 +58,8 @@ class BlockChain(object):
             logging.error("Block verify failed. Block struct: {}".format(block))
             return
 
+        # todo: 区块头的哈希是根据merkle树的根哈希值来进行哈希的， 和交易存在关系
+        #  那么是否可以在区块中仅仅存入交易的哈希列表，交易的具体信息存在其他的表中以提高查询效率，区块不存储区块具体的信息？
         block.set_header_hash()
         latest_hash = block.block_header.hash
         logging.debug(block.serialize())
@@ -145,6 +147,7 @@ class BlockChain(object):
         """
         通过交易的tx_hash来检索得到交易
         但是这里遍历区块的方式较为暴力， 需要进行优化
+        todo： 将交易的信息另外存入一个表？ 交易本身需要存入区块，可以直接存入表中，数据库直接建立索引
         在区块达到一定高度后可能存在一定的问题
         :param tx_hash: 需要检索的交易id
         :return: 检索到交易返回交易， 否则返回None

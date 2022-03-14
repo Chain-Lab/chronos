@@ -56,12 +56,16 @@ class VoteCenter(Singleton):
                 self.vote_update(vote_data[final_address][i], final_address, height)
 
     def refresh(self, height):
-        if not self.__has_voted or self.__vote_lock.locked():
+        if height < self.__height or not self.__has_voted or self.__vote_lock.locked():
             return
 
         self.__vote_lock.acquire()
-        self.__height = height
+        # 避免另外一个线程拿到锁后进行多余的操作
+        if height < self.__height:
+            self.__vote_lock.release()
+            return
         logging.debug("Synced height #{}, latest height #{}, clear information.".format(self.__height, height))
+        self.__height = height
         self.__queue.clear()
         self.__vote_dict.clear()
         self.__vote.clear()
