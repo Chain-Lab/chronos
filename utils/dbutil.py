@@ -1,5 +1,3 @@
-import threading
-
 import couchdb
 
 from utils.singleton import Singleton
@@ -36,8 +34,3 @@ class DBUtil(Singleton):
 
     def __setitem__(self, key, value):
         self.db[key] = value
-
-
-if __name__ == "__main__":
-    db = DBUtil('http://admin:couchdb2021chronos@172.26.0.8:5984')
-    print(db.get('latest'))

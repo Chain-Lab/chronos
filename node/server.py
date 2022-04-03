@@ -9,11 +9,13 @@ from core.block_chain import BlockChain
 from core.config import Config
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
+from node.calculator import Calculator
 from node.vote_center import VoteCenter
 from node.counter import Counter
 from node.constants import STATUS
 from node.message import Message
 from node.timer import Timer
+from utils import funcs
 
 
 class Server(object):
@@ -54,9 +56,11 @@ class Server(object):
 
     def run(self):
         """
-        类的运行函数， 开一个线程进行监听
+        类的运行函数， 开一个线程进行监听, 同时启动VDF的计算
         :return: None
         """
+        calculator = Calculator()
+        calculator.run()
         thread = threading.Thread(target=self.listen_loop, args=())
         thread.start()
 
@@ -179,7 +183,8 @@ class Server(object):
         local_height = -1
 
         # 如果当前线程没有同步过client的节点信息， 设置一次并且注册
-        if self.thread_local.client_id == -1:
+        # upd： 保证对端节点的高度和本地一致
+        if self.thread_local.client_id == -1 and remote_height == local_height:
             self.thread_local.client_id = node_id
             Counter().client_reg()
 
@@ -191,8 +196,7 @@ class Server(object):
         if local_height < remote_height:
             self.txs.clear()
             VoteCenter().refresh(remote_height)
-            Counter().refresh()
-            Timer().refresh(remote_height)
+            # Timer().refresh(remote_height)
             logging.debug("Local vote and transaction cleared.")
 
         # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
@@ -208,11 +212,14 @@ class Server(object):
             return result
 
         # 投票信息同步完成
+        # todo： 逻辑修改， 在到达时间点后直接进行处理
         flg = self.check_vote_synced(vote_data)
-
+        # 这里的逻辑实际是存在问题的， server和每个client都有建立连接， 但是只和一个client判断信息同步完成， 并且每一次都要判断
         if flg:
             a = sorted(VoteCenter().vote.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
             # 如果同步完成， 按照第一关键字为投票数，第二关键字为地址字典序来进行排序
+            # x的结构： addr1: [addr2 , addr3, ..., count]
+            # x[1]取后面的列表
             address = a[0][0]
             result = Message(STATUS.SYNC_MSG, address)
             return result
@@ -230,7 +237,7 @@ class Server(object):
             logging.error("Get genesis block error: IndexError, return empty message.")
             result = Message.empty_message()
             return result
-
+        # 逻辑走到这里说明不需要进行其他的操作， 直接返回握手的信息
         result_data = {
             "last_height": -1,
             "genesis_block": "",
@@ -285,11 +292,14 @@ class Server(object):
         if self.tx_pool.is_full():
             local_address = Config().get('node.address')
             final_address = VoteCenter().local_vote()
+            if final_address is None:
+                final_address = local_address
             VoteCenter().vote_update(local_address, final_address, self.thread_local.height)
             result_data = {
                 'vote': local_address + ' ' + final_address,
                 'address': local_address,
                 'time': time.time(),
+                # 这里是不是每一次都要从Config中读取？或许需要优化一下
                 'id': int(Config().get('node.id')),
                 'height': self.thread_local.height
             }
@@ -312,12 +322,15 @@ class Server(object):
 
         address, final_address = vote.split(' ')
         # 将client发过来的投票信息添加到本地
+        # 对端节点如果高度低于本地， 不接收对应的投票信息
         VoteCenter().vote_update(address, final_address, height)
         if not self.thread_local.server_synced:
             logging.debug("Add local vote information")
             address = Config().get("node.address")
+
             final_address = VoteCenter().local_vote()
-            VoteCenter().vote_update(address, final_address, self.thread_local.height)
+            if final_address is not None:
+                VoteCenter().vote_update(address, final_address, self.thread_local.height)
             self.thread_local.server_synced = True
         if not self.thread_local.client_synced:
             logging.debug("Synced with node {} vote info {}".format(self.thread_local.client_id, vote))
@@ -335,7 +348,14 @@ class Server(object):
         bc = BlockChain()
         try:
             # 一轮共识结束的第一个标识：收到其他节点发来的新区块
-            bc.add_block_from_peers(block)
+            is_added = bc.add_block_from_peers(block)
+
+            if is_added:
+                Counter().refresh()
+                delay_params = block.transactions[0].inputs[0].delay_params
+                hex_seed = delay_params.get("seed")
+                seed = funcs.hex2int(hex_seed)
+                Calculator().update(seed)
             # 从邻居节点更新了区块， 说明一轮共识已经结束或本地区块没有同步
             # 需要更新vote center中的信息并且设置synced为false
             self.thread_local.client_synced = False

@@ -4,6 +4,7 @@ from rpc.grpcs import block_pb2
 from rpc.grpcs import block_pb2_grpc
 from core.block_chain import BlockChain
 
+
 class BlockService(block_pb2_grpc.BlockServicer):
     """
     block相关的RPC服务端接口， 定义在protos/block.proto中
