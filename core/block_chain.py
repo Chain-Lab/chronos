@@ -36,11 +36,17 @@ class BlockChain(object):
             raise IndexError('Index overflow')
 
     def add_new_block(self, transactions: list, vote: dict):
+        """
+        新区块的产生逻辑， 传入待打包的交易列表和投票信息
+        @param transactions:
+        @param vote:
+        @return:
+        """
         latest_block, prev_hash = self.get_latest_block()
         height = latest_block.block_header.height + 1
 
         logging.debug("Vote info: {}".format(vote))
-        coin_base_tx = Transaction.coinbase_tx(vote)
+        coin_base_tx = Transaction.coinbase_tx(vote, {})
         transactions.insert(0, coin_base_tx)
 
         data = []
@@ -165,6 +171,7 @@ class BlockChain(object):
     def add_block_from_peers(self, block):
         """
         从邻居节点接收到区块， 更新本地区块
+        todo: 添加区块验证逻辑， 并且比对区块数据， 以投票信息多的为主
         :param block: 从邻居节点接收到的区块
         :return: None
         """
@@ -172,22 +179,29 @@ class BlockChain(object):
         peer_height = block.block_header.height
         peer_hash = block.header_hash
         peer_prev_hash = block.block_header.prev_block_hash
+
+        block_added = False
+
+        # 首先检查本地存在最新区块
         if latest_block:
+            # 获取最新区块的高度
             latest_height = latest_block.block_header.height
             logging.info("Receive block#{} from neighborhood, local height #{}".format(peer_height, latest_height))
-            logging.info("Receive block#{} from neighborhood, local hash #{}".format(peer_prev_hash, latest_block.block_header.hash))
             if peer_height < latest_height:
                 # 从邻居节点收到的区块高度低于本地， 抛出错误
                 logging.warning("Neighborhood height {} lower than local height {}.".format(peer_height, latest_height))
                 raise ValueError('Block height error')
+
+            # 如果区块验证失败， 抛出错误
             if not self.verify_block(block):
                 logging.error("Block#{} verify failed.".format(block.block_header.height))
                 raise ValueError('Block invalid.')
 
+            # 高度相同但是数据不一致， 回滚本地区块
+            # todo: 保证可以存在分叉，但是在后续以投票信息最多的链为准
             if peer_height == latest_height and block != latest_block:
-                # 高度相同但是数据不一致， 回滚本地区块
                 logging.error("Same height but different data, rollback local blockchain data.")
-                UTXOSet().roll_back(block)
+                UTXOSet().roll_back(latest_block)
                 self.roll_back()
 
             if peer_height == latest_height + 1 and peer_prev_hash == latest_block.block_header.hash:
@@ -198,6 +212,7 @@ class BlockChain(object):
                     self.db.create(peer_hash, block.serialize())
                     self.set_latest_hash(latest_hash)
                     UTXOSet().update(block)
+                    return True
                 except ResourceConflict:
                     logging.error("Create block in db resource conflict.")
         else:
@@ -206,8 +221,10 @@ class BlockChain(object):
                 last_hash = block.block_header.hash
                 self.set_latest_hash(last_hash)
                 UTXOSet().update(block)
+                return True
             except ResourceConflict:
                 logging.error("Create block in db resource conflict.")
+        return False
 
     def roll_back(self):
         """
@@ -287,3 +304,8 @@ class BlockChain(object):
                 continue
             prev_txs[prev_tx.tx_hash] = prev_tx
         return transaction.verify(prev_txs)
+
+    def get_latest_delay_params(self):
+        latest_block, _ = self.get_latest_block()
+        coinbase_tx_input = latest_block.transactions[0].inputs[0]
+        return coinbase_tx_input.get("delay_params")

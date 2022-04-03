@@ -39,7 +39,7 @@ class Client(object):
 
     def send(self, message):
         """
-        发送信息给邻居节点， 在出现Broke异常的情况下说明连接端口
+        发送信息给邻居节点， 在出现Broke异常的情况下说明连接断开
         :param message: 待发送信息
         """
         rec_message = None
@@ -99,22 +99,27 @@ class Client(object):
         while True:
             bc = BlockChain()
             latest_block, prev_hash = bc.get_latest_block()
+            # client开始一轮共识的逻辑：没有待发送交易，交易池为空且没有本地投票数据
+            # 或已经投票但是client没有发送
+            # 或到达时间并且没有发送投票信息
             if (not self.txs and self.tx_pool.is_full() and VoteCenter().vote == {}) or (
                     not self.txs and VoteCenter().has_vote and not self.send_vote) or (
                     not self.txs and Timer().reach() and not self.send_vote):
                 address = Config().get('node.address')
                 final_address = VoteCenter().local_vote()
-                VoteCenter().vote_update(address, final_address, self.height)
+                if final_address is not None:
+                    VoteCenter().vote_update(address, final_address, self.height)
 
-                message_data = {
-                    'vote': address + ' ' + final_address,
-                    'address': address,
-                    'time': time.time(),
-                    'id': int(Config().get('node.id')),
-                    'height': self.height
-                }
-                send_message = Message(STATUS.POT, message_data)
-                self.send(send_message)
+                    message_data = {
+                        'vote': address + ' ' + final_address,
+                        'address': address,
+                        'time': time.time(),
+                        'id': int(Config().get('node.id')),
+                        'height': self.height
+                    }
+                    send_message = Message(STATUS.POT, message_data)
+                    self.send(send_message)
+                # 不论是否进行过数据的发送，都设置为True
                 self.send_vote = True
 
             if self.txs:
@@ -147,6 +152,7 @@ class Client(object):
 
                 if genesis_block:
                     # logging.debug(genesis_block.transactions)
+                    # 如果存在创世区块， 发送创世区块
                     # 考虑一下创世区块的用处
                     data['latest_height'] = latest_block.block_header.height
                     data['genesis_block'] = genesis_block.serialize()
@@ -253,6 +259,10 @@ class Client(object):
         if self.tx_pool.is_full():
             address = Config().get('node.address')
             final_address = VoteCenter().local_vote()
+
+            # 如果本地投票信息为空， 说明该节点不是共识节点或者连接的其他节点不是共识节点
+            if final_address is None:
+                return
 
             VoteCenter().vote_update(address, final_address, self.height)
 
