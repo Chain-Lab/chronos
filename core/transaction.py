@@ -228,4 +228,6 @@ class CoinBaseInput(TxInput):
         result = copy.deepcopy(self.__dict__)
         if "vote_info" in result.keys():
             result.pop("vote_info")
+        if "delay_params" in result.keys():
+            result.pop("delay_params")
         return str(result)
