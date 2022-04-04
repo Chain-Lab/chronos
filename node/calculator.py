@@ -55,7 +55,7 @@ class Calculator(Singleton):
         # 先使用获取到的新的值作为这一轮的seed
         new_seed = funcs.hex2int(delay_params.get("seed"))
         self.result = new_seed
-        self.proof = funcs.hex2int(delay_params.get("proof"))
+        self.proof = funcs.hex2int(delay_params.get("proof", "00"))
         self.seed = new_seed
 
     def task(self):
