@@ -19,6 +19,7 @@ class Calculator(Singleton):
 
         self.result = None
         self.proof = None
+        self.newest_seed = None
 
         self.__cond = threading.Condition()
         self.__has_inited = False
@@ -38,6 +39,7 @@ class Calculator(Singleton):
 
         logging.info("VDF seed changed: {}".format(new_seed))
         self.seed = new_seed
+        self.newest_seed = new_seed
         self.changed = True
 
     def __initialization(self):
@@ -66,6 +68,7 @@ class Calculator(Singleton):
         # 先使用获取到的新的值作为这一轮的seed
         new_seed = funcs.hex2int(delay_params.get("seed"))
         self.result = new_seed
+        self.newest_seed = new_seed
         self.proof = funcs.hex2int(delay_params.get("proof", "00"))
         self.seed = new_seed
         self.__has_inited = True
@@ -120,6 +123,7 @@ class Calculator(Singleton):
 
     @property
     def delay_params(self):
+        self.newest_seed = self.result
         return {
             "seed": funcs.int2hex(self.result),
             "proof": funcs.int2hex(self.proof)
@@ -132,9 +136,9 @@ class Calculator(Singleton):
         :return: 是否共识节点
         """
         address_number = int.from_bytes(Base58Code.decode_check(address), byteorder='big')
-        node_hash = self.result * address_number % 2 ** 256
+        node_hash = self.newest_seed * address_number % 2 ** 256
 
-        if node_hash / 2 ** 256 > 0.5:
+        if node_hash / 2 ** 256 > 0.3:
             logging.debug("{} is not consensus node.".format(address))
             return False
 
