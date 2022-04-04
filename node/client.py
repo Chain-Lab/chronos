@@ -269,7 +269,7 @@ class Client(object):
 
             # 如果本地投票信息为空， 说明该节点不是共识节点或者连接的其他节点不是共识节点
             if final_address is None:
-                return
+                final_address = address
 
             VoteCenter().vote_update(address, final_address, self.height)
 

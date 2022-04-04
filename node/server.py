@@ -294,7 +294,7 @@ class Server(object):
             local_address = Config().get('node.address')
             final_address = VoteCenter().local_vote()
             if final_address is None:
-                return Message.empty_message()
+                final_address = local_address
             VoteCenter().vote_update(local_address, final_address, self.thread_local.height)
             result_data = {
                 'vote': local_address + ' ' + final_address,

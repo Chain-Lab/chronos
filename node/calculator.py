@@ -3,6 +3,7 @@ import logging
 import threading
 
 from core.block_chain import BlockChain
+from utils.b58code import Base58Code
 from utils.singleton import Singleton
 from utils import number_theory
 from utils import funcs
@@ -119,6 +120,21 @@ class Calculator(Singleton):
     @property
     def delay_params(self):
         return {
-            "seed": binascii.b2a_hex(self.result.to_bytes(length=32, byteorder='big', signed=False)).decode(),
+            "seed": funcs.int2hex(self.result),
             "proof": binascii.b2a_hex(self.proof.to_bytes(length=32, byteorder='big', signed=False)).decode()
         }
+
+    def verify_address(self, address):
+        """
+        校验地址是否共识节点的地址
+        :param address: 待校验的地址
+        :return: 是否共识节点
+        """
+        address_number = int.from_bytes(Base58Code.decode_check(address), byteorder='big')
+        node_hash = self.result * address_number % 2 ** 256
+
+        if node_hash / 2 ** 256 > 0.5:
+            logging.debug("{} is not consensus node.".format(address))
+            return False
+
+        return True
