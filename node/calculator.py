@@ -32,8 +32,9 @@ class Calculator(Singleton):
             return
 
         if not self.__has_inited:
-            self.__initialization()
-            self.__cond.notify_all()
+            with self.__cond:
+                self.__initialization()
+                self.__cond.notify_all()
 
         logging.info("VDF seed changed: {}".format(new_seed))
         self.seed = new_seed
