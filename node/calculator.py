@@ -35,7 +35,7 @@ class Calculator(Singleton):
         初始化函数， 获取到创世区块并拿到创世区块中的参数用于进行计算
         """
         bc = BlockChain()
-        genesis_block, _ = bc.get_block_by_height(0)
+        genesis_block = bc.get_block_by_height(0)
 
         if genesis_block is None:
             logging.error("Genesis block is not exists.")
