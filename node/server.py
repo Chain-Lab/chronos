@@ -352,7 +352,7 @@ class Server(object):
             is_added = bc.add_block_from_peers(block)
 
             if is_added:
-                delay_params = block.transactions[0].inputs[0].get("delay_params", {})
+                delay_params = block.transactions[0].inputs[0].delay_params
                 hex_seed = delay_params.get("seed")
                 seed = funcs.hex2int(hex_seed)
                 Calculator().update(seed)

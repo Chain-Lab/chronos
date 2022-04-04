@@ -310,4 +310,4 @@ class BlockChain(object):
     def get_latest_delay_params(self):
         latest_block, _ = self.get_latest_block()
         coinbase_tx_input = latest_block.transactions[0].inputs[0]
-        return coinbase_tx_input.get("delay_params")
+        return coinbase_tx_input.delay_params

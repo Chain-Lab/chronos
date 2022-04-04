@@ -42,7 +42,7 @@ class Calculator(Singleton):
 
         coinbase_tx = genesis_block.transactions[0]
         coinbase_tx_input = coinbase_tx.inputs[0]
-        delay_params = coinbase_tx_input.get("delay_params", {})
+        delay_params = coinbase_tx_input.delay_params
         order_hex = delay_params.get("order")
         verify_param = delay_params.get("verify_param")
         self.time_parma = delay_params.get("time_param")
@@ -51,7 +51,7 @@ class Calculator(Singleton):
 
         latest_block, _ = bc.get_latest_block()
         coinbase_tx_input = latest_block.transactions[0].inputs[0]
-        delay_params = coinbase_tx_input.get("delay_params", {})
+        delay_params = coinbase_tx_input.delay_params
         # 先使用获取到的新的值作为这一轮的seed
         new_seed = int.from_bytes(binascii.a2b_hex(bytes.fromhex(delay_params.get("seed"))), byteorder='big')
         self.result = new_seed
