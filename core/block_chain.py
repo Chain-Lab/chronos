@@ -35,18 +35,20 @@ class BlockChain(object):
             logging.warning("Index overflow while get block #{}".format(index))
             raise IndexError('Index overflow')
 
-    def add_new_block(self, transactions: list, vote: dict):
+    def add_new_block(self, transactions: list, vote: dict, delay_params: dict):
         """
         新区块的产生逻辑， 传入待打包的交易列表和投票信息
-        @param transactions:
-        @param vote:
-        @return:
+        :param transactions:
+        :param vote:
+        :param delay_params:
+        :return:
         """
         latest_block, prev_hash = self.get_latest_block()
         height = latest_block.block_header.height + 1
 
         logging.debug("Vote info: {}".format(vote))
-        coin_base_tx = Transaction.coinbase_tx(vote, {})
+
+        coin_base_tx = Transaction.coinbase_tx(vote, delay_params)
         transactions.insert(0, coin_base_tx)
 
         data = []

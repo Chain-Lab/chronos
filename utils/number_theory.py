@@ -40,7 +40,7 @@ def quick_pow(a, b, p):
 def miller_rabin(random_number):
     """
     MillerRabin算法判断是否质数
-    @param random_number: 待判断的数
+    :param random_number: 待判断的数
     @return: 返回判断结果
     """
     if random_number == 1:
@@ -98,8 +98,8 @@ def randrange(order, entropy=None):
 def is_prime(random_number, _round=40):
     """
     调用Miller Rabin算法检查是否质数， 检查_round轮
-    @param random_number: 选定的随机数
-    @param _round: 检查的轮数
+    :param random_number: 选定的随机数
+    :param _round: 检查的轮数
     @return:
     """
     for _ in range(_round):

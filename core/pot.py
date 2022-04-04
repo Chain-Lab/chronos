@@ -4,6 +4,7 @@ import time
 from core.config import Config
 from core.block_chain import BlockChain
 from utils.dbutil import DBUtil
+from utils import funcs
 from utils.b58code import Base58Code
 
 
@@ -18,10 +19,11 @@ class ProofOfTime(object):
         delay_params = bc.get_latest_delay_params()
         seed = delay_params.get("seed")
         # 需要处理异常
-        seed = int.from_bytes(binascii.a2b_hex(bytes.fromhex(seed)), byteorder='big')
+        seed = funcs.hex2int(seed)
         address_number = int.from_bytes(Base58Code.decode_check(local_address), byteorder='big')
         node_hash = seed * address_number % 2 ** 256
-        if node_hash / 2 ** 256 > 0.2:
+        # 实验测试使用， 在每段时间内有一半的节点会被选为共识节点
+        if node_hash / 2 ** 256 > 0.5:
             return None
 
         local_time = time.time()
@@ -43,7 +45,7 @@ class ProofOfTime(object):
             # 根据vdf的值和钱包地址来确定远端节点是否共识节点
             address_number = int.from_bytes(Base58Code.decode_check(item_address), byteorder='big')
             node_hash = seed * address_number % 2 ** 256
-            if node_hash / 2 ** 256 > 0.2:
+            if node_hash / 2 ** 256 > 0.5:
                 continue
 
             item_time = item[1].get('time')

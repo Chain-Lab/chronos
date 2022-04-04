@@ -16,6 +16,8 @@ from node.constants import STATUS
 from node.message import Message
 from node.timer import Timer
 from utils.dbutil import DBUtil
+from utils import funcs
+from node.calculator import Calculator
 
 
 class Client(object):
@@ -103,8 +105,8 @@ class Client(object):
             # 或已经投票但是client没有发送
             # 或到达时间并且没有发送投票信息
             if (not self.txs and self.tx_pool.is_full() and VoteCenter().vote == {}) or (
-                    not self.txs and VoteCenter().has_vote and not self.send_vote) or (
-                    not self.txs and Timer().reach() and not self.send_vote):
+                    not self.txs and VoteCenter().has_vote and not self.send_vote):
+                # or (not self.txs and Timer().reach() and not self.send_vote):
                 address = Config().get('node.address')
                 final_address = VoteCenter().local_vote()
                 if final_address is not None:
@@ -208,7 +210,7 @@ class Client(object):
         if self.height != local_height:
             # 当前线程最后共识的高度低于最新高度， 更新共识信息
             VoteCenter().refresh(local_height)
-            Timer().refresh(local_height)
+            # Timer().refresh(local_height)
             self.send_vote = False
             self.height = local_height
 
@@ -234,7 +236,12 @@ class Client(object):
         bc = BlockChain()
 
         try:
-            bc.add_block_from_peers(block)
+            is_added = bc.add_block_from_peers(block)
+            if is_added:
+                delay_params = block.transactions[0].inputs[0].get("delay_params", {})
+                hex_seed = delay_params.get("seed")
+                seed = funcs.hex2int(hex_seed)
+                Calculator().update(seed)
         except ValueError as e:
             # todo: 这里应该需要进行回滚， 但是回滚涉及到线程安全问题， 需要重新考虑
             logging.error(e)
@@ -308,7 +315,7 @@ class Client(object):
                 return
 
             bc = BlockChain()
-            bc.add_new_block(transactions, VoteCenter().vote)
+            bc.add_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
             logging.debug("Package new block.")
             self.txs.clear()
 

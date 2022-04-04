@@ -69,7 +69,6 @@ def genesis():
     n = p * q
     t = 50000000
 
-
     delay_params = {
         "order": binascii.b2a_hex(n.to_bytes(
             length=(n.bit_length() + 7) // 8,

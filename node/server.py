@@ -9,11 +9,13 @@ from core.block_chain import BlockChain
 from core.config import Config
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
+from node.calculator import Calculator
 from node.vote_center import VoteCenter
 from node.counter import Counter
 from node.constants import STATUS
 from node.message import Message
 from node.timer import Timer
+from utils import funcs
 
 
 class Server(object):
@@ -54,9 +56,11 @@ class Server(object):
 
     def run(self):
         """
-        类的运行函数， 开一个线程进行监听
+        类的运行函数， 开一个线程进行监听, 同时启动VDF的计算
         :return: None
         """
+        calculator = Calculator()
+        calculator.run()
         thread = threading.Thread(target=self.listen_loop, args=())
         thread.start()
 
@@ -193,7 +197,7 @@ class Server(object):
             self.txs.clear()
             VoteCenter().refresh(remote_height)
             Counter().refresh()
-            Timer().refresh(remote_height)
+            # Timer().refresh(remote_height)
             logging.debug("Local vote and transaction cleared.")
 
         # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
@@ -345,7 +349,13 @@ class Server(object):
         bc = BlockChain()
         try:
             # 一轮共识结束的第一个标识：收到其他节点发来的新区块
-            bc.add_block_from_peers(block)
+            is_added = bc.add_block_from_peers(block)
+
+            if is_added:
+                delay_params = block.transactions[0].inputs[0].get("delay_params", {})
+                hex_seed = delay_params.get("seed")
+                seed = funcs.hex2int(hex_seed)
+                Calculator().update(seed)
             # 从邻居节点更新了区块， 说明一轮共识已经结束或本地区块没有同步
             # 需要更新vote center中的信息并且设置synced为false
             self.thread_local.client_synced = False
