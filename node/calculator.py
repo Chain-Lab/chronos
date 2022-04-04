@@ -18,6 +18,9 @@ class Calculator(Singleton):
 
         self.result = None
         self.proof = None
+
+        self.__cond = threading.Condition()
+        self.__has_inited = False
         self.__initialization()
 
     def update(self, new_seed):
@@ -26,6 +29,11 @@ class Calculator(Singleton):
         """
         if new_seed == self.seed:
             return
+
+        if not self.__has_inited:
+            self.__initialization()
+            self.__cond.notify_all()
+
         logging.info("VDF seed changed: {}".format(new_seed))
         self.seed = new_seed
         self.changed = True
@@ -39,6 +47,7 @@ class Calculator(Singleton):
 
         if genesis_block is None:
             logging.error("Genesis block is not exists.")
+            return
 
         coinbase_tx = genesis_block.transactions[0]
         coinbase_tx_input = coinbase_tx.inputs[0]
@@ -57,35 +66,39 @@ class Calculator(Singleton):
         self.result = new_seed
         self.proof = funcs.hex2int(delay_params.get("proof", "00"))
         self.seed = new_seed
+        self.__has_inited = True
 
     def task(self):
         """
         用于计算VDF的线程函数， 目前设置参数保证一轮计算在30s左右
         """
         while True:
-            calculated_round = 1
-            g = self.seed
-            result = self.seed
-            pi, r = 1, 1
-            while calculated_round <= self.time_parma:
-                if self.changed:
-                    break
-                result = result * result % self.order
+            with self.__cond:
+                while not self.__has_inited:
+                    self.__cond.wait()
+                calculated_round = 1
+                g = self.seed
+                result = self.seed
+                pi, r = 1, 1
+                while calculated_round <= self.time_parma:
+                    if self.changed:
+                        break
+                    result = result * result % self.order
 
-                # b in {0, 1}
-                b = 2 * r // self.proof_parma
-                r = 2 * r % self.proof_parma
-                pi = (pi * pi % self.order) * (g ** b % self.order)
+                    # b in {0, 1}
+                    b = 2 * r // self.proof_parma
+                    r = 2 * r % self.proof_parma
+                    pi = (pi * pi % self.order) * (g ** b % self.order)
 
-                calculated_round += 1
-            if not self.changed:
-                logging.debug("Local new seed calculate finished.")
-                self.result = result
-                self.proof = pi
-                self.seed = self.result
-            else:
-                logging.debug("Seed changed. Start new calculate.")
-                self.changed = False
+                    calculated_round += 1
+                if not self.changed:
+                    logging.debug("Local new seed calculate finished.")
+                    self.result = result
+                    self.proof = pi
+                    self.seed = self.result
+                else:
+                    logging.debug("Seed changed. Start new calculate.")
+                    self.changed = False
 
     def run(self):
         thread = threading.Thread(target=self.task, args=())
