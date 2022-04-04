@@ -82,6 +82,7 @@ class Client(object):
                     db.update([old_wallets])
         # 在信息错误或连接断开时会产生该错误
         except json.decoder.JSONDecodeError as e:
+            logging.debug(data)
             logging.error(e)
         except ConnectionResetError:
             return True
@@ -109,18 +110,19 @@ class Client(object):
                 # or (not self.txs and Timer().reach() and not self.send_vote):
                 address = Config().get('node.address')
                 final_address = VoteCenter().local_vote()
-                if final_address is not None:
-                    VoteCenter().vote_update(address, final_address, self.height)
+                if final_address is None:
+                    final_address = address
+                VoteCenter().vote_update(address, final_address, self.height)
 
-                    message_data = {
-                        'vote': address + ' ' + final_address,
-                        'address': address,
-                        'time': time.time(),
-                        'id': int(Config().get('node.id')),
-                        'height': self.height
-                    }
-                    send_message = Message(STATUS.POT, message_data)
-                    self.send(send_message)
+                message_data = {
+                    'vote': address + ' ' + final_address,
+                    'address': address,
+                    'time': time.time(),
+                    'id': int(Config().get('node.id')),
+                    'height': self.height
+                }
+                send_message = Message(STATUS.POT, message_data)
+                self.send(send_message)
                 # 不论是否进行过数据的发送，都设置为True
                 self.send_vote = True
 
