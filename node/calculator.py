@@ -53,9 +53,9 @@ class Calculator(Singleton):
         coinbase_tx_input = latest_block.transactions[0].inputs[0]
         delay_params = coinbase_tx_input.delay_params
         # 先使用获取到的新的值作为这一轮的seed
-        new_seed = int.from_bytes(binascii.a2b_hex(bytes.fromhex(delay_params.get("seed"))), byteorder='big')
+        new_seed = funcs.hex2int(delay_params.get("seed"))
         self.result = new_seed
-        self.proof = int.from_bytes(binascii.a2b_hex(bytes.fromhex(delay_params.get("proof"))), byteorder='big')
+        self.proof = funcs.hex2int(delay_params.get("proof"))
         self.seed = new_seed
 
     def task(self):

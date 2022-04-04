@@ -44,4 +44,4 @@ def int2hex(value: int):
 
 
 def hex2int(s: str):
-    return int.from_bytes(binascii.a2b_hex(bytes.fromhex(s)), byteorder='big')
+    return int.from_bytes(s.encode(), byteorder='big')
