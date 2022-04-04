@@ -196,7 +196,6 @@ class Server(object):
         if local_height < remote_height:
             self.txs.clear()
             VoteCenter().refresh(remote_height)
-            Counter().refresh()
             # Timer().refresh(remote_height)
             logging.debug("Local vote and transaction cleared.")
 
@@ -352,6 +351,7 @@ class Server(object):
             is_added = bc.add_block_from_peers(block)
 
             if is_added:
+                Counter().refresh()
                 delay_params = block.transactions[0].inputs[0].delay_params
                 hex_seed = delay_params.get("seed")
                 seed = funcs.hex2int(hex_seed)

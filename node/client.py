@@ -11,6 +11,7 @@ from core.block_chain import BlockChain
 from core.config import Config
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
+from node.counter import Counter
 from node.vote_center import VoteCenter
 from node.constants import STATUS
 from node.message import Message
@@ -240,6 +241,7 @@ class Client(object):
         try:
             is_added = bc.add_block_from_peers(block)
             if is_added:
+                Counter().refresh()
                 delay_params = block.transactions[0].inputs[0].delay_params
                 hex_seed = delay_params.get("seed")
                 seed = funcs.hex2int(hex_seed)
