@@ -77,9 +77,9 @@ def genesis():
         )).decode(),
         "time_param": t,
         # 在目前开发过程中设置为默认的256位随机数
-        "seed": binascii.b2a_hex(number_theory.get_prime(256).to_bytes(length=32, byteorder='big', signed=False)).decode(),
+        "seed": funcs.int2hex(number_theory.get_prime(256)),
         # 用于验证的参数， 节点计算的同时计算proof
-        "verify_param": binascii.b2a_hex(number_theory.get_prime(256).to_bytes(length=32, byteorder='big', signed=False)).decode()
+        "verify_param": funcs.int2hex(number_theory.get_prime(256))
     }
     print(delay_params)
 

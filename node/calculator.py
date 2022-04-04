@@ -122,7 +122,7 @@ class Calculator(Singleton):
     def delay_params(self):
         return {
             "seed": funcs.int2hex(self.result),
-            "proof": binascii.b2a_hex(self.proof.to_bytes(length=32, byteorder='big', signed=False)).decode()
+            "proof": funcs.int2hex(self.proof)
         }
 
     def verify_address(self, address):
