@@ -4,6 +4,7 @@ import threading
 from core.pot import ProofOfTime
 from core.config import Config
 from utils.singleton import Singleton
+from node.calculator import Calculator
 
 
 class VoteCenter(Singleton):
@@ -41,6 +42,10 @@ class VoteCenter(Singleton):
                 address = current
                 final_address = self.__vote_dict[address]
                 logging.debug("Pop task {} vote {}".format(address, final_address))
+
+                if not Calculator().verify_address(address):
+                    continue
+
                 if final_address not in self.__vote:
                     self.__vote[final_address] = [address, 1]
                 else:

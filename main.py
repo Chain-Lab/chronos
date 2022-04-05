@@ -18,6 +18,7 @@ from node.peer_to_peer import P2p
 from node.server import Server
 from utils import funcs
 from utils.b58code import Base58Code
+from utils import number_theory
 from rpc.rpcserver import RPCServer
 
 """
@@ -63,8 +64,27 @@ def run():
 
 
 def genesis():
+    p = number_theory.get_prime(512)
+    q = number_theory.get_prime(512)
+    n = p * q
+    t = 50000000
+
+    delay_params = {
+        "order": binascii.b2a_hex(n.to_bytes(
+            length=(n.bit_length() + 7) // 8,
+            byteorder='big',
+            signed=False
+        )).decode(),
+        "time_param": t,
+        # 在目前开发过程中设置为默认的256位随机数
+        "seed": funcs.int2hex(number_theory.get_prime(256)),
+        # 用于验证的参数， 节点计算的同时计算proof
+        "verify_param": funcs.int2hex(number_theory.get_prime(256))
+    }
+    print(delay_params)
+
     bc = BlockChain()
-    tx = Transaction.coinbase_tx({})
+    tx = Transaction.coinbase_tx({}, delay_params)
     bc.new_genesis_block(tx)
 
 

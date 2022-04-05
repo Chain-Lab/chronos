@@ -5,6 +5,9 @@ from utils.singleton import Singleton
 
 
 class Timer(Singleton):
+    """
+    节点的计时器， 在间隔时间后触发共识逻辑
+    """
     INTERVAL = 30
     # 便于调试，先设置为30秒
 

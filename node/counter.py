@@ -32,4 +32,5 @@ class Counter(Singleton):
         self.__lock.release()
 
     def client_verify(self):
+        logging.debug("Synced client: {}/{}".format(self.__client_synced, self.__client_count))
         return self.__client_count == self.__client_synced

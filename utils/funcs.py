@@ -1,3 +1,4 @@
+import binascii
 import hashlib
 
 from utils import b58code
@@ -35,3 +36,13 @@ def sum256_hex(*args):
         else:
             m.update(arg)
     return m.hexdigest()
+
+
+def int2hex(value: int):
+    bit_length = value.bit_length()
+    return binascii.b2a_hex(value.to_bytes(length=(bit_length + 7) // 8, byteorder='big', signed=False)).decode()
+
+
+def hex2int(s: str):
+    return int.from_bytes(bytes.fromhex(s), byteorder='big')
+
