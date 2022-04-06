@@ -14,6 +14,7 @@ from node.vote_center import VoteCenter
 from node.counter import Counter
 from node.constants import STATUS
 from node.message import Message
+from utils.network import TCPConnect
 from node.timer import Timer
 from utils import funcs
 
@@ -86,8 +87,9 @@ class Server(object):
 
         while True:
             try:
-                rec_data = conn.recv(4096 * 2)
-                if rec_data == b"":
+                # rec_data = conn.recv(4096 * 2)
+                rec_data = TCPConnect.recv_msg(conn)
+                if rec_data is None:
                     Counter().client_close()
                     conn.close()
                     break
@@ -97,7 +99,8 @@ class Server(object):
             except ValueError:
                 try:
                     # 发送信息， 如果出现错误说明连接断开
-                    conn.sendall('{"code": 0, "data": ""}'.encode())
+                    # conn.sendall('{"code": 0, "data": ""}'.encode())
+                    TCPConnect.send_msg(conn, '{"code": 0, "data": ""}')
                 except BrokenPipeError:
                     logging.info("Client lost connect, close server.")
                     server_continue = False
@@ -106,7 +109,8 @@ class Server(object):
                 send_data = self.handle(rec_msg)
                 try:
                     # 发送信息， 如果出现错误说明连接断开
-                    conn.sendall(send_data.encode())
+                    # conn.sendall(send_data.encode())
+                    TCPConnect.send_msg(conn, send_data)
                 except BrokenPipeError:
                     logging.info("Client lost connect, close server.")
                     server_continue = False

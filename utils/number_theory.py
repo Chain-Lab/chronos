@@ -2,6 +2,10 @@ import os
 import random
 import sys
 
+"""
+数论相关的工具函数
+"""
+
 if sys.version_info >= (3,):  # pragma: no branch
 
     def entropy_to_bits(ent_256):
