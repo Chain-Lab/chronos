@@ -81,7 +81,7 @@ def genesis():
         # 用于验证的参数， 节点计算的同时计算proof
         "verify_param": funcs.int2hex(number_theory.get_prime(256))
     }
-    print(delay_params)
+    logging.debug(delay_params)
 
     bc = BlockChain()
     tx = Transaction.coinbase_tx({}, delay_params)

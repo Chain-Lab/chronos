@@ -62,6 +62,9 @@ class Server(object):
         """
         calculator = Calculator()
         calculator.run()
+        # 实例化timer， 进行初始化操作
+        Timer()
+
         thread = threading.Thread(target=self.listen_loop, args=())
         thread.start()
 
@@ -200,7 +203,7 @@ class Server(object):
         if local_height < remote_height:
             self.txs.clear()
             VoteCenter().refresh(remote_height)
-            # Timer().refresh(remote_height)
+            Timer().refresh(remote_height)
             logging.debug("Local vote and transaction cleared.")
 
         # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
@@ -217,9 +220,8 @@ class Server(object):
 
         # 投票信息同步完成
         # todo： 逻辑修改， 在到达时间点后直接进行处理
-        flg = self.check_vote_synced(vote_data)
         # 这里的逻辑实际是存在问题的， server和每个client都有建立连接， 但是只和一个client判断信息同步完成， 并且每一次都要判断
-        if flg:
+        if Timer().finish() or self.check_vote_synced(vote_data):
             a = sorted(VoteCenter().vote.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
             # 如果同步完成， 按照第一关键字为投票数，第二关键字为地址字典序来进行排序
             # x的结构： addr1: [addr2 , addr3, ..., count]
@@ -289,7 +291,7 @@ class Server(object):
 
         self.txs.append(transaction_data)
         transaction = Transaction.deserialize(transaction_data)
-        # 如果远端的交易添加失败， 说明交易已经存在或上一轮共识结束不进行后面的操作， 避免出现重复发出共识信息
+        # 如果对端的交易添加失败， 说明交易已经存在或上一轮共识结束不进行后面的操作， 避免出现重复发出共识信息
         if not self.tx_pool.add(transaction):
             return Message.empty_message()
 
