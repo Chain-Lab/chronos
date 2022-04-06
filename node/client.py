@@ -16,6 +16,7 @@ from node.vote_center import VoteCenter
 from node.constants import STATUS
 from node.message import Message
 from node.timer import Timer
+from utils.network import TCPConnect
 from utils.dbutil import DBUtil
 from utils import funcs
 from node.calculator import Calculator
@@ -48,13 +49,15 @@ class Client(object):
         rec_message = None
         data = json.dumps(message.__dict__)
         try:
-            self.sock.sendall(data.encode())
+            # self.sock.sendall(data.encode())
+            TCPConnect.send_msg(self.sock, data)
         except BrokenPipeError:
             logging.info("Lost connect, client close.")
             return True
 
         try:
-            rec_data = self.sock.recv(4096 * 2)
+            # rec_data = self.sock.recv(4096 * 2)
+            rec_data = TCPConnect.recv_msg(self.sock)
             if rec_data == b"":
                 return True
             rec_message = json.loads(rec_data.decode('utf-8'))
