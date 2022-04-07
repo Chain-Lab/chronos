@@ -203,7 +203,6 @@ class Server(object):
         if local_height < remote_height:
             self.txs.clear()
             VoteCenter().refresh(remote_height)
-            Timer().refresh(remote_height)
             logging.debug("Local vote and transaction cleared.")
 
         # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
@@ -352,12 +351,15 @@ class Server(object):
         data = message.get("data", "")
         block = Block.deserialize(data)
         bc = BlockChain()
+        height = block.block_header.height
+
         try:
             # 一轮共识结束的第一个标识：收到其他节点发来的新区块
             is_added = bc.add_block_from_peers(block)
 
             if is_added:
                 Counter().refresh()
+                Timer().refresh(height)
                 delay_params = block.transactions[0].inputs[0].delay_params
                 hex_seed = delay_params.get("seed")
                 seed = funcs.hex2int(hex_seed)

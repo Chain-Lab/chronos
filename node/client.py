@@ -216,7 +216,6 @@ class Client(object):
         if self.height != local_height:
             # 当前线程最后共识的高度低于最新高度， 更新共识信息
             VoteCenter().refresh(local_height)
-            Timer().refresh(local_height)
             self.send_vote = False
             self.height = local_height
 
@@ -240,11 +239,13 @@ class Client(object):
         data = message.get('data', {})
         block = Block.deserialize(data)
         bc = BlockChain()
+        height = block.block_header.height
 
         try:
             is_added = bc.add_block_from_peers(block)
             if is_added:
                 Counter().refresh()
+                Timer().refresh(height)
                 delay_params = block.transactions[0].inputs[0].delay_params
                 hex_seed = delay_params.get("seed")
                 seed = funcs.hex2int(hex_seed)
@@ -323,6 +324,10 @@ class Client(object):
 
             bc = BlockChain()
             bc.add_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
+            # todo: 这里假设能够正常运行, 需要考虑一下容错
+            block, _ = bc.get_latest_block()
+            height = block.block_header.height
+            Timer().refresh(height)
             logging.debug("Package new block.")
             self.txs.clear()
 

@@ -17,6 +17,7 @@ class Timer(Singleton):
         self.__next_time = -1
         self.__finish_time = -1
         self.__height = -1
+        self.__initialed = False
 
         self.__lock = threading.Lock()
         self.__initialization()
@@ -28,17 +29,21 @@ class Timer(Singleton):
         """
         bc = BlockChain()
         latest_block, _ = bc.get_latest_block()
-        timer = Timer()
+        if latest_block is None:
+            return
         height = latest_block.block_header.height
         timestamp = latest_block.block_header.height
-        timer.refresh(height=height, timestamp=timestamp)
-        self.refresh(height, timestamp)
+        self.refresh(height=height, timestamp=timestamp)
+        self.__initialed = True
 
     def refresh(self, height, timestamp=None):
         if self.__lock.locked() or height <= self.__height:
             return
 
         self.__lock.acquire()
+
+        if not self.__initialed:
+            self.__initialization()
 
         if timestamp is None:
             timestamp = time.time()
