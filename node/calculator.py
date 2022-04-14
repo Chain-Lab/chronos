@@ -124,6 +124,11 @@ class Calculator(Singleton):
 
     @property
     def delay_params(self):
+        if not self.__has_inited:
+            with self.__cond:
+                self.__initialization()
+                self.__cond.notify_all()
+
         self.newest_seed = self.result
         return {
             "seed": funcs.int2hex(self.result),
@@ -136,6 +141,11 @@ class Calculator(Singleton):
         :param address: 待校验的地址
         :return: 是否共识节点
         """
+        if not self.__has_inited:
+            with self.__cond:
+                self.__initialization()
+                self.__cond.notify_all()
+
         address_number = int.from_bytes(Base58Code.decode_check(address), byteorder='big')
         node_hash = self.newest_seed * address_number % 2 ** 256
 
