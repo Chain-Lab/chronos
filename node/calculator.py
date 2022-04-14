@@ -76,6 +76,7 @@ class Calculator(Singleton):
     def task(self):
         """
         用于计算VDF的线程函数， 目前设置参数保证一轮计算在30s左右
+        todo： 这里存在问题，应该在下一个区块出来之前等待，如果更新了新的VDF参数再开始进行计算，否则存在一致性问题
         """
         while True:
             with self.__cond:
@@ -123,6 +124,11 @@ class Calculator(Singleton):
 
     @property
     def delay_params(self):
+        if not self.__has_inited:
+            with self.__cond:
+                self.__initialization()
+                self.__cond.notify_all()
+
         self.newest_seed = self.result
         return {
             "seed": funcs.int2hex(self.result),
@@ -135,6 +141,11 @@ class Calculator(Singleton):
         :param address: 待校验的地址
         :return: 是否共识节点
         """
+        if not self.__has_inited:
+            with self.__cond:
+                self.__initialization()
+                self.__cond.notify_all()
+
         address_number = int.from_bytes(Base58Code.decode_check(address), byteorder='big')
         node_hash = self.newest_seed * address_number % 2 ** 256
 

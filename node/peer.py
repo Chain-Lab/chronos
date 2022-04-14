@@ -38,6 +38,11 @@ class Peer(Singleton):
             time.sleep(1)
 
     def broadcast(self, transaction):
+        """
+        待改造，节点直接通过UDP-gossip协议来进行交易的传播
+        :param transaction:
+        :return:
+        """
         peer: Client
         logging.debug("Peer start broadcast transaction")
 

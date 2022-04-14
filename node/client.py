@@ -110,8 +110,8 @@ class Client(object):
             # 或已经投票但是client没有发送
             # 或到达时间并且没有发送投票信息
             if (not self.txs and self.tx_pool.is_full() and VoteCenter().vote == {}) or (
-                    not self.txs and VoteCenter().has_vote and not self.send_vote):
-                # or (not self.txs and Timer().reach() and not self.send_vote):
+                    not self.txs and VoteCenter().has_vote and not self.send_vote) or (
+                    not self.txs and Timer().reach() and not self.send_vote):
                 address = Config().get('node.address')
                 final_address = VoteCenter().local_vote()
                 if final_address is None:
@@ -216,7 +216,6 @@ class Client(object):
         if self.height != local_height:
             # 当前线程最后共识的高度低于最新高度， 更新共识信息
             VoteCenter().refresh(local_height)
-            # Timer().refresh(local_height)
             self.send_vote = False
             self.height = local_height
 
@@ -240,11 +239,13 @@ class Client(object):
         data = message.get('data', {})
         block = Block.deserialize(data)
         bc = BlockChain()
+        height = block.block_header.height
 
         try:
             is_added = bc.add_block_from_peers(block)
             if is_added:
                 Counter().refresh()
+                Timer().refresh(height)
                 delay_params = block.transactions[0].inputs[0].delay_params
                 hex_seed = delay_params.get("seed")
                 seed = funcs.hex2int(hex_seed)
@@ -318,11 +319,16 @@ class Client(object):
             transactions = self.tx_pool.package(self.height + 1)
 
             # 如果取出的交易数据是None， 说明另外一个线程已经打包了， 就不用再管
+            # upd: 在新的逻辑里面，不论节点交易池是否存在交易都会进行区块的打包
             if transactions is None:
-                return
+                transactions = []
 
             bc = BlockChain()
             bc.add_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
+            # todo: 这里假设能够正常运行, 需要考虑一下容错
+            block, _ = bc.get_latest_block()
+            height = block.block_header.height
+            Timer().refresh(height)
             logging.debug("Package new block.")
             self.txs.clear()
 

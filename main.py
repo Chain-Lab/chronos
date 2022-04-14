@@ -67,7 +67,7 @@ def genesis():
     p = number_theory.get_prime(512)
     q = number_theory.get_prime(512)
     n = p * q
-    t = 50000000
+    t = 5000000
 
     delay_params = {
         "order": binascii.b2a_hex(n.to_bytes(
@@ -81,7 +81,7 @@ def genesis():
         # 用于验证的参数， 节点计算的同时计算proof
         "verify_param": funcs.int2hex(number_theory.get_prime(256))
     }
-    print(delay_params)
+    logging.debug(delay_params)
 
     bc = BlockChain()
     tx = Transaction.coinbase_tx({}, delay_params)
