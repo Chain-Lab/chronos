@@ -67,7 +67,7 @@ def genesis():
     p = number_theory.get_prime(512)
     q = number_theory.get_prime(512)
     n = p * q
-    t = 50000000
+    t = 5000000
 
     delay_params = {
         "order": binascii.b2a_hex(n.to_bytes(
