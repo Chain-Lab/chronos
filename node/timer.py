@@ -9,9 +9,8 @@ class Timer(Singleton):
     """
     节点的计时器， 在间隔时间后触发共识逻辑
     """
-    INTERVAL = 30
-    FINISH_INTERVAL = 10
-    # 便于调试，先设置为30秒
+    INTERVAL = 10
+    FINISH_INTERVAL = 5
 
     def __init__(self):
         self.__next_time = -1
