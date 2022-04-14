@@ -225,9 +225,14 @@ class Server(object):
             # 如果同步完成， 按照第一关键字为投票数，第二关键字为地址字典序来进行排序
             # x的结构： addr1: [addr2 , addr3, ..., count]
             # x[1]取后面的列表
-            address = a[0][0]
-            result = Message(STATUS.SYNC_MSG, address)
-            return result
+            try:
+                address = a[0][0]
+                result = Message(STATUS.SYNC_MSG, address)
+                return result
+            except IndexError:
+                # 如果本地没有投票信息直接略过
+                logging.info("Local node has none vote information.")
+                pass
 
         if self.txs:
             # 如果服务器存在交易， 发送给client

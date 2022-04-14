@@ -27,6 +27,6 @@ class TCPConnect(object):
         while len(data) < n:
             packet = sock.recv(n - len(data))
             if not packet:
-                return None
+                return b""
             data.extend(packet)
         return data
