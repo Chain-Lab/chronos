@@ -29,6 +29,22 @@ class Block(object):
         return cls(block_header, coinbase_tx)
 
     @property
+    def vote_info(self):
+        return self._transactions[0].inputs[0].vote_info
+
+    @property
+    def vote_count(self):
+        vote_info: dict
+        vote_info = self.vote_info
+        result = 0
+        for item in vote_info.values():
+            result += item[-1]
+        return result
+
+    def delay_params(self):
+        return self._transactions[0].inputs[0].delay_params
+
+    @property
     def block_header(self):
         return self._block_header
 
