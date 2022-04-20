@@ -124,9 +124,8 @@ class Calculator(Singleton):
                     calculated_round += 1
                 if not self.__changed:
                     logging.debug("Local new seed calculate finished.")
-                    self.result = result
-                    self.proof = pi
-                    self.seed = self.result
+                    self.result_seed = result
+                    self.result_proof = pi
                     self.__finished = True
                 else:
                     logging.debug("Seed changed. Start new calculate.")
@@ -155,11 +154,16 @@ class Calculator(Singleton):
                 self.__initialization()
                 self.__cond.notify_all()
 
-        self.newest_seed = self.result
-        return {
-            "seed": funcs.int2hex(self.result),
-            "proof": funcs.int2hex(self.proof)
-        }
+        if not self.__finished:
+            return {
+                "seed": funcs.int2hex(self.result),
+                "proof": funcs.int2hex(self.proof)
+            }
+        else:
+            return {
+                "seed": funcs.int2hex(self.result_seed),
+                "proof": funcs.int2hex(self.result_proof)
+            }
 
     def verify_address(self, address):
         """
