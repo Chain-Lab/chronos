@@ -11,27 +11,30 @@ from utils import funcs
 
 class Calculator(Singleton):
     def __init__(self):
-        self.seed = None
-        self.order = None
-        self.time_parma = None
+        self.order = None                # VDF计算的order, n = p * q
+        self.time_parma = None           # 计算参数，从创世区块获取
         self.proof_parma = None
 
-        self.result = None
-        self.proof = None
-        self.newest_seed = None
+        self.seed = None                 # 上一轮的计算结果，作为当前的计算输入
+        self.proof = None                # 上一轮的证明参数
+        self.result_seed = None          # 目前计算的结果
+        self.result_proof = None         # 目前计算的证明参数
 
         self.__cond = threading.Condition()
+        self.__lock = threading.Lock()
         self.__changed = False
         self.__has_inited = False
         self.__finished = True
         self.__initialization()
 
-    def update(self, new_seed):
+    def update(self, new_seed=None, pi=None):
         """
         得到区块中的vdf参数进行比对， 如果发生改变则重新开始计算
         """
-        if new_seed == self.seed:
+        if new_seed == self.seed or self.__lock.locked():
             return
+
+        self.__lock.acquire()
 
         if not self.__has_inited:
             with self.__cond:
@@ -39,14 +42,29 @@ class Calculator(Singleton):
                 self.__cond.notify_all()
 
         logging.info("VDF seed changed: {}".format(new_seed))
-        self.seed = new_seed
-        self.newest_seed = new_seed
-        self.__changed = True
 
-        if self.__finished:
+        if new_seed is not None:
+            # 如果能进入到这个逻辑， 说明线程还在进行计算， seed没有被修改过
+            # seed != new_seed, 修改changed之后立马会进行计算的重新开始
+            self.seed = new_seed
+            self.proof = pi
+            if self.__finished:
+                # 在本地计算完成后并且收到新的区块参数
+                with self.__cond:
+                    self.result_seed = None
+                    self.result_proof = None
+                    self.__cond.notify_all()
+            else:
+                self.__changed = True
+        else:
+            # 本地作为打包节点时进行参数更新
             with self.__cond:
-                self.__finished = False
+                self.seed = self.result_seed
+                self.proof = self.result_proof
+                self.result_seed = None
+                self.result_proof = new_seed
                 self.__cond.notify_all()
+        self.__lock.release()
 
     def __initialization(self):
         """
@@ -86,9 +104,8 @@ class Calculator(Singleton):
         """
         while True:
             with self.__cond:
-                while not self.__has_inited:
-                    self.__cond.wait()
-                while self.__finished:
+                # 没有创世区块无法初始化的时候
+                while not self.__has_inited or self.__finished:
                     self.__cond.wait()
                 calculated_round = 1
                 g = self.seed

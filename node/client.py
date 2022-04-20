@@ -248,8 +248,10 @@ class Client(object):
                 Timer().refresh(height)
                 delay_params = block.transactions[0].inputs[0].delay_params
                 hex_seed = delay_params.get("seed")
+                hex_pi = delay_params.get("pi")
                 seed = funcs.hex2int(hex_seed)
-                Calculator().update(seed)
+                pi = funcs.hex2int(hex_pi)
+                Calculator().update(seed, pi)
         except ValueError as e:
             # todo: 这里应该需要进行回滚， 但是回滚涉及到线程安全问题， 需要重新考虑
             logging.error(e)
@@ -329,6 +331,7 @@ class Client(object):
             block, _ = bc.get_latest_block()
             height = block.block_header.height
             Timer().refresh(height)
+            Calculator().update()
             logging.debug("Package new block.")
             self.txs.clear()
 
