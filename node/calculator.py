@@ -11,7 +11,6 @@ from utils import funcs
 
 class Calculator(Singleton):
     def __init__(self):
-        self.changed = False
         self.seed = None
         self.order = None
         self.time_parma = None
@@ -22,7 +21,9 @@ class Calculator(Singleton):
         self.newest_seed = None
 
         self.__cond = threading.Condition()
+        self.__changed = False
         self.__has_inited = False
+        self.__finished = True
         self.__initialization()
 
     def update(self, new_seed):
@@ -40,7 +41,12 @@ class Calculator(Singleton):
         logging.info("VDF seed changed: {}".format(new_seed))
         self.seed = new_seed
         self.newest_seed = new_seed
-        self.changed = True
+        self.__changed = True
+
+        if self.__finished:
+            with self.__cond:
+                self.__finished = False
+                self.__cond.notify_all()
 
     def __initialization(self):
         """
@@ -82,12 +88,14 @@ class Calculator(Singleton):
             with self.__cond:
                 while not self.__has_inited:
                     self.__cond.wait()
+                while self.__finished:
+                    self.__cond.wait()
                 calculated_round = 1
                 g = self.seed
                 result = self.seed
                 pi, r = 1, 1
                 while calculated_round <= self.time_parma:
-                    if self.changed:
+                    if self.__changed:
                         break
                     result = result * result % self.order
 
@@ -97,14 +105,15 @@ class Calculator(Singleton):
                     pi = (pi * pi % self.order) * (g ** b % self.order)
 
                     calculated_round += 1
-                if not self.changed:
+                if not self.__changed:
                     logging.debug("Local new seed calculate finished.")
                     self.result = result
                     self.proof = pi
                     self.seed = self.result
+                    self.__finished = True
                 else:
                     logging.debug("Seed changed. Start new calculate.")
-                    self.changed = False
+                    self.__changed = False
 
     def run(self):
         thread = threading.Thread(target=self.task, args=())
