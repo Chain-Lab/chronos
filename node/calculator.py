@@ -151,6 +151,7 @@ class Calculator(Singleton):
 
     @property
     def delay_params(self):
+        logging.debug("Calculator initial status: {}".format(self.__has_inited))
         if not self.__has_inited:
             with self.__cond:
                 self.__initialization()
@@ -166,7 +167,7 @@ class Calculator(Singleton):
                 "seed": funcs.int2hex(self.result_seed),
                 "proof": funcs.int2hex(self.result_proof)
             }
-        logging.debug("Return result is :", result)
+        logging.debug("Return result is :{}".format(result))
         return result
 
     def verify_address(self, address):
