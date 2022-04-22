@@ -93,10 +93,9 @@ class Calculator(Singleton):
         delay_params = coinbase_tx_input.delay_params
         # 先使用获取到的新的值作为这一轮的seed
         new_seed = funcs.hex2int(delay_params.get("seed"))
-        self.result = new_seed
-        self.newest_seed = new_seed
         self.proof = funcs.hex2int(delay_params.get("proof", "00"))
         self.seed = new_seed
+        self.__finished = False
         self.__has_inited = True
 
     def task(self):
@@ -159,7 +158,7 @@ class Calculator(Singleton):
 
         if not self.__finished:
             result = {
-                "seed": funcs.int2hex(self.result),
+                "seed": funcs.int2hex(self.seed),
                 "proof": funcs.int2hex(self.proof)
             }
         else:
