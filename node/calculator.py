@@ -181,7 +181,7 @@ class Calculator(Singleton):
                 self.__cond.notify_all()
 
         address_number = int.from_bytes(Base58Code.decode_check(address), byteorder='big')
-        node_hash = self.newest_seed * address_number % 2 ** 256
+        node_hash = self.seed * address_number % 2 ** 256
 
         if node_hash / 2 ** 256 > 0.3:
             logging.debug("{} is not consensus node.".format(address))
