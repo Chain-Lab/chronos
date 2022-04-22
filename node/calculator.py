@@ -24,7 +24,7 @@ class Calculator(Singleton):
         self.__lock = threading.Lock()
         self.__changed = False
         self.__has_inited = False
-        self.__finished = True
+        self.__finished = False
         self.__initialization()
 
     def update(self, new_seed=None, pi=None):
