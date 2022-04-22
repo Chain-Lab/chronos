@@ -244,7 +244,7 @@ class Client(object):
         try:
             is_added = bc.add_block_from_peers(block)
             if is_added:
-                Counter().refresh()
+                Counter().refresh(height)
                 Timer().refresh(height)
                 delay_params = block.transactions[0].inputs[0].delay_params
                 hex_seed = delay_params.get("seed")
