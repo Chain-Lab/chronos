@@ -207,6 +207,7 @@ class Server(object):
 
         # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
         if self.thread_local.height != local_height:
+            Counter().refresh(local_height)
             self.thread_local.height = local_height
             self.thread_local.client_synced = False
             self.thread_local.server_synced = False

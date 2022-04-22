@@ -43,7 +43,7 @@ class VoteCenter(Singleton):
                 final_address = self.__vote_dict[address]
                 logging.debug("Pop task {} vote {}".format(address, final_address))
 
-                if not Calculator().verify_address(address):
+                if address == final_address or not Calculator().verify_address(address):
                     continue
 
                 if final_address not in self.__vote:
