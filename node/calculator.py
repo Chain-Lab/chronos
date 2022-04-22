@@ -11,36 +11,61 @@ from utils import funcs
 
 class Calculator(Singleton):
     def __init__(self):
-        self.changed = False
-        self.seed = None
-        self.order = None
-        self.time_parma = None
+        self.order = None                # VDF计算的order, n = p * q
+        self.time_parma = None           # 计算参数，从创世区块获取
         self.proof_parma = None
 
-        self.result = None
-        self.proof = None
-        self.newest_seed = None
+        self.seed = None                 # 上一轮的计算结果，作为当前的计算输入
+        self.proof = None                # 上一轮的证明参数
+        self.result_seed = None          # 目前计算的结果
+        self.result_proof = None         # 目前计算的证明参数
 
         self.__cond = threading.Condition()
+        self.__lock = threading.Lock()
+        self.__changed = False
         self.__has_inited = False
+        self.__finished = False
         self.__initialization()
 
-    def update(self, new_seed):
+    def update(self, new_seed=None, pi=None):
         """
         得到区块中的vdf参数进行比对， 如果发生改变则重新开始计算
         """
-        if new_seed == self.seed:
+        if new_seed == self.seed or self.__lock.locked():
             return
+
+        self.__lock.acquire()
 
         if not self.__has_inited:
             with self.__cond:
                 self.__initialization()
+                logging.debug("Calculator initial finished.")
                 self.__cond.notify_all()
 
         logging.info("VDF seed changed: {}".format(new_seed))
-        self.seed = new_seed
-        self.newest_seed = new_seed
-        self.changed = True
+
+        if new_seed is not None:
+            # 如果能进入到这个逻辑， 说明线程还在进行计算， seed没有被修改过
+            # seed != new_seed, 修改changed之后立马会进行计算的重新开始
+            self.seed = new_seed
+            self.proof = pi
+            if self.__finished:
+                # 在本地计算完成后并且收到新的区块参数
+                with self.__cond:
+                    self.result_seed = None
+                    self.result_proof = None
+                    self.__cond.notify_all()
+            else:
+                self.__changed = True
+        else:
+            # 本地作为打包节点时进行参数更新
+            with self.__cond:
+                self.seed = self.result_seed
+                self.proof = self.result_proof
+                self.result_seed = None
+                self.result_proof = new_seed
+                self.__cond.notify_all()
+        self.__lock.release()
 
     def __initialization(self):
         """
@@ -61,16 +86,16 @@ class Calculator(Singleton):
         self.time_parma = delay_params.get("time_param")
         self.order = funcs.hex2int(order_hex)
         self.proof_parma = funcs.hex2int(verify_param)
+        logging.debug("Genesis params initial.")
 
         latest_block, _ = bc.get_latest_block()
         coinbase_tx_input = latest_block.transactions[0].inputs[0]
         delay_params = coinbase_tx_input.delay_params
         # 先使用获取到的新的值作为这一轮的seed
         new_seed = funcs.hex2int(delay_params.get("seed"))
-        self.result = new_seed
-        self.newest_seed = new_seed
         self.proof = funcs.hex2int(delay_params.get("proof", "00"))
         self.seed = new_seed
+        self.__finished = False
         self.__has_inited = True
 
     def task(self):
@@ -80,14 +105,15 @@ class Calculator(Singleton):
         """
         while True:
             with self.__cond:
-                while not self.__has_inited:
+                # 没有创世区块无法初始化的时候
+                while not self.__has_inited or self.__finished:
                     self.__cond.wait()
                 calculated_round = 1
                 g = self.seed
                 result = self.seed
                 pi, r = 1, 1
                 while calculated_round <= self.time_parma:
-                    if self.changed:
+                    if self.__changed:
                         break
                     result = result * result % self.order
 
@@ -97,14 +123,14 @@ class Calculator(Singleton):
                     pi = (pi * pi % self.order) * (g ** b % self.order)
 
                     calculated_round += 1
-                if not self.changed:
+                if not self.__changed:
                     logging.debug("Local new seed calculate finished.")
-                    self.result = result
-                    self.proof = pi
-                    self.seed = self.result
+                    self.result_seed = result
+                    self.result_proof = pi
+                    self.__finished = True
                 else:
                     logging.debug("Seed changed. Start new calculate.")
-                    self.changed = False
+                    self.__changed = False
 
     def run(self):
         thread = threading.Thread(target=self.task, args=())
@@ -124,16 +150,24 @@ class Calculator(Singleton):
 
     @property
     def delay_params(self):
+        logging.debug("Calculator initial status: {}".format(self.__has_inited))
         if not self.__has_inited:
             with self.__cond:
                 self.__initialization()
                 self.__cond.notify_all()
 
-        self.newest_seed = self.result
-        return {
-            "seed": funcs.int2hex(self.result),
-            "proof": funcs.int2hex(self.proof)
-        }
+        if not self.__finished:
+            result = {
+                "seed": funcs.int2hex(self.seed),
+                "proof": funcs.int2hex(self.proof)
+            }
+        else:
+            result = {
+                "seed": funcs.int2hex(self.result_seed),
+                "proof": funcs.int2hex(self.result_proof)
+            }
+        logging.debug("Return result is :{}".format(result))
+        return result
 
     def verify_address(self, address):
         """
@@ -147,7 +181,7 @@ class Calculator(Singleton):
                 self.__cond.notify_all()
 
         address_number = int.from_bytes(Base58Code.decode_check(address), byteorder='big')
-        node_hash = self.newest_seed * address_number % 2 ** 256
+        node_hash = self.seed * address_number % 2 ** 256
 
         if node_hash / 2 ** 256 > 0.3:
             logging.debug("{} is not consensus node.".format(address))

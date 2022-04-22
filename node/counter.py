@@ -6,12 +6,17 @@ from utils.singleton import Singleton
 
 class Counter(Singleton):
     def __init__(self):
+        self.__height = -1
         self.__client_count = 0
         self.__client_synced = 0
         self.__lock = threading.Lock()
 
-    def refresh(self):
+    def refresh(self, height):
+        if height <= self.__height or self.__lock.locked():
+            return
+
         self.__lock.acquire()
+        self.__height = height
         self.__client_synced = 0
         self.__lock.release()
 

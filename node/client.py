@@ -244,12 +244,14 @@ class Client(object):
         try:
             is_added = bc.add_block_from_peers(block)
             if is_added:
-                Counter().refresh()
+                Counter().refresh(height)
                 Timer().refresh(height)
                 delay_params = block.transactions[0].inputs[0].delay_params
                 hex_seed = delay_params.get("seed")
+                hex_pi = delay_params.get("pi")
                 seed = funcs.hex2int(hex_seed)
-                Calculator().update(seed)
+                pi = funcs.hex2int(hex_pi)
+                Calculator().update(seed, pi)
         except ValueError as e:
             # todo: 这里应该需要进行回滚， 但是回滚涉及到线程安全问题， 需要重新考虑
             logging.error(e)
@@ -317,11 +319,13 @@ class Client(object):
         logging.debug("Receive package wallet is: {}".format(data))
         if data == address:
             transactions = self.tx_pool.package(self.height + 1)
+            logging.debug("Package transaction result: {}".format(transactions))
 
             # 如果取出的交易数据是None， 说明另外一个线程已经打包了， 就不用再管
             # upd: 在新的逻辑里面，不论节点交易池是否存在交易都会进行区块的打包
             if transactions is None:
-                transactions = []
+                logging.debug("Tx memory pool has been packaged.")
+                return
 
             bc = BlockChain()
             bc.add_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
@@ -329,6 +333,7 @@ class Client(object):
             block, _ = bc.get_latest_block()
             height = block.block_header.height
             Timer().refresh(height)
+            Calculator().update()
             logging.debug("Package new block.")
             self.txs.clear()
 

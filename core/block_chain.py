@@ -202,9 +202,10 @@ class BlockChain(object):
             # 高度相同但是数据不一致， 回滚本地区块
             # todo: 保证可以存在分叉，但是在后续以投票信息最多的链为准
             if peer_height == latest_height and block != latest_block:
-                logging.error("Same height but different data, rollback local blockchain data.")
-                UTXOSet().roll_back(latest_block)
-                self.roll_back()
+                if block.vote_count > latest_block.vote_count:
+                    logging.error("Same height but different data, rollback local blockchain data.")
+                    UTXOSet().roll_back(latest_block)
+                    self.roll_back()
 
             if peer_height == latest_height + 1 and peer_prev_hash == latest_block.block_header.hash:
                 logging.debug("Local height: {}, Neighborhood height: {}".format(latest_height, peer_height))
