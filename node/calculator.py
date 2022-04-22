@@ -157,15 +157,17 @@ class Calculator(Singleton):
                 self.__cond.notify_all()
 
         if not self.__finished:
-            return {
+            result = {
                 "seed": funcs.int2hex(self.result),
                 "proof": funcs.int2hex(self.proof)
             }
         else:
-            return {
+            result = {
                 "seed": funcs.int2hex(self.result_seed),
                 "proof": funcs.int2hex(self.result_proof)
             }
+        logging.debug("Return result is :", result)
+        return result
 
     def verify_address(self, address):
         """
