@@ -39,6 +39,7 @@ class Calculator(Singleton):
         if not self.__has_inited:
             with self.__cond:
                 self.__initialization()
+                logging.debug("Calculator initial finished.")
                 self.__cond.notify_all()
 
         logging.info("VDF seed changed: {}".format(new_seed))
@@ -85,6 +86,7 @@ class Calculator(Singleton):
         self.time_parma = delay_params.get("time_param")
         self.order = funcs.hex2int(order_hex)
         self.proof_parma = funcs.hex2int(verify_param)
+        logging.debug("Genesis params initial.")
 
         latest_block, _ = bc.get_latest_block()
         coinbase_tx_input = latest_block.transactions[0].inputs[0]
