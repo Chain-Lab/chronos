@@ -323,6 +323,7 @@ class Client(object):
             # 如果取出的交易数据是None， 说明另外一个线程已经打包了， 就不用再管
             # upd: 在新的逻辑里面，不论节点交易池是否存在交易都会进行区块的打包
             if transactions is None:
+                logging.debug("Tx memory pool has been packaged.")
                 return
 
             bc = BlockChain()
