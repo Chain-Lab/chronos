@@ -35,7 +35,7 @@ class Calculator(Singleton):
             return
 
         if new_seed is None and not self.__finished:
-            return 
+            return
 
         self.__lock.acquire()
         logging.debug("VDF update locked.")
@@ -46,7 +46,7 @@ class Calculator(Singleton):
                 logging.debug("Calculator initial finished.")
                 self.__cond.notify_all()
 
-        logging.info("VDF seed changed: {}".format(new_seed))
+        logging.info("VDF seed changed: {}, calculator status: {}".format(new_seed, self.__finished))
 
         if new_seed is not None:
             # 如果能进入到这个逻辑， 说明线程还在进行计算， seed没有被修改过
@@ -60,6 +60,7 @@ class Calculator(Singleton):
                 self.__finished = False
                 # 计算完成的这个变量必须修改， 不然唤醒后继续循环
                 with self.__cond:
+                    logging.debug("Update remote VDF params, notify thread start calculate.")
                     self.__cond.notify_all()
             else:
                 self.__changed = True
@@ -71,6 +72,7 @@ class Calculator(Singleton):
             self.result_proof = None
             self.__finished = False
             with self.__cond:
+                logging.debug("Update local VDF params, notify thread start calculate.")
                 self.__cond.notify_all()
         self.__lock.release()
         logging.debug("VDF update release.")

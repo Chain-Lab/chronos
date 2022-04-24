@@ -368,8 +368,10 @@ class Server(object):
                 Timer().refresh(height)
                 delay_params = block.transactions[0].inputs[0].delay_params
                 hex_seed = delay_params.get("seed")
+                hex_pi = delay_params.get("proof")
                 seed = funcs.hex2int(hex_seed)
-                Calculator().update(seed)
+                pi = funcs.hex2int(hex_pi)
+                Calculator().update(seed, pi)
             # 从邻居节点更新了区块， 说明一轮共识已经结束或本地区块没有同步
             # 需要更新vote center中的信息并且设置synced为false
             self.thread_local.client_synced = False
