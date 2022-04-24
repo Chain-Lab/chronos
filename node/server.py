@@ -259,7 +259,9 @@ class Server(object):
         }
 
         if genesis_block:
-            block, prev_hash = bc.get_latest_block()
+            # 避免由于刚好到这里的时候block为空
+            if block is None:
+                block, prev_hash = bc.get_latest_block()
             result_data = {
                 "last_height": block.block_header.height,
                 "genesis_block": genesis_block.serialize(),
