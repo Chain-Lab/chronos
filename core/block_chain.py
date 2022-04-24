@@ -232,8 +232,7 @@ class BlockChain(object):
                     return True
                 except ResourceConflict:
                     logging.error("Create block in db resource conflict.")
-
-            if peer_prev_hash != latest_block.block_header.hash:
+            elif peer_prev_hash != latest_block.block_header.hash:
                 # 哈希信息不一致， 直接回退
                 logging.warning("Prev block hash is not same.")
                 UTXOSet().roll_back(latest_block)
