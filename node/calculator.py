@@ -59,11 +59,11 @@ class Calculator(Singleton):
                 self.__changed = True
         else:
             # 本地作为打包节点时进行参数更新
+            self.seed = self.result_seed
+            self.proof = self.result_proof
+            self.result_seed = None
+            self.result_proof = None
             with self.__cond:
-                self.seed = self.result_seed
-                self.proof = self.result_proof
-                self.result_seed = None
-                self.result_proof = None
                 self.__cond.notify_all()
         self.__finished = False
         self.__lock.release()
@@ -126,9 +126,10 @@ class Calculator(Singleton):
                     calculated_round += 1
                 if not self.__changed:
                     logging.debug("Local new seed calculate finished.")
-                    self.result_seed = result
-                    self.result_proof = pi
-                    self.__finished = True
+                    with self.__lock:
+                        self.result_seed = result
+                        self.result_proof = pi
+                        self.__finished = True
                 else:
                     logging.debug("Seed changed. Start new calculate.")
                     self.__changed = False
@@ -156,6 +157,8 @@ class Calculator(Singleton):
             with self.__cond:
                 self.__initialization()
                 self.__cond.notify_all()
+        if self.__lock.locked():
+            logging.debug("awaiting lock release...")
         self.__lock.acquire()
 
         if not self.__finished:
