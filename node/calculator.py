@@ -35,6 +35,7 @@ class Calculator(Singleton):
             return
 
         self.__lock.acquire()
+        logging.debug("VDF update locked.")
 
         if not self.__has_inited:
             with self.__cond:
@@ -51,9 +52,11 @@ class Calculator(Singleton):
             self.proof = pi
             if self.__finished:
                 # 在本地计算完成后并且收到新的区块参数
+                self.result_seed = None
+                self.result_proof = None
+                self.__finished = False
+                # 计算完成的这个变量必须修改， 不然唤醒后继续循环
                 with self.__cond:
-                    self.result_seed = None
-                    self.result_proof = None
                     self.__cond.notify_all()
             else:
                 self.__changed = True
@@ -63,10 +66,11 @@ class Calculator(Singleton):
             self.proof = self.result_proof
             self.result_seed = None
             self.result_proof = None
+            self.__finished = False
             with self.__cond:
                 self.__cond.notify_all()
-        self.__finished = False
         self.__lock.release()
+        logging.debug("VDF update release.")
 
     def __initialization(self):
         """
