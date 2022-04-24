@@ -157,6 +157,8 @@ class Calculator(Singleton):
                 self.__cond.notify_all()
 
         if not self.__finished:
+            logging.debug("seed: {}".format(self.seed))
+            logging.debug("proof: {}".format(self.proof))
             result = {
                 "seed": funcs.int2hex(self.seed),
                 "proof": funcs.int2hex(self.proof)
