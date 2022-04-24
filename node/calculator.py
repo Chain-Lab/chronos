@@ -63,8 +63,9 @@ class Calculator(Singleton):
                 self.seed = self.result_seed
                 self.proof = self.result_proof
                 self.result_seed = None
-                self.result_proof = new_seed
+                self.result_proof = None
                 self.__cond.notify_all()
+        self.__finished = False
         self.__lock.release()
 
     def __initialization(self):
@@ -155,6 +156,7 @@ class Calculator(Singleton):
             with self.__cond:
                 self.__initialization()
                 self.__cond.notify_all()
+        self.__lock.acquire()
 
         if not self.__finished:
             logging.debug("seed: {}".format(self.seed))
@@ -168,6 +170,7 @@ class Calculator(Singleton):
                 "seed": funcs.int2hex(self.result_seed),
                 "proof": funcs.int2hex(self.result_proof)
             }
+        self.__lock.release()
         logging.debug("Return result is :{}".format(result))
         return result
 
