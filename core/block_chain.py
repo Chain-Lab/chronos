@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 
 from couchdb import ResourceNotFound, ResourceConflict
 
@@ -105,9 +106,22 @@ class BlockChain(object):
             return None, None
 
         latest_block_hash = latest_block_hash_doc.get('hash', '')
-        block_data = self.db.get(latest_block_hash)
-        # logging.debug(block_data)
-        block = Block.deserialize(block_data)
+
+        times = 0
+
+        while True:
+            # 重试逻辑， 在失败的情况下再尝试3次
+            try:
+                block_data = self.db.get(latest_block_hash)
+                # logging.debug(block_data)
+                block = Block.deserialize(block_data)
+                break
+            except TypeError:
+                time.sleep(1)
+                times += 1
+            if times >= 3:
+                return None, None
+
         return block, latest_block_hash
 
     def set_latest_hash(self, hash):
