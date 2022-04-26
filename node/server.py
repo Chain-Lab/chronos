@@ -363,6 +363,7 @@ class Server(object):
             # 一轮共识结束的第一个标识：收到其他节点发来的新区块
             is_added = bc.add_block_from_peers(block)
 
+            # todo： 在修改了区块添加方式后， 需要确认更新参数的方法
             if is_added:
                 Counter().refresh(height)
                 Timer().refresh(height)
