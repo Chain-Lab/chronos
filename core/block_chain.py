@@ -221,8 +221,8 @@ class BlockChain(object):
                     UTXOSet().roll_back(latest_block)
                     self.roll_back()
 
+            logging.debug("Local block hash: {}, peer prev hash: {}".format(latest_block.block_header.hash, peer_prev_hash))
             if peer_height == latest_height + 1 and peer_prev_hash == latest_block.block_header.hash:
-                logging.debug("Local height: {}, Neighborhood height: {}".format(latest_height, peer_height))
                 latest_hash = peer_hash
                 
                 try:
