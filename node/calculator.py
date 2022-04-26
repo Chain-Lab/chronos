@@ -37,6 +37,7 @@ class Calculator(Singleton):
         if new_seed is None and not self.__finished:
             return
 
+        logging.debug("Wait Calculate update lock.")
         self.__lock.acquire()
         logging.debug("VDF update locked.")
 

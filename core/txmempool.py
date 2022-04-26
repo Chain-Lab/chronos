@@ -33,6 +33,7 @@ class TxMemPool(Singleton):
         return False
 
     def clear(self):
+        logging.debug("Wait TxMemPool clear lock.")
         self.pool_lock.acquire()
         self.txs.clear()
         self.tx_hashes.clear()
@@ -49,6 +50,7 @@ class TxMemPool(Singleton):
         if height <= self.__height or self.pool_lock.locked():
             return None
 
+        logging.debug("Wait TxMemPool package lock.")
         self.pool_lock.acquire()
         # 拿到锁后再检查一次， 避免某个线程刚好到达这个地方抢到锁
         if height <= self.__height:
@@ -74,6 +76,7 @@ class TxMemPool(Singleton):
         :param tx_hash:
         :return:
         """
+        logging.debug("Wait TxMemPool remove lock.")
         self.pool_lock.acquire()
         if tx_hash in self.tx_hashes:
             self.tx_hashes.remove(tx_hash)
