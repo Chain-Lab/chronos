@@ -49,7 +49,7 @@ class Client(object):
         rec_message = None
         data = json.dumps(message.__dict__)
         try:
-            # self.sock.sendall(data.encode())
+            # self.sock.sendallsendall(data.encode())
             TCPConnect.send_msg(self.sock, data)
         except BrokenPipeError:
             logging.info("Lost connect, client close.")

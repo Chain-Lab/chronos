@@ -32,6 +32,7 @@ class BlockChain(Singleton):
 
         self.__queue = []
         self.__cond = threading.Condition()
+        self.__lock = threading.Lock()
         self.thread = None
 
     def run(self):
@@ -194,13 +195,15 @@ class BlockChain(Singleton):
         :return: None
         """
         block_hash = block.header_hash
-        if block_hash in self.cache.keys():
+        if block_hash in self.cache.keys() or self.__lock.locked():
             logging.info("Block#{} already in cache.".format(block_hash))
             return True
 
+        self.__lock.acquire()
         with self.__cond:
             self.__queue.append(block)
             self.__cond.notify_all()
+        self.__lock.release()
         return True
 
     def roll_back(self):
@@ -315,15 +318,16 @@ class BlockChain(Singleton):
                 block_hash = block.block_header.hash
                 logging.debug("Pop block#{} from queue.".format(block_hash))
 
+                if not latest_block:
+                    logging.info("Insert genesis block to database.")
+                    self.__insert_block(block)
+                    continue
+
                 latest_block, latest_hash = self.get_latest_block()
                 latest_height = latest_block.block_header.height
                 self.cache[block_hash] = True
 
                 logging.debug("Latest block: {}".format(latest_block))
-                if not latest_block:
-                    logging.info("Insert genesis block to database.")
-                    self.__insert_block(block)
-                    continue
 
                 # 获取到的该区块的高度低于或等于本地高度， 说明区块已经存在
                 if block_height <= latest_height:
