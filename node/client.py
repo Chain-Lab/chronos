@@ -59,6 +59,7 @@ class Client(object):
             # rec_data = self.sock.recv(4096 * 2)
             rec_data = TCPConnect.recv_msg(self.sock)
             if rec_data == b"":
+                logging.debug("Receive data is empty")
                 return True
             rec_message = json.loads(rec_data.decode('utf-8'))
 

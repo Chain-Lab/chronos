@@ -319,6 +319,7 @@ class BlockChain(Singleton):
                 latest_height = latest_block.block_header.height
                 self.cache[block_hash] = True
 
+                logging.debug("Latest block: {}".format(latest_block))
                 if not latest_block:
                     logging.info("Insert genesis block to database.")
                     self.__insert_block(block)

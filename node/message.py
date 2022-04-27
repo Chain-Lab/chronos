@@ -8,4 +8,4 @@ class Message(object):
 
     @classmethod
     def empty_message(cls):
-        return cls(STATUS.NODE_MSG, "")
+        return cls(STATUS.NODE_MSG, "0")
