@@ -298,7 +298,7 @@ class BlockChain(Singleton):
         """
         block_hash = block.block_header.hash
         logging.info("Insert new block#{} height {}".format(block_hash, block.block_header.height))
-        self.db.create(block_hash, block)
+        self.db.create(block_hash, block.serialize())
         self.set_latest_hash(block_hash)
         UTXOSet().update(block)
 
@@ -317,13 +317,13 @@ class BlockChain(Singleton):
                 block_height = block.block_header.height
                 block_hash = block.block_header.hash
                 logging.debug("Pop block#{} from queue.".format(block_hash))
+                latest_block, latest_hash = self.get_latest_block()
 
                 if not latest_block:
                     logging.info("Insert genesis block to database.")
                     self.__insert_block(block)
                     continue
 
-                latest_block, latest_hash = self.get_latest_block()
                 latest_height = latest_block.block_header.height
                 self.cache[block_hash] = True
 
