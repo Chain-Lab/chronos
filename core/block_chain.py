@@ -32,6 +32,8 @@ class BlockChain(Singleton):
 
         self.__queue = []
         self.__cond = threading.Condition()
+        self.thread = threading.Thread(target=self.__task, args=())
+        self.thread.start()
 
     def __getitem__(self, index):
         """
@@ -87,10 +89,7 @@ class BlockChain(Singleton):
         latest_hash = block.block_header.hash
         logging.debug(block.serialize())
         # 先添加块再更新最新哈希， 避免添加区块时出现问题更新数据库
-        self.db.create(block.block_header.hash, block.serialize())
-        self.set_latest_hash(latest_hash)
-
-        UTXOSet().update(block)
+        self.__insert_block(block)
 
     def new_genesis_block(self, transaction):
         """
@@ -193,11 +192,13 @@ class BlockChain(Singleton):
         """
         block_hash = block.header_hash
         if block_hash in self.cache.keys():
-            return
+            logging.info("Block#{} already in cache.".format(block_hash))
+            return True
 
         with self.__cond:
             self.__queue.append(block)
             self.__cond.notify_all()
+        return True
 
     def roll_back(self):
         """
