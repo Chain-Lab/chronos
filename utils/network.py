@@ -11,7 +11,7 @@ class TCPConnect(object):
     def recv_msg(sock):
         raw_msglen = TCPConnect.recvall(sock, 4)
         if not raw_msglen:
-            return b""
+            return None
         msglen = struct.unpack('>I', raw_msglen)[0]
         return TCPConnect.recvall(sock, msglen)
 
