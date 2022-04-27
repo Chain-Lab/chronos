@@ -32,6 +32,9 @@ class BlockChain(Singleton):
 
         self.__queue = []
         self.__cond = threading.Condition()
+        self.thread = None
+
+    def run(self):
         self.thread = threading.Thread(target=self.__task, args=())
         self.thread.start()
 

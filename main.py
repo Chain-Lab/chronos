@@ -44,6 +44,7 @@ def run():
     setup_logger()
 
     bc = BlockChain()
+    bc.run()
     utxo_set = UTXOSet()
     utxo_set.reindex(bc)
     logging.info("UTXO set reindex finish")
