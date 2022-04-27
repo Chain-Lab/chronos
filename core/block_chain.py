@@ -291,6 +291,7 @@ class BlockChain(Singleton):
         @return:
         """
         block_hash = block.block_header.hash
+        logging.info("Insert new block#{} height {}".format(block_hash, block.block_header.height))
         self.db.create(block_hash, block)
         self.set_latest_hash(block_hash)
         UTXOSet().update(block)
@@ -309,17 +310,20 @@ class BlockChain(Singleton):
 
                 block_height = block.block_header.height
                 block_hash = block.block_header.hash
+                logging.debug("Pop block#{} from queue.".format(block_hash))
 
                 latest_block, latest_hash = self.get_latest_block()
                 latest_height = latest_block.block_header.height
                 self.cache[block_hash] = True
 
                 if not latest_block:
+                    logging.info("Insert genesis block to database.")
                     self.__insert_block(block)
                     continue
 
                 # 获取到的该区块的高度低于或等于本地高度， 说明区块已经存在
                 if block_height <= latest_height:
+                    logging.info("Block has equal block, check whether legal.")
                     block_count = block.vote_count
                     block_timestamp = block.block_header.timestamp
 
@@ -336,6 +340,7 @@ class BlockChain(Singleton):
                     rollback_times = latest_height - block_height
                     for _ in range(rollback_times):
                         latest_block, _ = self.get_latest_block()
+                        logging.info("Rollback block#{}.".format(latest_block.block_header.hash))
                         UTXOSet().roll_back(latest_block)
                         self.roll_back()
                     self.__insert_block(block)
@@ -348,5 +353,6 @@ class BlockChain(Singleton):
                     else:
                         # 最前面的区块没有被处理过， 将区块返回到队列中等待
                         if not self.cache[block_prev_hash]:
+                            logging.debug("Block#{} push back to queue.".format(block_hash))
                             self.__queue.append(block)
                             self.cache[block_hash] = False
