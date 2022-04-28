@@ -108,8 +108,9 @@ class BlockChain(Singleton):
 
             logging.info("Create genesis block : {}".format(genesis_block))
 
-            self.set_latest_hash(genesis_block.block_header.hash)
+            # 更新顺序应该先创建区块再创建索引， 否则会出现获取为空的问题
             self.db.create(genesis_block.block_header.hash, genesis_block.serialize())
+            self.set_latest_hash(genesis_block.block_header.hash)
 
             UTXOSet().update(genesis_block)
 
