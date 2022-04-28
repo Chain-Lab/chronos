@@ -1,24 +1,23 @@
-import binascii
 import logging
 import threading
 
 from core.block_chain import BlockChain
+from utils import funcs
+from utils import number_theory
 from utils.b58code import Base58Code
 from utils.singleton import Singleton
-from utils import number_theory
-from utils import funcs
 
 
 class Calculator(Singleton):
     def __init__(self):
-        self.order = None                # VDF计算的order, n = p * q
-        self.time_parma = None           # 计算参数，从创世区块获取
+        self.order = None  # VDF计算的order, n = p * q
+        self.time_parma = None  # 计算参数，从创世区块获取
         self.proof_parma = None
 
-        self.seed = None                 # 上一轮的计算结果，作为当前的计算输入
-        self.proof = None                # 上一轮的证明参数
-        self.result_seed = None          # 目前计算的结果
-        self.result_proof = None         # 目前计算的证明参数
+        self.seed = None  # 上一轮的计算结果，作为当前的计算输入
+        self.proof = None  # 上一轮的证明参数
+        self.result_seed = None  # 目前计算的结果
+        self.result_proof = None  # 目前计算的证明参数
 
         self.__cond = threading.Condition()
         self.__lock = threading.Lock()
@@ -156,7 +155,8 @@ class Calculator(Singleton):
         :return:
         """
         r = number_theory.quick_pow(2, self.time_parma, self.proof_parma)
-        h = number_theory.quick_pow(pi, self.proof_parma, self.order) * number_theory.quick_pow(seed, r, self.order) % self.order
+        h = number_theory.quick_pow(pi, self.proof_parma, self.order) * number_theory.quick_pow(seed, r,
+                                                                                                self.order) % self.order
         return result == h
 
     @property

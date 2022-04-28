@@ -1,10 +1,10 @@
 import logging
 import threading
 
-from core.pot import ProofOfTime
 from core.config import Config
+from core.pot import ProofOfTime
+from threads.calculator import Calculator
 from utils.singleton import Singleton
-from node.calculator import Calculator
 
 
 class VoteCenter(Singleton):
@@ -100,4 +100,5 @@ class VoteCenter(Singleton):
 
 if __name__ == "__main__":
     import dis
+
     dis.dis(VoteCenter.refresh)

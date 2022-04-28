@@ -9,14 +9,15 @@ from core.block_chain import BlockChain
 from core.config import Config
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
-from node.calculator import Calculator
-from node.vote_center import VoteCenter
-from node.counter import Counter
 from node.constants import STATUS
 from node.message import Message
-from utils.network import TCPConnect
 from node.timer import Timer
+from threads.calculator import Calculator
+from threads.counter import Counter
+from threads.merge import MergeThread
+from threads.vote_center import VoteCenter
 from utils import funcs
+from utils.network import TCPConnect
 
 
 class Server(object):
@@ -356,12 +357,11 @@ class Server(object):
         """
         data = message.get("data", "")
         block = Block.deserialize(data)
-        bc = BlockChain()
         height = block.block_header.height
 
         try:
             # 一轮共识结束的第一个标识：收到其他节点发来的新区块
-            is_added = bc.add_block_from_peers(block)
+            is_added = MergeThread().append_block(block)
 
             # todo： 在修改了区块添加方式后， 需要确认更新参数的方法
             if is_added:

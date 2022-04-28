@@ -1,5 +1,5 @@
-import threading
 import logging
+import threading
 
 from utils.singleton import Singleton
 

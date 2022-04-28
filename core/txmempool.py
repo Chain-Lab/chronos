@@ -1,8 +1,8 @@
 import logging
 import threading
 
-from core.config import Config
 from core.block_chain import BlockChain
+from core.config import Config
 from utils.singleton import Singleton
 
 

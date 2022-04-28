@@ -1,8 +1,8 @@
 import threading
 import time
 
-from utils.singleton import Singleton
 from core.block_chain import BlockChain
+from utils.singleton import Singleton
 
 
 class Timer(Singleton):

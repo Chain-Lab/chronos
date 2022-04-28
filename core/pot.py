@@ -1,12 +1,11 @@
-import binascii
 import logging
 import time
 
-from core.config import Config
 from core.block_chain import BlockChain
-from utils.dbutil import DBUtil
+from core.config import Config
 from utils import funcs
 from utils.b58code import Base58Code
+from utils.dbutil import DBUtil
 
 
 class ProofOfTime(object):

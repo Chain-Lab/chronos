@@ -1,8 +1,7 @@
 import json
 import logging
-import threading
 
-from couchdb import ResourceNotFound, ResourceConflict
+from couchdb import ResourceNotFound
 
 from core.block import Block
 from core.block_header import BlockHeader
@@ -15,29 +14,9 @@ from utils.singleton import Singleton
 
 
 class BlockChain(Singleton):
-    # upd: v1.1.2 修改为单例模式，减少初始化开销并添加一个线程用来维护区块
-
     def __init__(self):
         db_url = Config().get('database.url')
         self.db = DBUtil(db_url)
-        # 线程处理的区块的cache，保存接收到的区块的哈希信息及高度，定期清除比较低的高度信息
-        """
-        cache的结构应该是:
-        {
-            hash(string): status(bool)
-            表示哈希值对应的区块是否被线程处理过
-        }
-        """
-        self.cache = {}
-
-        self.__queue = []
-        self.__cond = threading.Condition()
-        self.__lock = threading.Lock()
-        self.thread = None
-
-    def run(self):
-        self.thread = threading.Thread(target=self.__task, args=())
-        self.thread.start()
 
     def __getitem__(self, index):
         """
@@ -90,10 +69,9 @@ class BlockChain(Singleton):
         # todo: 区块头的哈希是根据merkle树的根哈希值来进行哈希的， 和交易存在关系
         #  那么是否可以在区块中仅仅存入交易的哈希列表，交易的具体信息存在其他的表中以提高查询效率，区块不存储区块具体的信息？
         block.set_header_hash()
-        latest_hash = block.block_header.hash
         logging.debug(block.serialize())
         # 先添加块再更新最新哈希， 避免添加区块时出现问题更新数据库
-        self.__insert_block(block)
+        self.insert_block(block)
 
     def new_genesis_block(self, transaction):
         """
@@ -189,24 +167,6 @@ class BlockChain(Singleton):
                     return tx
         return None
 
-    def add_block_from_peers(self, block):
-        """
-        将区块添加到队列中， 添加之前检查一下在cache中是否存在
-        :param block: 从邻居节点接收到的区块
-        :return: None
-        """
-        block_hash = block.header_hash
-        if block_hash in self.cache.keys() or self.__lock.locked():
-            logging.info("Block#{} already in cache.".format(block_hash))
-            return True
-
-        self.__lock.acquire()
-        with self.__cond:
-            self.__queue.append(block)
-            self.__cond.notify_all()
-        self.__lock.release()
-        return True
-
     def roll_back(self):
         """
         回滚数据库中的latest记录， 将记录回滚到上一区块高度
@@ -291,9 +251,9 @@ class BlockChain(Singleton):
         coinbase_tx_input = latest_block.transactions[0].inputs[0]
         return coinbase_tx_input.delay_params
 
-    def __insert_block(self, block: Block):
+    def insert_block(self, block: Block):
         """
-        追加最新区块
+        追加最新区块, 由单一的；另外一个线程调用
         @param block: 需要添加的区块
         @return:
         """
@@ -302,66 +262,3 @@ class BlockChain(Singleton):
         self.db.create(block_hash, block.serialize())
         self.set_latest_hash(block_hash)
         UTXOSet().update(block)
-
-    def __task(self):
-        """
-        区块信息处理线程的线程函数
-        在队列中存在区块的时候进行处理
-        @return:
-        """
-        while True:
-            with self.__cond:
-                while not len(self.__queue):
-                    self.__cond.wait()
-                block = self.__queue.pop()
-
-                block_height = block.block_header.height
-                block_hash = block.block_header.hash
-                logging.debug("Pop block#{} from queue.".format(block_hash))
-                latest_block, latest_hash = self.get_latest_block()
-
-                if not latest_block:
-                    logging.info("Insert genesis block to database.")
-                    self.__insert_block(block)
-                    continue
-
-                latest_height = latest_block.block_header.height
-                self.cache[block_hash] = True
-
-                logging.debug("Latest block: {}".format(latest_block))
-
-                # 获取到的该区块的高度低于或等于本地高度， 说明区块已经存在
-                if block_height <= latest_height:
-                    logging.info("Block has equal block, check whether legal.")
-                    block_count = block.vote_count
-                    block_timestamp = block.block_header.timestamp
-
-                    # 获取到本地存储的对等高度的区块
-                    equal_block = self.get_block_by_height(block_height)
-                    equal_count = equal_block.vote_count
-                    equal_hash = equal_block.block_header.hash
-                    equal_timestamp = block.block_header.timestamp
-                    if block_hash == equal_hash or block_count < equal_count or (
-                            block_count == equal_count and block_timestamp > equal_timestamp):
-                        continue
-
-                    # 如果代码逻辑到达这里， 说明需要进行区块的回退
-                    rollback_times = latest_height - block_height
-                    for _ in range(rollback_times):
-                        latest_block, _ = self.get_latest_block()
-                        logging.info("Rollback block#{}.".format(latest_block.block_header.hash))
-                        UTXOSet().roll_back(latest_block)
-                        self.roll_back()
-                    self.__insert_block(block)
-                    continue
-                elif block_height == latest_height + 1:
-                    # 取得区块的前一个区块哈希
-                    block_prev_hash = block.block_header.prev_block_hash
-                    if block_prev_hash == latest_hash:
-                        self.__insert_block(block)
-                    else:
-                        # 最前面的区块没有被处理过， 将区块返回到队列中等待
-                        if block_prev_hash not in self.cache.keys() or not self.cache[block_prev_hash]:
-                            logging.debug("Block#{} push back to queue.".format(block_hash))
-                            self.__queue.append(block)
-                            self.cache[block_hash] = False
