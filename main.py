@@ -20,6 +20,7 @@ from utils import funcs
 from utils.b58code import Base58Code
 from utils import number_theory
 from rpc.rpcserver import RPCServer
+from threads.merge import MergeThread
 
 """
 注意： 该文件仅用于测试
@@ -44,7 +45,6 @@ def run():
     setup_logger()
 
     bc = BlockChain()
-    bc.run()
     utxo_set = UTXOSet()
     utxo_set.reindex(bc)
     logging.info("UTXO set reindex finish")

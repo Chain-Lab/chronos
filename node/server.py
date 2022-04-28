@@ -373,14 +373,17 @@ class Server(object):
                 seed = funcs.hex2int(hex_seed)
                 pi = funcs.hex2int(hex_pi)
                 Calculator().update(seed, pi)
-            # 从邻居节点更新了区块， 说明一轮共识已经结束或本地区块没有同步
-            # 需要更新vote center中的信息并且设置synced为false
-            self.thread_local.client_synced = False
-            self.thread_local.server_synced = False
-            # 从交易池中移除已有的交易
-            for tx in block.transactions:
-                tx_hash = tx.tx_hash
-                self.tx_pool.remove(tx_hash)
+                # 从邻居节点更新了区块， 说明一轮共识已经结束或本地区块没有同步
+                # 需要更新vote center中的信息并且设置synced为false
+                self.thread_local.client_synced = False
+                self.thread_local.server_synced = False
+                # 从交易池中移除已有的交易
+                for tx in block.transactions:
+                    tx_hash = tx.tx_hash
+                    self.tx_pool.remove(tx_hash)
+            else:
+                send_msg = Message(STATUS.UPDATE_MSG, height - 1)
+                return send_msg
         except ValueError as e:
             # todo: 失败的情况下应该进行回滚
             logging.error(e)

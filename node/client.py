@@ -230,14 +230,12 @@ class Client(object):
             send_msg = Message(STATUS.GET_BLOCK_MSG, i)
             self.send(send_msg)
 
-    @staticmethod
-    def handle_get_block(message: dict):
+    def handle_get_block(self, message: dict):
         """
         状态码为STATUS.GET_BLOCK_MSG = 2, 处理服务器发送过来的区块数据
         :param message: 包含区块数据的消息
         :return: None
         """
-        # todo: 这一句挪到前面统一处理？
         data = message.get('data', {})
         block = Block.deserialize(data)
         height = block.block_header.height
@@ -253,6 +251,9 @@ class Client(object):
                 seed = funcs.hex2int(hex_seed)
                 pi = funcs.hex2int(hex_pi)
                 Calculator().update(seed, pi)
+            else:
+                send_msg = Message(STATUS.GET_BLOCK_MSG, height - 1)
+                self.send(send_msg)
         except ValueError as e:
             # todo: 这里应该需要进行回滚， 但是回滚涉及到线程安全问题， 需要重新考虑
             logging.error(e)

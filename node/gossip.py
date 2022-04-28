@@ -1,4 +1,3 @@
-
 from utils.singleton import Singleton
 
 

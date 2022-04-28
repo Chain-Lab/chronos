@@ -56,6 +56,10 @@ class Block(object):
     def header_hash(self):
         return self._block_header.hash
 
+    @property
+    def height(self):
+        return self._block_header.height
+
     def __repr__(self):
         return "Block(block_header=%s)" % self._block_header
 

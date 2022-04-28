@@ -14,6 +14,9 @@ class MergeThread(Singleton):
 
     def __init__(self):
         """
+        线程实例初始化， 在调用MergeThread()时先初始化才添加区块
+        """
+        """
         cache的结构:
         {
             hash(string): status(bool)
@@ -25,7 +28,8 @@ class MergeThread(Singleton):
         self.__queue = []
         self.__cond = threading.Condition()
         self.__lock = threading.Lock()
-        self.thread = None
+        self.thread = threading.Thread(target=self.__task, args=())
+        self.thread.start()
 
     def append_block(self, block):
         """
@@ -33,21 +37,24 @@ class MergeThread(Singleton):
         :param block: 从邻居节点接收到的区块
         :return: None
         """
+        result = True
         block_hash = block.header_hash
         if block_hash in self.cache.keys() or self.__lock.locked():
             logging.info("Block#{} already in cache.".format(block_hash))
             return True
+
+        bc = BlockChain()
+        block_height = block.height
+        equal_block = bc.get_block_by_height(block_height)
+        if equal_block is not None and equal_block.header_hash == block.header_hash:
+            result = False
 
         self.__lock.acquire()
         with self.__cond:
             self.__queue.append(block)
             self.__cond.notify_all()
         self.__lock.release()
-        return True
-
-    def run(self):
-        self.thread = threading.Thread(target=self.__task, args=())
-        self.thread.start()
+        return result
 
     def __task(self):
         """
