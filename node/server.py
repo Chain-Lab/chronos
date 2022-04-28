@@ -281,8 +281,12 @@ class Server(object):
         height = message.get("data", 1)
         bc = BlockChain()
         block = bc.get_block_by_height(height)
-        result_data = block.serialize()
-        result = Message(STATUS.GET_BLOCK_MSG, result_data)
+        try:
+            result_data = block.serialize()
+        except AttributeError:
+            result = Message.empty_message()
+        else:
+            result = Message(STATUS.GET_BLOCK_MSG, result_data)
         return result
 
     def handle_transaction(self, message: dict):
