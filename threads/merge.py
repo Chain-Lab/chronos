@@ -116,7 +116,7 @@ class MergeThread(Singleton):
                         bc.insert_block(block)
                     else:
                         # 最前面的区块没有被处理过， 将区块返回到队列中等待
-                        if block_prev_hash not in self.cache.keys() or not self.cache[block_prev_hash]:
+                        if block_prev_hash in self.cache.keys() and not self.cache[block_prev_hash]:
                             logging.debug("Block#{} push back to queue.".format(block_hash))
                             self.__queue.append(block)
                             self.cache[block_hash] = False
