@@ -44,8 +44,8 @@ class TxMemPool(Singleton):
         :return: 高度高于已打包高度的情况下返回交易列表， 否则返回None
         """
         result = []
-        logging.debug("Package pool, pool status:")
-        logging.debug(self.tx_hashes)
+        # logging.debug("Package pool, pool status:")
+        # logging.debug(self.tx_hashes)
         if height <= self.__height or self.pool_lock.locked():
             return None
 

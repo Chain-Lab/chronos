@@ -91,7 +91,7 @@ class MergeThread(Singleton):
 
                 # 获取到的该区块的高度低于或等于本地高度， 说明区块已经存在
                 if block_height <= latest_height:
-                    logging.info("Block has equal block, check whether legal.")
+                    logging.info("Block has equal block, check whether block is legal.")
                     block_count = block.vote_count
                     block_timestamp = block.block_header.timestamp
 
