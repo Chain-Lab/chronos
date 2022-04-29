@@ -172,9 +172,13 @@ class Client(object):
                 }
 
                 if genesis_block:
-                    # logging.debug(genesis_block.transactions)
                     # 如果存在创世区块， 发送创世区块
                     # 考虑一下创世区块的用处
+
+                    # 如果存在创世区块， 那么最新区块必然是存在的， 为了避免创建创世区块的时候刚好到达
+                    # 这里的逻辑，所以需要再获取一次
+                    if not latest_block:
+                        latest_block, prev_hash = bc.get_latest_block()
                     data['latest_height'] = latest_block.block_header.height
                     data['genesis_block'] = genesis_block.serialize()
 
