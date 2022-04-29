@@ -97,6 +97,7 @@ class MergeThread(Singleton):
                 self.cache[block_hash] = True
 
                 logging.debug("Latest block: {}".format(latest_block))
+                logging.debug("Now block: {}".format(block))
 
                 # 获取到的该区块的高度低于或等于本地高度， 说明区块已经存在
                 if block_height <= latest_height:
@@ -111,7 +112,7 @@ class MergeThread(Singleton):
                     equal_timestamp = block.block_header.timestamp
                     if block_hash == equal_hash or block_count < equal_count or (
                             block_count == equal_count and block_timestamp > equal_timestamp):
-                        logging.info("block#{} < equal block.")
+                        logging.info("block#{} < equal block.".format(block_hash))
                         continue
 
                     # 如果代码逻辑到达这里， 说明需要进行区块的回退
