@@ -48,6 +48,6 @@ def int2hex(value: int):
 
 def hex2int(s: str):
     if s is None:
-        s = "0x00"
+        return 0
     return int.from_bytes(bytes.fromhex(s), byteorder='big')
 
