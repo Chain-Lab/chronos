@@ -28,7 +28,7 @@ class MergeThread(Singleton):
         self.__queue = []
         self.__cond = threading.Condition()
         self.__lock = threading.Lock()
-        self.thread = threading.Thread(target=self.__task, args=())
+        self.thread = threading.Thread(target=self.__task, args=(), name="Merge Thead")
         self.thread.start()
 
     def append_block(self, block):
@@ -102,10 +102,11 @@ class MergeThread(Singleton):
                     equal_timestamp = block.block_header.timestamp
                     if block_hash == equal_hash or block_count < equal_count or (
                             block_count == equal_count and block_timestamp > equal_timestamp):
+                        logging.info("block#{} < equal block.")
                         continue
 
                     # 如果代码逻辑到达这里， 说明需要进行区块的回退
-                    rollback_times = latest_height - block_height
+                    rollback_times = latest_height - block_height + 1
                     for _ in range(rollback_times):
                         latest_block, _ = bc.get_latest_block()
                         logging.info("Rollback block#{}.".format(latest_block.block_header.hash))
