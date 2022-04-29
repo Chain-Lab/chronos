@@ -174,14 +174,15 @@ class BlockChain(Singleton):
         """
         latest_block, prev_hash = self.get_latest_block()
         latest_height = latest_block.block_header.height
+
+        # 先修改索引， 再删除数据， 尽量避免拿到空数据
+        block = self.get_block_by_height(latest_height - 1)
+        self.set_latest_hash(block.block_header.hash)
         doc = self.db.get(latest_block.block_header.hash)
         try:
             self.db.delete(doc)
         except ResourceNotFound as e:
             logging.error(e)
-        # 回滚时没有查询到对应hash的记录， 原逻辑可以照常执行
-        block = self.get_block_by_height(latest_height - 1)
-        self.set_latest_hash(block.block_header.hash)
 
     def find_utxo(self):
         """
@@ -253,7 +254,8 @@ class BlockChain(Singleton):
 
     def insert_block(self, block: Block):
         """
-        追加最新区块, 由单一的；另外一个线程调用
+        追加最新区块, 由单一的另外一个线程调用
+        先更新区块， 再更新索引信息， 避免返回空区块
         @param block: 需要添加的区块
         @return:
         """

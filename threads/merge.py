@@ -57,8 +57,10 @@ class MergeThread(Singleton):
         if block_hash in self.cache.keys():
             logging.info("Block#{} already in cache.".format(block_hash))
             self.__lock.release()
-            return MergeThread.STATUS_EXISTS
-
+            if self.cache[block_hash]:
+                return MergeThread.STATUS_EXISTS
+            else:
+                return MergeThread.STATUS_APPEND
         with self.__cond:
             logging.info("Append Block#{} height {} to queue.".format(block_hash, block_height))
             self.__queue.append(block)
