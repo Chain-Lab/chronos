@@ -240,7 +240,6 @@ class Server(object):
             except IndexError:
                 # 如果本地没有投票信息直接略过
                 logging.info("Local node has none vote information.")
-                pass
 
         if self.txs:
             # 如果服务器存在交易， 发送给client

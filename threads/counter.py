@@ -32,9 +32,11 @@ class Counter(Singleton):
         self.__lock.release()
 
     def client_synced(self):
+        logging.debug("Server lock client counter.")
         self.__lock.acquire()
         self.__client_synced += 1
         self.__lock.release()
+        logging.debug("Sever release client counter.")
 
     def client_verify(self):
         logging.debug("Synced client: {}/{}".format(self.__client_synced, self.__client_count))
