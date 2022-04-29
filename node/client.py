@@ -333,7 +333,11 @@ class Client(object):
             bc.add_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
             # todo: 这里假设能够正常运行, 需要考虑一下容错
             block, _ = bc.get_latest_block()
-            height = block.block_header.height
+
+            if not block:
+                height = -1
+            else:
+                height = block.block_header.height
             Timer().refresh(height)
             Calculator().update()
             logging.debug("Package new block.")

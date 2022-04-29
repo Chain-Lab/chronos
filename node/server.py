@@ -261,7 +261,7 @@ class Server(object):
 
         if genesis_block:
             result_data = {
-                "last_height": block.block_header.height,
+                "last_height": local_height,
                 "genesis_block": genesis_block.serialize(),
                 "address": Config().get('node.address'),
                 "time": time.time(),
