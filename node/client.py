@@ -94,7 +94,11 @@ class Client(object):
             return True
 
         if rec_message is not None:
-            self.handle(rec_message)
+            try:
+                self.handle(rec_message)
+            # 在出现异常的情况下不断开连接， 保证线程能够正常运行， 对于具体异常的处理待完成
+            except:
+                return False
 
         return False
 

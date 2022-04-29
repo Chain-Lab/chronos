@@ -110,7 +110,13 @@ class Server(object):
                     server_continue = False
 
             if rec_msg is not None:
-                send_data = self.handle(rec_msg)
+
+                try:
+                    send_data = self.handle(rec_msg)
+                # 先直接使用except保证节点程序在遇到异常时能够正常进行处理
+                except:
+                    continue
+
                 try:
                     # 发送信息， 如果出现错误说明连接断开
                     # conn.sendall(send_data.encode())
