@@ -111,7 +111,12 @@ class Client(object):
         thread_obj.name = "Client Thread - " + thread_obj.getName().split("-")[-1]
         while True:
             bc = BlockChain()
-            latest_block, prev_hash = bc.get_latest_block()
+            # get_latest_block会返回None导致线程挂掉， 需要catch一下
+            try:
+                latest_block, prev_hash = bc.get_latest_block()
+            except TypeError:
+                continue
+
             # client开始一轮共识的逻辑：没有待发送交易，交易池为空且没有本地投票数据
             # 或已经投票但是client没有发送
             # 或到达时间并且没有发送投票信息
