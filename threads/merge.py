@@ -51,13 +51,14 @@ class MergeThread(Singleton):
             # 说明是分叉上的区块， 向对端请求上一个高度上的区块信息
             prev_hash = block.block_header.prev_block_hash
             if prev_hash not in self.cache.keys():
+                logging.info("Previous block#{} not exists, pull block.".format(prev_hash))
                 return MergeThread.STATUS_EXISTS
 
         self.__lock.acquire()
         if block_hash in self.cache.keys():
             logging.info("Block#{} already in cache.".format(block_hash))
             self.__lock.release()
-            if self.cache[block_hash]:
+            if not self.cache[block_hash]:
                 return MergeThread.STATUS_EXISTS
             else:
                 return MergeThread.STATUS_APPEND
