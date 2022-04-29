@@ -371,10 +371,10 @@ class Server(object):
 
         try:
             # 一轮共识结束的第一个标识：收到其他节点发来的新区块
-            is_added = MergeThread().append_block(block)
+            result = MergeThread().append_block(block)
 
             # todo： 在修改了区块添加方式后， 需要确认更新参数的方法
-            if is_added:
+            if result == MergeThread.STATUS_APPEND:
                 Counter().refresh(height)
                 Timer().refresh(height)
                 delay_params = block.transactions[0].inputs[0].delay_params
@@ -391,7 +391,7 @@ class Server(object):
                 for tx in block.transactions:
                     tx_hash = tx.tx_hash
                     self.tx_pool.remove(tx_hash)
-            else:
+            elif result == MergeThread.STATUS_EXISTS:
                 send_msg = Message(STATUS.UPDATE_MSG, height - 1)
                 return send_msg
         except ValueError as e:

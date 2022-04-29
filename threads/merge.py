@@ -12,6 +12,10 @@ class MergeThread(Singleton):
     该线程专门处理区块信息， 保证在链上只有一条主链
     """
 
+    STATUS_APPEND = 0                        # 区块成功添加到队列
+    STATUS_LOCKED = 1                        # 队列被锁
+    STATUS_EXISTS = 2                        # 区块已经存在
+
     def __init__(self):
         """
         线程实例初始化， 在调用MergeThread()时先初始化才添加区块
@@ -37,11 +41,7 @@ class MergeThread(Singleton):
         :param block: 从邻居节点接收到的区块
         :return: None
         """
-        result = True
         block_hash = block.header_hash
-        if block_hash in self.cache.keys() or self.__lock.locked():
-            logging.info("Block#{} already in cache.".format(block_hash))
-            return result
 
         bc = BlockChain()
         block_height = block.height
@@ -51,14 +51,20 @@ class MergeThread(Singleton):
             # 说明是分叉上的区块， 向对端请求上一个高度上的区块信息
             prev_hash = block.block_header.prev_block_hash
             if prev_hash not in self.cache.keys():
-                result = False
+                return MergeThread.STATUS_EXISTS
 
         self.__lock.acquire()
+        if block_hash in self.cache.keys():
+            logging.info("Block#{} already in cache.".format(block_hash))
+            self.__lock.release()
+            return MergeThread.STATUS_EXISTS
+
         with self.__cond:
+            logging.info("Append Block#{} height {} to queue.".format(block_hash, block_height))
             self.__queue.append(block)
             self.__cond.notify_all()
         self.__lock.release()
-        return result
+        return MergeThread.STATUS_APPEND
 
     def __task(self):
         """

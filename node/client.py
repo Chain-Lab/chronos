@@ -252,8 +252,8 @@ class Client(object):
         height = block.block_header.height
 
         try:
-            is_added = MergeThread().append_block(block)
-            if is_added:
+            result = MergeThread().append_block(block)
+            if result == MergeThread.STATUS_APPEND:
                 Counter().refresh(height)
                 Timer().refresh(height)
                 delay_params = block.transactions[0].inputs[0].delay_params
@@ -262,7 +262,7 @@ class Client(object):
                 seed = funcs.hex2int(hex_seed)
                 pi = funcs.hex2int(hex_pi)
                 Calculator().update(seed, pi)
-            else:
+            elif result == MergeThread.STATUS_EXISTS:
                 send_msg = Message(STATUS.GET_BLOCK_MSG, height - 1)
                 self.send(send_msg)
         except ValueError as e:
