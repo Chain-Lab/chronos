@@ -156,8 +156,10 @@ class Client(object):
                 self.txs.clear()
             else:
                 try:
-                    genesis_block = bc[0]
+                    genesis_block = bc.get_block_by_height(0)
                 except IndexError as e:
+                    genesis_block = None
+                except TypeError:
                     genesis_block = None
 
                 data = {
