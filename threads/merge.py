@@ -85,6 +85,7 @@ class MergeThread(Singleton):
 
                 block_height = block.block_header.height
                 block_hash = block.block_header.hash
+                block_prev_hash = block.block_header.prev_block_hash
                 logging.debug("Pop block#{} from queue.".format(block_hash))
                 latest_block, latest_hash = bc.get_latest_block()
 
@@ -110,7 +111,9 @@ class MergeThread(Singleton):
                     equal_count = equal_block.vote_count
                     equal_hash = equal_block.block_header.hash
                     equal_timestamp = block.block_header.timestamp
-                    if block_hash == equal_hash or block_count < equal_count or (
+                    equal_prev_hash = equal_block.block_header.prev_block_hash
+                    # 比较的大前提是两个区块的前一个区块一致（分叉点）， 并且区块哈希值不一样
+                    if block_hash == equal_hash or block_prev_hash != equal_prev_hash or block_count < equal_count or (
                             block_count == equal_count and block_timestamp > equal_timestamp):
                         logging.info("block#{} < equal block.".format(block_hash))
                         continue
