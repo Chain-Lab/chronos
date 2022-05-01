@@ -179,7 +179,10 @@ class Client(object):
                     # 这里的逻辑，所以需要再获取一次
                     if not latest_block:
                         latest_block, prev_hash = bc.get_latest_block()
-                    data['latest_height'] = latest_block.block_header.height
+                    try:
+                        data['latest_height'] = latest_block.block_header.height
+                    except AttributeError:
+                        data['latest_height'] = -1
                     data['genesis_block'] = genesis_block.serialize()
 
                 send_message = Message(STATUS.HAND_SHAKE_MSG, data)
