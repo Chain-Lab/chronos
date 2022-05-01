@@ -45,14 +45,10 @@ class MergeThread(Singleton):
 
         bc = BlockChain()
         block_height = block.height
-        equal_block = bc.get_block_by_height(block_height)
-        if equal_block is not None and equal_block.header_hash != block.header_hash:
-            # 第一次添加这个区块的时候， 如果对等高度上的区块存在但是哈希不一致
-            # 说明是分叉上的区块， 向对端请求上一个高度上的区块信息
-            prev_hash = block.block_header.prev_block_hash
-            if prev_hash not in self.cache.keys():
-                logging.info("Previous block#{} not exists, pull block.".format(prev_hash))
-                return MergeThread.STATUS_EXISTS
+        prev_hash = block.block_header.prev_block_hash
+        if prev_hash not in self.cache.keys():
+            logging.info("Previous block#{} not exists, pull block.".format(prev_hash))
+            return MergeThread.STATUS_EXISTS
 
         self.__lock.acquire()
         if block_hash in self.cache.keys():
