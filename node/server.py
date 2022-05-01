@@ -149,6 +149,8 @@ class Server(object):
             result_message = Message(STATUS.NODE_MSG, "4")
         elif code == STATUS.UPDATE_MSG:
             result_message = self.handle_update(message)
+        elif code == STATUS.BLOCK:
+            result_message = self.handle_send_block(message)
         else:
             result_message = Message.empty_message()
         return json.dumps(result_message.__dict__)
@@ -391,9 +393,31 @@ class Server(object):
                     tx_hash = tx.tx_hash
                     self.tx_pool.remove(tx_hash)
             elif result == MergeThread.STATUS_EXISTS:
-                send_msg = Message(STATUS.UPDATE_MSG, height - 1)
+                send_msg = Message(STATUS.BLOCK, height - 1)
                 return send_msg
         except ValueError as e:
             # todo: 失败的情况下应该进行回滚
             logging.error(e)
         return Message(STATUS.NODE_MSG, "6")
+
+    @staticmethod
+    def handle_send_block(message: dict):
+        """
+        状态码为STATUS.BLOCK = 7, 发送对应高度的区块给对端
+        :param message: 包含高度信息的message
+        :return:
+        """
+        height = message.get('data', -1)
+
+        if height == -1:
+            send_message = Message.empty_message()
+            return send_message
+
+        block = BlockChain().get_block_by_height(height)
+
+        if block is None:
+            send_message = Message.empty_message()
+        else:
+            send_message = Message(STATUS.GET_BLOCK_MSG, block.serialize())
+
+        return send_message

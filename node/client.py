@@ -208,6 +208,8 @@ class Client(object):
             self.handle_sync(message)
         elif code == STATUS.UPDATE_MSG:
             self.handle_update(message)
+        elif code == STATUS.BLOCK:
+            self.handle_send_block(message)
 
     def handle_shake(self, message: dict):
         """
@@ -270,7 +272,7 @@ class Client(object):
                 pi = funcs.hex2int(hex_pi)
                 Calculator().update(seed, pi)
             elif result == MergeThread.STATUS_EXISTS:
-                send_msg = Message(STATUS.GET_BLOCK_MSG, height - 1)
+                send_msg = Message(STATUS.BLOCK, height - 1)
                 self.send(send_msg)
         except ValueError as e:
             # todo: 这里应该需要进行回滚， 但是回滚涉及到线程安全问题， 需要重新考虑
@@ -384,6 +386,28 @@ class Client(object):
             data['id'] = int(Config().get('node.id'))
             send_message = Message(STATUS.UPDATE_MSG, data)
             self.send(send_message)
+
+    def handle_send_block(self, message: dict):
+        """
+        状态码为STATUS.BLOCK = 7, 发送对应高度的区块给对端
+        这里逻辑和状态码为2的逻辑是一样的， 但是为了保证C/S的统一所以还是需要定义一下
+        :param message: 包含高度信息的message
+        :return:
+        """
+        height = message.get('data', -1)
+
+        if height == -1:
+            send_message = Message.empty_message()
+            self.send(send_message)
+            return
+        block = BlockChain().get_block_by_height(height)
+
+        if block is None:
+            send_message = Message.empty_message()
+        else:
+            send_message = Message(STATUS.UPDATE_MSG, block.serialize())
+
+        self.send(send_message)
 
     def close(self):
         self.sock.close()
