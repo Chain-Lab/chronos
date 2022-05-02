@@ -237,7 +237,6 @@ class Client(object):
 
         if self.height != local_height:
             # 当前线程最后共识的高度低于最新高度， 更新共识信息
-            VoteCenter().refresh(local_height)
             self.send_vote = False
             self.height = local_height
 
@@ -262,16 +261,7 @@ class Client(object):
 
         try:
             result = MergeThread().append_block(block)
-            if result == MergeThread.STATUS_APPEND:
-                Counter().refresh(height)
-                Timer().refresh(height)
-                delay_params = block.transactions[0].inputs[0].delay_params
-                hex_seed = delay_params.get("seed")
-                hex_pi = delay_params.get("pi")
-                seed = funcs.hex2int(hex_seed)
-                pi = funcs.hex2int(hex_pi)
-                Calculator().update(seed, pi)
-            elif result == MergeThread.STATUS_EXISTS:
+            if result == MergeThread.STATUS_EXISTS:
                 send_msg = Message(STATUS.BLOCK, height - 1)
                 self.send(send_msg)
         except ValueError as e:

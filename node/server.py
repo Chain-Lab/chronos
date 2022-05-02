@@ -211,7 +211,6 @@ class Server(object):
         # 本地高度低于远端高度， 清除交易和投票信息
         if local_height < remote_height:
             self.txs.clear()
-            VoteCenter().refresh(remote_height)
             logging.debug("Local vote and transaction cleared.")
 
         # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
@@ -374,16 +373,7 @@ class Server(object):
             # 一轮共识结束的第一个标识：收到其他节点发来的新区块
             result = MergeThread().append_block(block)
 
-            # todo： 在修改了区块添加方式后， 需要确认更新参数的方法
             if result == MergeThread.STATUS_APPEND:
-                Counter().refresh(height)
-                Timer().refresh(height)
-                delay_params = block.transactions[0].inputs[0].delay_params
-                hex_seed = delay_params.get("seed")
-                hex_pi = delay_params.get("proof")
-                seed = funcs.hex2int(hex_seed)
-                pi = funcs.hex2int(hex_pi)
-                Calculator().update(seed, pi)
                 # 从邻居节点更新了区块， 说明一轮共识已经结束或本地区块没有同步
                 # 需要更新vote center中的信息并且设置synced为false
                 self.thread_local.client_synced = False

@@ -3,7 +3,12 @@ import threading
 
 from core.block_chain import BlockChain
 from core.utxo import UTXOSet
+from threads.calculator import Calculator
+from threads.counter import Counter
+from threads.vote_center import VoteCenter
+from utils import funcs
 from utils.singleton import Singleton
+from node.timer import Timer
 
 
 class MergeThread(Singleton):
@@ -66,6 +71,21 @@ class MergeThread(Singleton):
         self.__lock.release()
         return MergeThread.STATUS_APPEND
 
+    def __update(self, block):
+        height = block.block_header.height
+
+        VoteCenter().refresh(height)
+        Counter().refresh(height)
+        Timer().refresh(height)
+
+        delay_params = block.transactions[0].inputs[0].delay_params
+        hex_seed = delay_params.get("seed")
+        hex_pi = delay_params.get("proof")
+        seed = funcs.hex2int(hex_seed)
+        pi = funcs.hex2int(hex_pi)
+        Calculator().update(seed, pi)
+
+
     def __task(self):
         """
         区块信息处理线程的线程函数
@@ -123,12 +143,14 @@ class MergeThread(Singleton):
                         UTXOSet().roll_back(latest_block)
                         bc.roll_back()
                     bc.insert_block(block)
+                    self.__update(block)
                     continue
                 elif block_height == latest_height + 1:
                     # 取得区块的前一个区块哈希
                     block_prev_hash = block.block_header.prev_block_hash
                     if block_prev_hash == latest_hash:
                         bc.insert_block(block)
+                        self.__update(block)
                     else:
                         # 最前面的区块没有被处理过， 将区块返回到队列中等待
                         if block_prev_hash in self.cache.keys() and not self.cache[block_prev_hash]:
