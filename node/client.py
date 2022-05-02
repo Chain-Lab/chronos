@@ -149,8 +149,9 @@ class Client(object):
                 # todo： 如果有多个交易的情况下需要进行处理， 目前仅仅针对一个交易
                 #  修改clear的逻辑
                 logging.debug("Send transaction to peer.")
-                data = self.txs[0].serialize()
-                self.tx_pool.add(self.txs[0])
+                tx = self.txs.pop(0)
+                data = tx.serialize()
+                self.tx_pool.add(tx)
                 message = Message(STATUS.TRANSACTION_MSG, data)
                 is_closed = self.send(message)
                 if is_closed:
