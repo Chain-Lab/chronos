@@ -53,7 +53,10 @@ class MergeThread(Singleton):
 
         bc = BlockChain()
         latest_block, _ = bc.get_latest_block()
-        latest_height = latest_block.block_header.height
+        if latest_block is not None:
+            latest_height = latest_block.block_header.height
+        else:
+            latest_height = 0
         block_height = block.height
         prev_hash = block.block_header.prev_block_hash
         delta = abs(latest_height - block_height)
