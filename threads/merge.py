@@ -1,5 +1,6 @@
 import logging
 import threading
+import time
 
 from core.block_chain import BlockChain
 from core.utxo import UTXOSet
@@ -39,6 +40,8 @@ class MergeThread(Singleton):
         self.__lock = threading.Lock()
         self.thread = threading.Thread(target=self.__task, args=(), name="Merge Thead")
         self.thread.start()
+        self.__cleaner = threading.Thread(target=self.__clear_task, args=(), name="Cleaner Thread")
+        self.__cleaner.start()
 
     def append_block(self, block):
         """
@@ -157,3 +160,9 @@ class MergeThread(Singleton):
                             logging.debug("Block#{} push back to queue.".format(block_hash))
                             self.__queue.append(block)
                             self.cache[block_hash] = False
+
+    def __clear_task(self):
+        while True:
+            time.sleep(180)
+            with self.__lock:
+                self.cache.clear()
