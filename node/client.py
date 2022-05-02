@@ -121,7 +121,7 @@ class Client(object):
             # 或已经投票但是client没有发送
             # 或到达时间并且没有发送投票信息
             tx_len = len(self.txs)
-            flg = (tx_len % 2 == 0 and tx_len == 0)
+            flg = (tx_len % 2 == 0 or tx_len == 0)
             logging.debug("Client has {} transactions need to send.".format(tx_len))
 
             if (flg and self.tx_pool.is_full() and VoteCenter().vote == {}) or (
