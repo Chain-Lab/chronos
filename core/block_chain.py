@@ -1,6 +1,7 @@
 import json
 import logging
 
+import couchdb
 from couchdb import ResourceNotFound
 
 from core.block import Block
@@ -261,6 +262,10 @@ class BlockChain(Singleton):
         """
         block_hash = block.block_header.hash
         logging.info("Insert new block#{} height {}".format(block_hash, block.block_header.height))
-        self.db.create(block_hash, block.serialize())
+        try:
+            self.db.create(block_hash, block.serialize())
+        except couchdb.http.ResourceConflict:
+            return
         self.set_latest_hash(block_hash)
         UTXOSet().update(block)
+
