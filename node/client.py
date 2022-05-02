@@ -120,9 +120,12 @@ class Client(object):
             # client开始一轮共识的逻辑：没有待发送交易，交易池为空且没有本地投票数据
             # 或已经投票但是client没有发送
             # 或到达时间并且没有发送投票信息
-            if (not self.txs and self.tx_pool.is_full() and VoteCenter().vote == {}) or (
-                    not self.txs and VoteCenter().has_vote and not self.send_vote) or (
-                    not self.txs and Timer().reach() and not self.send_vote):
+            tx_len = len(self.txs)
+            flg = (tx_len % 2 == 0 and tx_len == 0)
+
+            if (flg and self.tx_pool.is_full() and VoteCenter().vote == {}) or (
+                    flg and VoteCenter().has_vote and not self.send_vote) or (
+                    flg and Timer().reach() and not self.send_vote):
                 address = Config().get('node.address')
                 final_address = VoteCenter().local_vote()
                 if final_address is None:
@@ -141,7 +144,7 @@ class Client(object):
                 # 不论是否进行过数据的发送，都设置为True
                 self.send_vote = True
 
-            if self.txs:
+            if not flg:
                 # 如果本地存在交易， 将交易发送到邻居节点
                 # todo： 如果有多个交易的情况下需要进行处理， 目前仅仅针对一个交易
                 #  修改clear的逻辑
