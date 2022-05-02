@@ -85,7 +85,6 @@ class MergeThread(Singleton):
         pi = funcs.hex2int(hex_pi)
         Calculator().update(seed, pi)
 
-
     def __task(self):
         """
         区块信息处理线程的线程函数
@@ -109,6 +108,7 @@ class MergeThread(Singleton):
                 if not latest_block:
                     logging.info("Insert genesis block to database.")
                     bc.insert_block(block)
+                    self.__update(block)
                     continue
 
                 latest_height = latest_block.block_header.height
