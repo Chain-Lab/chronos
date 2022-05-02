@@ -156,7 +156,7 @@ class Client(object):
                 if is_closed:
                     self.close()
                     break
-                self.txs.clear()
+                # self.txs.clear()
             else:
                 try:
                     genesis_block = bc.get_block_by_height(0)
@@ -354,7 +354,7 @@ class Client(object):
             Timer().refresh(height)
             Calculator().update()
             logging.debug("Package new block.")
-            self.txs.clear()
+            # self.txs.clear()
 
     def handle_update(self, message: dict):
         """
