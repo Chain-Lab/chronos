@@ -50,8 +50,9 @@ class Gossip(Singleton):
     def append(self, tx):
         if TxMemPool().add(tx):
             logging.debug("Append transaction to queue.")
-            self.__queue.append(tx)
-            self.__cond.notify_all()
+            with self.__cond:
+                self.__queue.append(tx)
+                self.__cond.notify_all()
 
     def __task(self):
         local_ip = Config().get('node.listen_ip')
