@@ -113,7 +113,7 @@ class MergeThread(Singleton):
             with self.__cond:
                 while not len(self.__queue):
                     self.__cond.wait()
-                block = self.__queue.pop()
+                block = self.__queue.pop(0)
 
                 block_height = block.block_header.height
                 block_hash = block.block_header.hash

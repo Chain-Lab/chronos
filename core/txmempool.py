@@ -60,7 +60,7 @@ class TxMemPool(Singleton):
         length = len(self.tx_hashes)
 
         while count < pool_size and count < length:
-            tx_hash = self.tx_hashes.pop()
+            tx_hash = self.tx_hashes.pop(0)
             transaction = self.txs.pop(tx_hash)
             result.append(transaction)
             count += 1

@@ -244,7 +244,7 @@ class Server(object):
 
         if self.txs:
             # 如果服务器存在交易， 发送给client
-            transaction = self.txs.pop()
+            transaction = self.txs.pop(0)
             result = Message(STATUS.TRANSACTION_MSG, transaction)
             # time.sleep(2)
             return result

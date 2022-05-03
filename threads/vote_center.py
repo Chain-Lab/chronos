@@ -38,7 +38,7 @@ class VoteCenter(Singleton):
             with self.__cond:
                 while not len(self.__queue):
                     self.__cond.wait()
-                current = self.__queue.pop()
+                current = self.__queue.pop(0)
                 address = current
                 final_address = self.__vote_dict[address]
                 logging.debug("Pop task {} vote {}".format(address, final_address))

@@ -69,7 +69,7 @@ class Gossip(Singleton):
                     self.__cond.wait()
 
                 tx: Transaction
-                tx = self.__queue.pop()
+                tx = self.__queue.pop(0)
                 logging.debug("Client pop transaction.")
 
                 data = json.dumps(tx.serialize())
