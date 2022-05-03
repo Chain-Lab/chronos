@@ -117,15 +117,11 @@ class Client(object):
             except TypeError:
                 continue
 
-            # client开始一轮共识的逻辑：没有待发送交易，交易池为空且没有本地投票数据
-            # 或已经投票但是client没有发送
-            # 或到达时间并且没有发送投票信息
-            tx_len = len(self.txs)
-            flg = (tx_len % 2 == 0 or tx_len == 0)
+            # v1.1.2 upd: 删除发送交易逻辑， 改为gossip协议使用UDP进行交易的广播
 
-            if (flg and self.tx_pool.is_full() and VoteCenter().vote == {}) or (
-                    flg and VoteCenter().has_vote and not self.send_vote) or (
-                    flg and Timer().reach() and not self.send_vote):
+            if (self.tx_pool.is_full() and VoteCenter().vote == {}) or (
+                    VoteCenter().has_vote and not self.send_vote) or (
+                    Timer().reach() and not self.send_vote):
                 address = Config().get('node.address')
                 final_address = VoteCenter().local_vote()
                 if final_address is None:
@@ -144,58 +140,43 @@ class Client(object):
                 # 不论是否进行过数据的发送，都设置为True
                 self.send_vote = True
 
-            if not flg:
-                # 如果本地存在交易， 将交易发送到邻居节点
-                # todo： 如果有多个交易的情况下需要进行处理， 目前仅仅针对一个交易
-                #  修改clear的逻辑
-                logging.debug("Send transaction to peer.")
-                tx = self.txs.pop(0)
-                data = tx.serialize()
-                self.tx_pool.add(tx)
-                message = Message(STATUS.TRANSACTION_MSG, data)
-                is_closed = self.send(message)
-                if is_closed:
-                    self.close()
-                    break
-                # self.txs.clear()
-            else:
+            try:
+                genesis_block = bc.get_block_by_height(0)
+            except IndexError as e:
+                genesis_block = None
+            except TypeError:
+                genesis_block = None
+
+            data = {
+                "latest_height": -1,
+                "genesis_block": "",
+                "address": Config().get('node.address'),
+                "time": time.time(),
+                "id": int(Config().get('node.id')),
+                "vote": VoteCenter().vote
+            }
+
+            if genesis_block:
+                # 如果存在创世区块， 发送创世区块
+                # 考虑一下创世区块的用处
+
+                # 如果存在创世区块， 那么最新区块必然是存在的， 为了避免创建创世区块的时候刚好到达
+                # 这里的逻辑，所以需要再获取一次
+                if not latest_block:
+                    latest_block, prev_hash = bc.get_latest_block()
                 try:
-                    genesis_block = bc.get_block_by_height(0)
-                except IndexError as e:
-                    genesis_block = None
-                except TypeError:
-                    genesis_block = None
+                    data['latest_height'] = latest_block.block_header.height
+                except AttributeError:
+                    data['latest_height'] = -1
+                data['genesis_block'] = genesis_block.serialize()
 
-                data = {
-                    "latest_height": -1,
-                    "genesis_block": "",
-                    "address": Config().get('node.address'),
-                    "time": time.time(),
-                    "id": int(Config().get('node.id')),
-                    "vote": VoteCenter().vote
-                }
-
-                if genesis_block:
-                    # 如果存在创世区块， 发送创世区块
-                    # 考虑一下创世区块的用处
-
-                    # 如果存在创世区块， 那么最新区块必然是存在的， 为了避免创建创世区块的时候刚好到达
-                    # 这里的逻辑，所以需要再获取一次
-                    if not latest_block:
-                        latest_block, prev_hash = bc.get_latest_block()
-                    try:
-                        data['latest_height'] = latest_block.block_header.height
-                    except AttributeError:
-                        data['latest_height'] = -1
-                    data['genesis_block'] = genesis_block.serialize()
-
-                send_message = Message(STATUS.HAND_SHAKE_MSG, data)
-                # logging.debug("Send message: {}".format(data))
-                is_closed = self.send(send_message)
-                if is_closed:
-                    self.close()
-                    break
-                time.sleep(1)
+            send_message = Message(STATUS.HAND_SHAKE_MSG, data)
+            # logging.debug("Send message: {}".format(data))
+            is_closed = self.send(send_message)
+            if is_closed:
+                self.close()
+                break
+            time.sleep(1)
 
     def handle(self, message: dict):
         code = message.get('code', 0)

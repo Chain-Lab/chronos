@@ -250,8 +250,15 @@ class BlockChain(Singleton):
         :return: 是否校验通过
         """
         prev_txs = {}
+        tx_cache = {}
         for _input in transaction.inputs:
-            prev_tx = self.get_transaction_by_tx_hash(_input.tx_hash)
+            tx_hash = _input.tx_hash
+            if tx_hash not in tx_cache.keys():
+                # 优化： 先在cache里面查询， 如果没有的话再从数据库里面查询
+                prev_tx = self.get_transaction_by_tx_hash(tx_hash)
+                tx_cache[tx_hash] = prev_tx
+            else:
+                prev_tx = tx_cache[tx_hash]
             if not prev_tx:
                 continue
             prev_txs[prev_tx.tx_hash] = prev_tx
