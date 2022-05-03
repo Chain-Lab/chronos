@@ -3,6 +3,7 @@ import threading
 import time
 
 from core.block_chain import BlockChain
+from core.txmempool import TxMemPool
 from core.utxo import UTXOSet
 from threads.calculator import Calculator
 from threads.counter import Counter
@@ -94,6 +95,11 @@ class MergeThread(Singleton):
         seed = funcs.hex2int(hex_seed)
         pi = funcs.hex2int(hex_pi)
         Calculator().update(seed, pi)
+
+        tx_mem_pool = TxMemPool()
+        for tx in block.transactions:
+            tx_hash = tx.tx_hash
+            tx_mem_pool.remove(tx_hash)
 
     def __task(self):
         """
