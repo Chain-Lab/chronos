@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 
 import couchdb
 from couchdb import ResourceNotFound
@@ -44,6 +45,7 @@ class BlockChain(Singleton):
         :param delay_params:
         :return:
         """
+        start_time = time.time()
         latest_block, prev_hash = self.get_latest_block()
         height = latest_block.block_header.height + 1
 
@@ -73,6 +75,8 @@ class BlockChain(Singleton):
         logging.debug(block.serialize())
         # 先添加块再更新最新哈希， 避免添加区块时出现问题更新数据库
         self.insert_block(block)
+        end_time = time.time()
+        logging.debug("Package block use {}s".format(end_time - start_time))
 
     def new_genesis_block(self, transaction):
         """
