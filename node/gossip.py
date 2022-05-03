@@ -62,11 +62,14 @@ class Gossip(Singleton):
         while True:
             with self.__cond:
                 length = len(Peer().nodes)
+                logging.debug("per node {}".format(length))
                 while not len(self.__queue) or length == 0:
+                    logging.debug("Client wait insert new transaction.")
                     self.__cond.wait()
 
                 tx: Transaction
                 tx = self.__queue.pop()
+                logging.debug("Client pop transaction.")
                 data = json.dumps(tx.serialize())
 
                 nodes = random.choices(Peer().nodes, k=length // 2)
