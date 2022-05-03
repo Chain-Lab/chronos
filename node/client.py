@@ -345,7 +345,8 @@ class Client(object):
                 return
 
             bc = BlockChain()
-            bc.add_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
+            block = bc.package_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
+            MergeThread().append_block(block)
             # todo: 这里假设能够正常运行, 需要考虑一下容错
             block, _ = bc.get_latest_block()
 

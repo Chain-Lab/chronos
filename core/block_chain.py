@@ -37,7 +37,7 @@ class BlockChain(Singleton):
             logging.warning("Index overflow while get block #{}".format(index))
             raise IndexError('Index overflow')
 
-    def add_new_block(self, transactions: list, vote: dict, delay_params: dict):
+    def package_new_block(self, transactions: list, vote: dict, delay_params: dict):
         """
         新区块的产生逻辑， 传入待打包的交易列表和投票信息
         :param transactions:
@@ -74,9 +74,10 @@ class BlockChain(Singleton):
         block.set_header_hash()
         logging.debug(block.serialize())
         # 先添加块再更新最新哈希， 避免添加区块时出现问题更新数据库
-        self.insert_block(block)
+        # self.insert_block(block)
         end_time = time.time()
         logging.debug("Package block use {}s".format(end_time - start_time))
+        return block
 
     def new_genesis_block(self, transaction):
         """
