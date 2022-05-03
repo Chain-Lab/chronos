@@ -33,14 +33,15 @@ class Gossip(Singleton):
         s.bind(addr)
 
         while True:
-            data, addr = s.recvfrom(65535)           # 64kb
+            data, addr = s.recvfrom(20480)           # 15kb
             logging.debug("Receive transaction from {}.".format(addr))
             try:
-                data = json.loads(data)
+                data = json.loads(data.decode())
             except json.JSONDecodeError:
                 logging.error("Receive wrong data.")
                 continue
 
+            logging.debug(data)
             tx = Transaction.deserialize(data)
             if not json_validator("./schemas/transaction.json", tx):
                 logging.error("Receive transaction invalid.")
