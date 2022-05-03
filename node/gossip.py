@@ -61,9 +61,7 @@ class Gossip(Singleton):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         while True:
             with self.__cond:
-                length = len(Peer().nodes)
-                logging.debug("per node {}".format(length))
-                while not len(self.__queue) or length == 0:
+                while not len(self.__queue) or len(Peer().nodes) == 0:
                     logging.debug("Client wait insert new transaction.")
                     self.__cond.wait()
 
@@ -71,6 +69,7 @@ class Gossip(Singleton):
                 tx = self.__queue.pop()
                 logging.debug("Client pop transaction.")
                 data = json.dumps(tx.serialize())
+                length = len(Peer().nodes)
 
                 nodes = random.choices(Peer().nodes, k=length // 2)
                 logging.info("Send tx to gossip network.")
