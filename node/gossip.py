@@ -24,9 +24,10 @@ class Gossip(Singleton):
         self.client_thread.start()
 
     def server(self):
+        logging.debug("UDP Server start")
         local_ip = Config().get('node.listen_ip')
         port = Config().get('node.gossip_port')
-        addr = (local_ip, port)
+        addr = (local_ip, int(port))
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind(addr)
@@ -55,6 +56,7 @@ class Gossip(Singleton):
                 self.__cond.notify_all()
 
     def __task(self):
+        logging.debug("UDP Client start")
         local_ip = Config().get('node.listen_ip')
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         while True:
@@ -76,6 +78,6 @@ class Gossip(Singleton):
                     if ip == local_ip:
                         continue
 
-                    addr = (ip, port)
+                    addr = (ip, int(port))
                     # UDPConnect.send_msg(s, addr, data)
                     s.sendto(data.encode(), addr)
