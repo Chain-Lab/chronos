@@ -49,7 +49,7 @@ class Gossip(Singleton):
             tx = Transaction.deserialize(data)
             self.append(tx)
 
-    def append(self, tx):
+    def append(self, tx: Transaction):
         if TxMemPool().add(tx):
             logging.debug("Append transaction to queue.")
             with self.__cond:
@@ -69,6 +69,7 @@ class Gossip(Singleton):
                 tx: Transaction
                 tx = self.__queue.pop()
                 logging.debug("Client pop transaction.")
+
                 data = json.dumps(tx.serialize())
                 length = len(Peer().nodes)
 

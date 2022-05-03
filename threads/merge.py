@@ -166,6 +166,12 @@ class MergeThread(Singleton):
                             logging.debug("Block#{} push back to queue.".format(block_hash))
                             self.__queue.append(block)
                             self.cache[block_hash] = False
+                else:
+                    # 如果区块的高度高于目前区块一个区块以上， 返回到队列中等待处理
+                    logging.debug("Block#{} push back to queue.".format(block_hash))
+                    self.__queue.append(block)
+                    self.cache[block_hash] = False
+
 
     def __clear_task(self):
         while True:
