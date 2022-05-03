@@ -138,6 +138,7 @@ class Server(object):
         :return: 消息处理完成后应该返回的数据
         """
         code = message.get('code', 0)
+        logging.debug("Server handle code {}".format(code))
         if code == STATUS.HAND_SHAKE_MSG:
             result_message = self.handle_handshake(message)
         elif code == STATUS.GET_BLOCK_MSG:
