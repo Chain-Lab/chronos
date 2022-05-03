@@ -42,11 +42,11 @@ class Gossip(Singleton):
                 continue
 
             logging.debug(data)
-            tx = Transaction.deserialize(data)
-            if not json_validator("./schemas/transaction.json", tx):
+            if not json_validator("./schemas/transaction.json", data):
                 logging.error("Receive transaction invalid.")
                 continue
 
+            tx = Transaction.deserialize(data)
             self.append(tx)
 
     def append(self, tx):
