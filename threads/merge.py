@@ -59,10 +59,10 @@ class MergeThread(Singleton):
             latest_height = 0
         block_height = block.height
         prev_hash = block.block_header.prev_block_hash
-        prev_block = bc.get_transaction_by_tx_hash(prev_hash)
+        prev_block = bc.get_block_by_hash(prev_hash)
         delta = abs(latest_height - block_height)
 
-        if prev_block is None and prev_hash not in self.cache.keys() and block_height != 0 and delta < 5:
+        if prev_hash not in self.cache.keys() and block_height != 0 and prev_block is None and delta < 5:
             logging.info("Previous block#{} not exists, pull block.".format(prev_hash))
             return MergeThread.STATUS_EXISTS
 
@@ -176,6 +176,6 @@ class MergeThread(Singleton):
 
     def __clear_task(self):
         while True:
-            time.sleep(180)
+            time.sleep(300)
             with self.__lock:
                 self.cache.clear()
