@@ -33,7 +33,7 @@ class Gossip(Singleton):
         s.bind(addr)
 
         while True:
-            data, addr = s.recvfrom(15360)           # 15kb
+            data, addr = s.recvfrom(65535)           # 64kb
             logging.debug("Receive transaction from {}.".format(addr))
             try:
                 data = json.loads(data)
