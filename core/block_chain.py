@@ -9,6 +9,7 @@ from core.block_header import BlockHeader
 from core.config import Config
 from core.merkle import MerkleTree
 from core.transaction import Transaction
+from core.txmempool import TxMemPool
 from core.utxo import UTXOSet
 from utils.dbutil import DBUtil
 from utils.singleton import Singleton
@@ -272,4 +273,8 @@ class BlockChain(Singleton):
             return
         self.set_latest_hash(block_hash)
         UTXOSet().update(block)
+        tx_mem_pool = TxMemPool()
+        for tx in block.transactions:
+            tx_hash = tx.tx_hash
+            tx_mem_pool.remove(tx_hash)
 

@@ -42,7 +42,6 @@ class Gossip(Singleton):
                 logging.error("Receive wrong data.")
                 continue
 
-            logging.debug(data)
             if not json_validator("./schemas/transaction.json", data):
                 logging.error("Receive transaction invalid.")
                 continue
