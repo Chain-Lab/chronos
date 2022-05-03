@@ -13,6 +13,7 @@ from core.block_chain import BlockChain
 from core.config import Config
 from core.transaction import Transaction
 from core.utxo import UTXOSet
+from node.gossip import Gossip
 from node.peer import Peer
 from node.peer_to_peer import P2p
 from node.server import Server
@@ -48,6 +49,9 @@ def run():
     utxo_set = UTXOSet()
     utxo_set.reindex(bc)
     logging.info("UTXO set reindex finish")
+
+    gossip = Gossip()
+    gossip.run()
 
     tcpserver = Server()
     tcpserver.listen()

@@ -16,9 +16,12 @@ class Gossip(Singleton):
     def __init__(self):
         self.__queue = []
         self.__cond = threading.Condition()
+        self.server_thread = threading.Thread(target=self.server, args=(), name="UDP Server")
+        self.client_thread = threading.Thread(target=self.__task, args=(), name="UDP Client")
 
     def run(self):
-        pass
+        self.server_thread.start()
+        self.client_thread.start()
 
     def server(self):
         local_ip = Config().get('node.listen_ip')
