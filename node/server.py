@@ -222,7 +222,7 @@ class Server(object):
 
         # 本地高度低于邻居高度， 拉取区块
         if local_height < remote_height:
-            logging.debug("Local height lower than remote height, pull block.")
+            logging.debug("Local height#{} lower than remote height#{}, pull block.".format(local_height, remote_height))
             result = Message(STATUS.UPDATE_MSG, local_height)
             return result
 
