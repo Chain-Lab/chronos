@@ -48,8 +48,8 @@ class Gossip(Singleton):
 
             tx = Transaction.deserialize(data)
             self.append(tx)
-            time.sleep(3)
-            # 等待3s， gossip发送交易太快了占用cpu较多
+            time.sleep(1)
+            # 等待1s， gossip发送交易太快了占用cpu较多
 
     def append(self, tx: Transaction):
         if TxMemPool().add(tx):
@@ -87,4 +87,4 @@ class Gossip(Singleton):
                     addr = (ip, int(port))
                     # UDPConnect.send_msg(s, addr, data)
                     s.sendto(data.encode(), addr)
-                    time.sleep(1)
+                time.sleep(1)

@@ -78,4 +78,5 @@ class TxMemPool(Singleton):
         if tx_hash in self.tx_hashes:
             self.tx_hashes.remove(tx_hash)
             self.txs.pop(tx_hash)
+            logging.debug("Remove tx#{} from memory pool.".format(tx_hash))
         self.pool_lock.release()
