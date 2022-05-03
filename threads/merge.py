@@ -179,9 +179,8 @@ class MergeThread(Singleton):
                     self.__queue.append(block)
                     self.cache[block_hash] = False
 
-
     def __clear_task(self):
         while True:
-            time.sleep(300)
+            time.sleep(60)
             with self.__lock:
                 self.cache.clear()

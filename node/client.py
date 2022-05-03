@@ -199,7 +199,7 @@ class Client(object):
 
     def handle(self, message: dict):
         code = message.get('code', 0)
-        logging.debug("Server handle code {}".format(code))
+        logging.debug("Client handle code {}".format(code))
 
         if code == STATUS.HAND_SHAKE_MSG:
             self.handle_shake(message)
