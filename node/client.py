@@ -340,10 +340,10 @@ class Client(object):
             bc = BlockChain()
             logging.debug("Start package new block.")
             block = bc.package_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
-            with package_cond:
-                package_cond.notify_all()
             logging.debug("Append new block to merge thread.")
             package_lock.release()
+            with package_cond:
+                package_cond.notify_all()
             MergeThread().append_block(block)
             # todo: 这里假设能够正常运行, 需要考虑一下容错
             block, _ = bc.get_latest_block()
