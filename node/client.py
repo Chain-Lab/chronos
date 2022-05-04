@@ -330,17 +330,20 @@ class Client(object):
         :return: None
         """
         # 一轮共识结束的第二个标志：本地被投票为打包区块的节点，产生新区块
-        data = message.get('data', '')
+        data = message.get('data', '0#0')
         address = Config().get('node.address')
         logging.debug("Client receive package address: {}".format(data))
-        # logging.debug("Receive package wallet is: {}".format(data))
-        if data == address:
+        items = data.split("#")
+        dst_address = items[0]
+        vote_height = int(items[1])
+
+        if address == dst_address:
             if package_lock.locked():
                 logging.debug("Package locked.")
                 return
             package_lock.acquire()
             logging.debug("Lock package lock. Start package memory pool.")
-            transactions = self.tx_pool.package(self.height + 1)
+            transactions = self.tx_pool.package(vote_height + 1)
             logging.debug("Package transaction result: {}".format(transactions))
 
             # 如果取出的交易数据是None， 说明另外一个线程已经打包了， 就不用再管

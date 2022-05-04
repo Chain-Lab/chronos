@@ -245,7 +245,7 @@ class Server(object):
             # x[1]取后面的列表
             try:
                 address = a[0][0]
-                result = Message(STATUS.SYNC_MSG, address)
+                result = Message(STATUS.SYNC_MSG, "{}#{}".format(address, local_height))
                 self.thread_local.server_send = True
                 logging.debug("Send vote result {} to client.".format(address))
                 return result
