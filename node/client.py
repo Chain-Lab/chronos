@@ -115,7 +115,7 @@ class Client(object):
             with package_cond:
                 while package_lock.locked():
                     logging.debug("Wait block package finished.")
-                    package_cond.wait()
+                    package_cond.wait(5)
 
             bc = BlockChain()
             # get_latest_block会返回None导致线程挂掉， 需要catch一下
@@ -327,7 +327,6 @@ class Client(object):
                 logging.debug("Package locked.")
                 return
             package_lock.acquire()
-
             transactions = self.tx_pool.package(self.height + 1)
             logging.debug("Package transaction result: {}".format(transactions))
 

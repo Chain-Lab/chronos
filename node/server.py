@@ -93,7 +93,7 @@ class Server(object):
             with package_cond:
                 while package_lock.locked():
                     logging.debug("Wait block package finished.")
-                    package_cond.wait()
+                    package_cond.wait(5)
 
             try:
                 # rec_data = conn.recv(4096 * 2)
