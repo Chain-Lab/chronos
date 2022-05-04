@@ -170,22 +170,27 @@ class Server(object):
         :return:
         """
         if vote_data == {} or len(vote_data) != len(VoteCenter().vote) or not Counter().client_verify():
+            logging.debug("Check vote synced condition failed.")
             return False
         for address in vote_data:
             # 当前地址的键值不存在， 说明信息没有同步
             if address not in VoteCenter().vote.keys():
+                logging.debug("Address {} not in local vote key.".format(address))
                 return False
             # todo: 由于是浅拷贝，会不会影响到另外一个正在写的线程
             a = VoteCenter().vote[address]
             b = vote_data[address]
             if len(a) == 0 or len(b) == 0 or len(a) != len(b):
+                logging.debug("Vote list length is not equal.")
                 return False
             a = a[: -1]
             b = b[: -1]
             a.sort()
             b.sort()
             if a != b:
+                logging.debug("Sorted list is not equal.")
                 return False
+            logging.debug("Vote list same, return True.")
         return True
 
     def handle_handshake(self, message: dict):
@@ -195,6 +200,7 @@ class Server(object):
         :param message:
         :return:
         """
+        logging.debug("Server receive handshake message.")
         data = message.get("data", {})
         vote_data = data.get("vote", {})
         remote_height = data.get("latest_height", 0)
@@ -268,8 +274,8 @@ class Server(object):
                 # 如果本地没有投票信息直接略过
                 logging.info("Local node has none vote information.")
 
-        logging.debug("Vote information is not synced, sync remote vote list.")
         if bool(vote_data):
+            logging.debug("Vote information is not synced, sync remote vote list.")
             VoteCenter().vote_sync(vote_data)
 
         try:
@@ -289,6 +295,7 @@ class Server(object):
         }
 
         if genesis_block:
+            logging.debug("Send data with genesis block data.")
             result_data = {
                 "last_height": local_height,
                 "genesis_block": genesis_block.serialize(),
@@ -298,6 +305,7 @@ class Server(object):
                 "vote": VoteCenter().vote
             }
         result = Message(STATUS.HAND_SHAKE_MSG, result_data)
+        logging.debug("Return handshake data.")
         return result
 
     @staticmethod
