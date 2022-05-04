@@ -323,6 +323,11 @@ class Client(object):
         logging.debug("Client receive package address: {}".format(data))
         # logging.debug("Receive package wallet is: {}".format(data))
         if data == address:
+            if package_lock.locked():
+                logging.debug("Package locked.")
+                return
+            package_lock.acquire()
+
             transactions = self.tx_pool.package(self.height + 1)
             logging.debug("Package transaction result: {}".format(transactions))
 
@@ -334,11 +339,11 @@ class Client(object):
 
             bc = BlockChain()
             logging.debug("Start package new block.")
-            with package_lock:
-                block = bc.package_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
-                with package_cond:
-                    package_cond.notify_all()
+            block = bc.package_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
+            with package_cond:
+                package_cond.notify_all()
             logging.debug("Append new block to merge thread.")
+            package_lock.release()
             MergeThread().append_block(block)
             # todo: 这里假设能够正常运行, 需要考虑一下容错
             block, _ = bc.get_latest_block()
