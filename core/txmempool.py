@@ -44,6 +44,7 @@ class TxMemPool(Singleton):
         :return: 高度高于已打包高度的情况下返回交易列表， 否则返回None
         """
         result = []
+        bc = BlockChain()
         # logging.debug("Package pool, pool status:")
         # logging.debug(self.tx_hashes)
         if height <= self.__height or self.pool_lock.locked():
@@ -62,6 +63,11 @@ class TxMemPool(Singleton):
         while count < pool_size and count < length:
             tx_hash = self.tx_hashes.pop(0)
             transaction = self.txs.pop(tx_hash)
+            db_tx = bc.get_transaction_by_tx_hash(tx_hash)
+
+            if db_tx is not None:
+                continue
+
             result.append(transaction)
             count += 1
 
