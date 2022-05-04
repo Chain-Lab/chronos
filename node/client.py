@@ -137,7 +137,7 @@ class Client(object):
 
             # v1.1.2 upd: 删除发送交易逻辑， 改为gossip协议使用UDP进行交易的广播
 
-            if (self.tx_pool.is_full() and VoteCenter().vote == {}) or (
+            if (self.tx_pool.is_full() and not bool(VoteCenter().vote)) or (
                     VoteCenter().has_vote and not self.send_vote) or (
                     Timer().reach() and not self.send_vote):
                 logging.debug("Start consensus.")
