@@ -16,7 +16,7 @@ from threads.calculator import Calculator
 from threads.counter import Counter
 from threads.merge import MergeThread
 from threads.vote_center import VoteCenter
-from utils import funcs
+from utils.locks import package_lock, package_cond
 from utils.network import TCPConnect
 
 
@@ -90,6 +90,10 @@ class Server(object):
         self.thread_local.height = -1
 
         while True:
+            while package_lock.locked():
+                logging.debug("Wait block package finished.")
+                package_cond.wait()
+
             try:
                 # rec_data = conn.recv(4096 * 2)
                 rec_data = TCPConnect.recv_msg(conn)

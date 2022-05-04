@@ -20,6 +20,7 @@ from threads.merge import MergeThread
 from threads.vote_center import VoteCenter
 from utils import funcs
 from utils.dbutil import DBUtil
+from utils.locks import package_lock, package_cond
 from utils.network import TCPConnect
 
 
@@ -110,6 +111,11 @@ class Client(object):
         thread_obj = threading.current_thread()
         thread_obj.name = "Client Thread - " + thread_obj.getName().split("-")[-1]
         while True:
+            # 在本地进行打包区块时让出cpu资源
+            while package_lock.locked():
+                logging.debug("Wait block package finished.")
+                package_cond.wait()
+
             bc = BlockChain()
             # get_latest_block会返回None导致线程挂掉， 需要catch一下
             try:
@@ -327,7 +333,9 @@ class Client(object):
 
             bc = BlockChain()
             logging.debug("Start package new block.")
-            block = bc.package_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
+            with package_lock:
+                block = bc.package_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
+            package_cond.notify_all()
             logging.debug("Append new block to merge thread.")
             MergeThread().append_block(block)
             # todo: 这里假设能够正常运行, 需要考虑一下容错
