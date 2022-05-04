@@ -375,7 +375,7 @@ class Client(object):
             return
 
         local_height = latest_block.block_header.height
-        for i in range(height + 1, local_height + 1):
+        for i in range(height, local_height + 1):
             block = bc.get_block_by_height(i)
             data = block.serialize()
             data['address'] = address
