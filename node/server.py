@@ -90,9 +90,10 @@ class Server(object):
         self.thread_local.height = -1
 
         while True:
-            while package_lock.locked():
-                logging.debug("Wait block package finished.")
-                package_cond.wait()
+            with package_cond:
+                while package_lock.locked():
+                    logging.debug("Wait block package finished.")
+                    package_cond.wait()
 
             try:
                 # rec_data = conn.recv(4096 * 2)
