@@ -180,7 +180,6 @@ class Client(object):
 
     def handle(self, message: dict):
         code = message.get('code', 0)
-        logging.debug("Client handle code {}".format(code))
 
         if code == STATUS.HAND_SHAKE_MSG:
             self.handle_shake(message)
@@ -314,6 +313,7 @@ class Client(object):
         # 一轮共识结束的第二个标志：本地被投票为打包区块的节点，产生新区块
         data = message.get('data', '')
         address = Config().get('node.address')
+        logging.debug("Client receive package address: {}".format(address))
         # logging.debug("Receive package wallet is: {}".format(data))
         if data == address:
             transactions = self.tx_pool.package(self.height + 1)
