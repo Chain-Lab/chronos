@@ -236,7 +236,7 @@ class Server(object):
         # 投票信息同步完成
         # todo： 逻辑修改， 在到达时间点后直接进行处理
         # 这里的逻辑实际是存在问题的， server和每个client都有建立连接， 但是只和一个client判断信息同步完成， 并且每一次都要判断
-        logging.debug("Server vote result send status: {}"/format(self.thread_local.server_send))
+        logging.debug("Server vote result send status: {}".format(self.thread_local.server_send))
 
         if not self.thread_local.server_send and (Timer().finish() or self.check_vote_synced(vote_data)):
             a = sorted(VoteCenter().vote.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
