@@ -34,6 +34,7 @@ class Client(object):
         self.tx_pool = TxMemPool()
         self.send_vote = False
         self.height = -1
+        self.new_block = None
 
     def add_transaction(self, transaction):
         """
@@ -110,19 +111,29 @@ class Client(object):
         """
         thread_obj = threading.current_thread()
         thread_obj.name = "Client Thread - " + thread_obj.getName().split("-")[-1]
+        bc = BlockChain()
+        packaged = False
         while True:
             # 在本地进行打包区块时让出cpu资源
             with package_cond:
                 while package_lock.locked():
                     logging.debug("Wait block package finished.")
                     package_cond.wait()
+                    packaged = True
 
-            bc = BlockChain()
             # get_latest_block会返回None导致线程挂掉， 需要catch一下
             try:
                 latest_block, prev_hash = bc.get_latest_block()
             except TypeError:
                 continue
+
+            if packaged:
+                try:
+                    send_message = Message(STATUS.UPDATE_MSG, self.new_block.serialize())
+                    self.send(send_message)
+                except TypeError:
+                    pass
+                packaged = False
 
             # v1.1.2 upd: 删除发送交易逻辑， 改为gossip协议使用UDP进行交易的广播
 
@@ -342,12 +353,12 @@ class Client(object):
 
             bc = BlockChain()
             logging.debug("Start package new block.")
-            block = bc.package_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
+            self.new_block = bc.package_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
             logging.debug("Append new block to merge thread.")
             package_lock.release()
             with package_cond:
                 package_cond.notify_all()
-            MergeThread().append_block(block)
+            MergeThread().append_block(self.new_block)
             # todo: 这里假设能够正常运行, 需要考虑一下容错
             block, _ = bc.get_latest_block()
 
