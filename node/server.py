@@ -247,7 +247,7 @@ class Server(object):
                 address = a[0][0]
                 result = Message(STATUS.SYNC_MSG, address)
                 self.thread_local.server_send = True
-                logging.debug("Send vote result to client.")
+                logging.debug("Send vote result {} to client.".format(address))
                 return result
             except IndexError:
                 # 如果本地没有投票信息直接略过

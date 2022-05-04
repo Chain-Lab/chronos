@@ -67,6 +67,10 @@ class TxMemPool(Singleton):
 
             while count < pool_size and count < length:
                 logging.debug("Pop transaction from pool.")
+
+                if len(self.tx_hashes) <= 0:
+                    logging.debug("Memory pool cleaned.")
+                    break
                 tx_hash = self.tx_hashes.pop(0)
                 transaction = self.txs.pop(tx_hash)
                 db_tx = bc.get_transaction_by_tx_hash(tx_hash)
