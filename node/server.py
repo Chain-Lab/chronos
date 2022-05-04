@@ -170,6 +170,8 @@ class Server(object):
         :return:
         """
         if vote_data == {} or len(vote_data) != len(VoteCenter().vote) or not Counter().client_verify():
+            logging.debug("Vote data: {}".format(vote_data))
+            logging.debug("Vote data length: {} / {}".format(len(vote_data), len(VoteCenter().vote)))
             logging.debug("Check vote synced condition failed.")
             return False
         for address in vote_data:
