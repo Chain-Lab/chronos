@@ -88,7 +88,7 @@ class MergeThread(Singleton):
 
         VoteCenter().refresh(height)
         Counter().refresh(height)
-        Timer().refresh(height)
+        Timer().refresh()
 
         delay_params = block.transactions[0].inputs[0].delay_params
         hex_seed = delay_params.get("seed")
