@@ -7,6 +7,10 @@ from utils.singleton import Singleton
 
 
 class TxMemPool(Singleton):
+    STATUS_NONE = 0
+    STATUS_APPEND = 1
+    STATUS_PACKAGE = 2
+
     def __init__(self):
         self.txs = {}
         self.tx_hashes = []
@@ -15,6 +19,7 @@ class TxMemPool(Singleton):
         # todo: 存在潜在的类型转换错误，如果config文件配置错误可能抛出错误
         self.SIZE = int(Config().get("node.mem_pool_size"))
         self.__height = -1
+        self.__status = TxMemPool.STATUS_NONE
 
     def is_full(self):
         return len(self.txs) >= self.SIZE
@@ -23,14 +28,18 @@ class TxMemPool(Singleton):
         tx_hash = tx.tx_hash
         # 在添加交易到交易池前先检查交易是否存在，如果存在说明已经被打包了
         with self.pool_lock:
+            self.__status = TxMemPool.STATUS_APPEND
             if self.bc.get_transaction_by_tx_hash(tx_hash) is not None:
                 logging.debug("Transaction #{} existed.".format(tx_hash))
+                self.__status = TxMemPool.STATUS_NONE
                 return False
             if tx_hash not in self.tx_hashes:
                 self.txs[tx_hash] = tx
                 self.tx_hashes.append(tx_hash)
                 logging.debug("Add tx#{} in memory pool.".format(tx_hash))
+                self.__status = TxMemPool.STATUS_NONE
                 return True
+            self.__status = TxMemPool.STATUS_NONE
             return False
 
     def clear(self):
@@ -48,16 +57,18 @@ class TxMemPool(Singleton):
         bc = BlockChain()
         # logging.debug("Package pool, pool status:")
         # logging.debug(self.tx_hashes)
-        if height <= self.__height or self.pool_lock.locked():
+        if height <= self.__height or (self.pool_lock.locked() and self.__status != TxMemPool.STATUS_PACKAGE):
             return None
 
         with self.pool_lock:
+            self.__status = TxMemPool.STATUS_PACKAGE
             logging.debug("Lock txmempool.")
             # 拿到锁后再检查一次， 避免某个线程刚好到达这个地方抢到锁
             if height <= self.__height:
                 logging.debug("Height#{} < mempool height #{}.".format(height, self.__height))
                 self.pool_lock.release()
                 logging.debug("Release txmempool lock.")
+                self.__status = TxMemPool.STATUS_NONE
                 return None
             logging.debug("Memory pool height #{}, set height #{}".format(self.__height, height))
             self.__height = height
@@ -80,6 +91,7 @@ class TxMemPool(Singleton):
 
                 result.append(transaction)
                 count += 1
+        self.__status = TxMemPool.STATUS_NONE
         return result
 
     def remove(self, tx_hash):
