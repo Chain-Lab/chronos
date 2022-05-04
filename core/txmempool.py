@@ -14,17 +14,24 @@ class TxMemPool(Singleton):
     def __init__(self):
         self.txs = {}
         self.tx_hashes = []
-        self.pool_lock = threading.Lock()
         self.bc = BlockChain()
         # todo: 存在潜在的类型转换错误，如果config文件配置错误可能抛出错误
         self.SIZE = int(Config().get("node.mem_pool_size"))
         self.__height = -1
         self.__status = TxMemPool.STATUS_NONE
+        self.pool_lock = threading.Lock()
+        self.__read_lock = threading.Lock()
+        self.__cond = threading.Condition()
 
     def is_full(self):
         return len(self.txs) >= self.SIZE
 
     def add(self, tx):
+
+        with self.__cond:
+            while self.__read_lock.locked():
+                self.__cond.wait()
+
         tx_hash = tx.tx_hash
         # 在添加交易到交易池前先检查交易是否存在，如果存在说明已经被打包了
         with self.pool_lock:
@@ -57,40 +64,46 @@ class TxMemPool(Singleton):
         bc = BlockChain()
         # logging.debug("Package pool, pool status:")
         # logging.debug(self.tx_hashes)
-        if height <= self.__height or (self.pool_lock.locked() and self.__status != TxMemPool.STATUS_PACKAGE):
+        if height <= self.__height or self.__read_lock.locked():
             return None
 
-        with self.pool_lock:
-            self.__status = TxMemPool.STATUS_PACKAGE
-            logging.debug("Lock txmempool.")
-            # 拿到锁后再检查一次， 避免某个线程刚好到达这个地方抢到锁
-            if height <= self.__height:
-                logging.debug("Height#{} < mempool height #{}.".format(height, self.__height))
-                self.pool_lock.release()
-                logging.debug("Release txmempool lock.")
-                self.__status = TxMemPool.STATUS_NONE
-                return None
-            logging.debug("Memory pool height #{}, set height #{}".format(self.__height, height))
-            self.__height = height
-            pool_size = int(Config().get("node.mem_pool_size"))
-            count = 0
-            length = len(self.tx_hashes)
+        with self.__read_lock:
+            with self.pool_lock:
+                self.__status = TxMemPool.STATUS_PACKAGE
+                logging.debug("Lock txmempool.")
+                # 拿到锁后再检查一次， 避免某个线程刚好到达这个地方抢到锁
+                if height <= self.__height:
+                    logging.debug("Height#{} < mempool height #{}.".format(height, self.__height))
+                    self.pool_lock.release()
+                    logging.debug("Release txmempool lock.")
+                    self.__status = TxMemPool.STATUS_NONE
+                    with self.__cond:
+                        self.__cond.notify_all()
+                    return None
+                logging.debug("Memory pool height #{}, set height #{}".format(self.__height, height))
+                self.__height = height
+                pool_size = int(Config().get("node.mem_pool_size"))
+                count = 0
+                length = len(self.tx_hashes)
 
-            while count < pool_size and count < length:
-                logging.debug("Pop transaction from pool.")
+                while count < pool_size and count < length:
+                    logging.debug("Pop transaction from pool.")
 
-                if len(self.tx_hashes) <= 0:
-                    logging.debug("Memory pool cleaned.")
-                    break
-                tx_hash = self.tx_hashes.pop(0)
-                transaction = self.txs.pop(tx_hash)
-                db_tx = bc.get_transaction_by_tx_hash(tx_hash)
+                    if len(self.tx_hashes) <= 0:
+                        logging.debug("Memory pool cleaned.")
+                        break
+                    tx_hash = self.tx_hashes.pop(0)
+                    transaction = self.txs.pop(tx_hash)
+                    db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
-                if db_tx is not None:
-                    continue
+                    if db_tx is not None:
+                        continue
 
-                result.append(transaction)
-                count += 1
+                    result.append(transaction)
+                    count += 1
+
+                with self.__cond:
+                    self.__cond.notify_all()
         self.__status = TxMemPool.STATUS_NONE
         return result
 
