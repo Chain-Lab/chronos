@@ -249,6 +249,7 @@ class Client(object):
         # 发送邻居节点没有的区块
         start_height = 0 if local_height == -1 else local_height
         for i in range(start_height, remote_height + 1):
+            logging.debug("Client pull block#{}.".format(i))
             send_msg = Message(STATUS.GET_BLOCK_MSG, i)
             self.send(send_msg)
 
@@ -387,6 +388,7 @@ class Client(object):
 
         local_height = latest_block.block_header.height
         for i in range(height, local_height + 1):
+            logging.debug("Client send block #{}.".format(i))
             block = bc.get_block_by_height(i)
             data = block.serialize()
             data['address'] = address
