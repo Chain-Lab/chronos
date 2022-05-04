@@ -228,10 +228,7 @@ class Client(object):
         remote_height = data.get('latest_height', 0)
         vote_data = data['vote']
 
-        if vote_data == {}:
-            # self.txs.clear()
-            pass
-        else:
+        if bool(vote_data):
             VoteCenter().vote_sync(vote_data, remote_height)
 
         bc = BlockChain()

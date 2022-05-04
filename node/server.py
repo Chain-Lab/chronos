@@ -269,7 +269,8 @@ class Server(object):
                 logging.info("Local node has none vote information.")
 
         logging.debug("Vote information is not synced, sync remote vote list.")
-        VoteCenter().vote_sync(vote_data)
+        if bool(vote_data):
+            VoteCenter().vote_sync(vote_data)
 
         try:
             genesis_block = bc[0]
