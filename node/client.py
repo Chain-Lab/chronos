@@ -334,6 +334,9 @@ class Client(object):
             # upd: 在新的逻辑里面，不论节点交易池是否存在交易都会进行区块的打包
             if transactions is None:
                 logging.debug("Tx memory pool has been packaged.")
+                package_lock.release()
+                with package_cond:
+                    package_cond.notify_all()
                 return
 
             bc = BlockChain()
