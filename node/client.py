@@ -317,16 +317,18 @@ class Client(object):
         # logging.debug("Receive package wallet is: {}".format(data))
         if data == address:
             transactions = self.tx_pool.package(self.height + 1)
-            # logging.debug("Package transaction result: {}".format(transactions))
+            logging.debug("Package transaction result: {}".format(transactions))
 
             # 如果取出的交易数据是None， 说明另外一个线程已经打包了， 就不用再管
             # upd: 在新的逻辑里面，不论节点交易池是否存在交易都会进行区块的打包
             if transactions is None:
-                # logging.debug("Tx memory pool has been packaged.")
+                logging.debug("Tx memory pool has been packaged.")
                 return
 
             bc = BlockChain()
+            logging.debug("Start package new block.")
             block = bc.package_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
+            logging.debug("Append new block to merge thread.")
             MergeThread().append_block(block)
             # todo: 这里假设能够正常运行, 需要考虑一下容错
             block, _ = bc.get_latest_block()

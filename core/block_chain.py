@@ -241,9 +241,14 @@ class BlockChain(Singleton):
         :param block: 待校验区块
         :return: 是否校验通过
         """
+        start_time = time.time()
         for tx in block.transactions:
             if not self.verify_transaction(tx):
+                end_time = time.time()
+                logging.debug("Verify block use {} s.".format(end_time - start_time))
                 return False
+        end_time = time.time()
+        logging.debug("Verify block use {} s.".format(end_time - start_time))
         return True
 
     def verify_transaction(self, transaction: Transaction):
