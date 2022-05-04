@@ -46,6 +46,7 @@ class Transaction(object):
         :param prev_txs: 当前交易的各个input对应哈希的交易
         :return: 验证是否通过
         """
+        st = time.time()
         if self.is_coinbase():
             logging.debug("Transaction is coinbase tx.")
             return True
@@ -55,7 +56,10 @@ class Transaction(object):
         for idx, _input in enumerate(self.inputs):
             prev_tx = prev_txs.get(_input.tx_hash, None)
             if not prev_tx:
-                raise ValueError('Previous transaction error.')
+                # raise ValueError('Previous transaction error.')
+                ed = time.time()
+                logging.debug("Verify transaction use {} s.".format(ed - st))
+                return False
             tx_copy.inputs[idx].signature = None
             tx_copy.inputs[idx].pub_key = prev_tx.outputs[_input.index].pub_key_hash
             tx_copy.set_id()
@@ -66,10 +70,16 @@ class Transaction(object):
 
             try:
                 if not vk.verify(signature, tx_copy.tx_hash.encode()):
+                    ed = time.time()
+                    logging.debug("Verify transaction use {} s.".format(ed - st))
                     return False
             except ecdsa.keys.BadSignatureError:
+                ed = time.time()
+                logging.debug("Verify transaction use {} s.".format(ed - st))
                 return False
 
+        ed = time.time()
+        logging.debug("Verify transaction use {} s.".format(ed - st))
         return True
 
     def serialize(self):
