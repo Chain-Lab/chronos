@@ -78,6 +78,7 @@ class MergeThread(Singleton):
         with self.__cond:
             logging.info("Append Block#{} height {} to queue.".format(block_hash, block_height))
             self.__queue.append(block)
+            self.cache[block_hash] = False
             self.__cond.notify_all()
         self.__lock.release()
         return MergeThread.STATUS_APPEND
