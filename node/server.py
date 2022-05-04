@@ -246,12 +246,12 @@ class Server(object):
             try:
                 address = a[0][0]
                 result = Message(STATUS.SYNC_MSG, address)
+                self.thread_local.server_send = True
+                logging.debug("Send vote result to client.")
                 return result
             except IndexError:
                 # 如果本地没有投票信息直接略过
                 logging.info("Local node has none vote information.")
-            logging.debug("Send vote result to client.")
-            self.thread_local.server_send = True
 
         try:
             genesis_block = bc[0]
