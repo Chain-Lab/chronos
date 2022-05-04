@@ -229,6 +229,7 @@ class Server(object):
 
         # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
         if self.thread_local.height != local_height:
+            logging.debug("New consensus round, refresh flags.")
             Counter().refresh(local_height)
             self.thread_local.height = local_height
             self.thread_local.client_synced = False
@@ -391,7 +392,7 @@ class Server(object):
         if not self.thread_local.client_synced:
             logging.debug("Synced with node {} vote info {}".format(self.thread_local.client_id, vote))
             self.thread_local.client_synced = True
-            Counter().client_synced()
+            Counter().client_synced(height)
 
     def handle_update(self, message: dict):
         """

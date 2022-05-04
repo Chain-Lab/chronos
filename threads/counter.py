@@ -31,7 +31,10 @@ class Counter(Singleton):
         logging.debug("Client connect closed.")
         self.__lock.release()
 
-    def client_synced(self):
+    def client_synced(self, height):
+        if height < self.__height:
+            return
+
         logging.debug("Server lock client counter.")
         self.__lock.acquire()
         self.__client_synced += 1
