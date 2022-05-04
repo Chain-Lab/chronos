@@ -24,13 +24,17 @@ class VoteCenter(Singleton):
         self.thread.start()
 
     def vote_update(self, address: str, final_address: str, height: int):
+        logging.debug("Trying append task {} vote {} height {}".format(address, final_address, height))
+
         # 先检查是否在字典中， 字典key查找操作o(1)
         if height < self.__height or address in self.__vote_dict.keys():
             return
 
+        logging.debug("Insert task to queue successful.")
         self.__vote_dict[address] = final_address
         with self.__cond:
             self.__queue.append(address)
+            logging.debug("Notify to merge vote queue.")
             self.__cond.notify_all()
 
     def task(self):
