@@ -131,7 +131,7 @@ class Client(object):
                 try:
                     send_message = Message(STATUS.UPDATE_MSG, self.new_block.serialize())
                     self.send(send_message)
-                except TypeError:
+                except AttributeError:
                     pass
                 packaged = False
 
