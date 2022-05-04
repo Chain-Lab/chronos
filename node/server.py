@@ -236,6 +236,8 @@ class Server(object):
         # 投票信息同步完成
         # todo： 逻辑修改， 在到达时间点后直接进行处理
         # 这里的逻辑实际是存在问题的， server和每个client都有建立连接， 但是只和一个client判断信息同步完成， 并且每一次都要判断
+        logging.debug("Server vote result send status: {}"/format(self.thread_local.server_send))
+
         if not self.thread_local.server_send and (Timer().finish() or self.check_vote_synced(vote_data)):
             a = sorted(VoteCenter().vote.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
             # 如果同步完成， 按照第一关键字为投票数，第二关键字为地址字典序来进行排序
@@ -248,6 +250,7 @@ class Server(object):
             except IndexError:
                 # 如果本地没有投票信息直接略过
                 logging.info("Local node has none vote information.")
+            logging.debug("Send vote result to client.")
             self.thread_local.server_send = True
 
         try:
