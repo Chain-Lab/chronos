@@ -22,15 +22,16 @@ class TxMemPool(Singleton):
     def add(self, tx):
         tx_hash = tx.tx_hash
         # 在添加交易到交易池前先检查交易是否存在，如果存在说明已经被打包了
-        if self.bc.get_transaction_by_tx_hash(tx_hash) is not None:
-            logging.debug("Transaction #{} existed.".format(tx_hash))
+        with self.pool_lock:
+            if self.bc.get_transaction_by_tx_hash(tx_hash) is not None:
+                logging.debug("Transaction #{} existed.".format(tx_hash))
+                return False
+            if tx_hash not in self.tx_hashes:
+                self.txs[tx_hash] = tx
+                self.tx_hashes.append(tx_hash)
+                logging.debug("Add tx#{} in memory pool.".format(tx_hash))
+                return True
             return False
-        if tx_hash not in self.tx_hashes:
-            self.txs[tx_hash] = tx
-            self.tx_hashes.append(tx_hash)
-            logging.debug("Add tx#{} in memory pool.".format(tx_hash))
-            return True
-        return False
 
     def clear(self):
         self.pool_lock.acquire()
@@ -50,31 +51,31 @@ class TxMemPool(Singleton):
         if height <= self.__height or self.pool_lock.locked():
             return None
 
-        self.pool_lock.acquire()
-        logging.debug("Lock txmempool.")
-        # 拿到锁后再检查一次， 避免某个线程刚好到达这个地方抢到锁
-        if height <= self.__height:
-            logging.debug("Height#{} < mempool height #{}.".format(height, self.__height))
-            self.pool_lock.release()
-            logging.debug("Release txmempool lock.")
-            return None
-        self.__height = height
-        pool_size = int(Config().get("node.mem_pool_size"))
-        count = 0
-        length = len(self.tx_hashes)
+        with self.pool_lock:
+            logging.debug("Lock txmempool.")
+            # 拿到锁后再检查一次， 避免某个线程刚好到达这个地方抢到锁
+            if height <= self.__height:
+                logging.debug("Height#{} < mempool height #{}.".format(height, self.__height))
+                self.pool_lock.release()
+                logging.debug("Release txmempool lock.")
+                return None
+            logging.debug("Memory pool height #{}, set height #{}".format(self.__height, height))
+            self.__height = height
+            pool_size = int(Config().get("node.mem_pool_size"))
+            count = 0
+            length = len(self.tx_hashes)
 
-        while count < pool_size and count < length:
-            tx_hash = self.tx_hashes.pop(0)
-            transaction = self.txs.pop(tx_hash)
-            db_tx = bc.get_transaction_by_tx_hash(tx_hash)
+            while count < pool_size and count < length:
+                logging.debug("Pop transaction from pool.")
+                tx_hash = self.tx_hashes.pop(0)
+                transaction = self.txs.pop(tx_hash)
+                db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
-            if db_tx is not None:
-                continue
+                if db_tx is not None:
+                    continue
 
-            result.append(transaction)
-            count += 1
-
-        self.pool_lock.release()
+                result.append(transaction)
+                count += 1
         return result
 
     def remove(self, tx_hash):

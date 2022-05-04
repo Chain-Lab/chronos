@@ -327,6 +327,7 @@ class Client(object):
                 logging.debug("Package locked.")
                 return
             package_lock.acquire()
+            logging.debug("Lock package lock. Start package memory pool.")
             transactions = self.tx_pool.package(self.height + 1)
             logging.debug("Package transaction result: {}".format(transactions))
 
