@@ -51,9 +51,12 @@ class TxMemPool(Singleton):
             return None
 
         self.pool_lock.acquire()
+        logging.debug("Lock txmempool.")
         # 拿到锁后再检查一次， 避免某个线程刚好到达这个地方抢到锁
         if height <= self.__height:
+            logging.debug("Height#{} < mempool height #{}.".format(height, self.__height))
             self.pool_lock.release()
+            logging.debug("Release txmempool lock.")
             return None
         self.__height = height
         pool_size = int(Config().get("node.mem_pool_size"))
