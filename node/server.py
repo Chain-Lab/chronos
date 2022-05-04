@@ -268,6 +268,9 @@ class Server(object):
                 # 如果本地没有投票信息直接略过
                 logging.info("Local node has none vote information.")
 
+        logging.debug("Vote information is not synced, sync remote vote list.")
+        VoteCenter().vote_sync(vote_data)
+
         try:
             genesis_block = bc[0]
         except IndexError:

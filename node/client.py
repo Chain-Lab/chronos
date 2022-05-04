@@ -140,11 +140,13 @@ class Client(object):
             if (self.tx_pool.is_full() and VoteCenter().vote == {}) or (
                     VoteCenter().has_vote and not self.send_vote) or (
                     Timer().reach() and not self.send_vote):
+                logging.debug("Start consensus.")
                 address = Config().get('node.address')
                 final_address = VoteCenter().local_vote()
                 if final_address is None:
                     final_address = address
                 VoteCenter().vote_update(address, final_address, self.height)
+                logging.debug("Send local vote information to server.")
 
                 message_data = {
                     'vote': address + ' ' + final_address,
@@ -165,6 +167,7 @@ class Client(object):
             except TypeError:
                 genesis_block = None
 
+            logging.debug("Send vote list to server.")
             data = {
                 "latest_height": -1,
                 "genesis_block": "",
@@ -220,6 +223,7 @@ class Client(object):
         :param message: 待处理的消息
         :return: None
         """
+        logging.debug("Receive handshake status code.")
         data = message.get('data', {})
         remote_height = data.get('latest_height', 0)
         vote_data = data['vote']
@@ -244,6 +248,7 @@ class Client(object):
             self.height = local_height
 
         if local_height >= remote_height:
+            logging.debug("Local height >= remote height.")
             return
 
         # 发送邻居节点没有的区块
