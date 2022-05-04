@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+from functools import lru_cache
 
 import couchdb
 from couchdb import ResourceNotFound
@@ -149,6 +150,8 @@ class BlockChain(Singleton):
             block = Block.deserialize(block_data)
         return block
 
+    # 平均每个tx占用20kb的话， 10000的cache占用200M左右的内存
+    @lru_cache(maxsize=10000)
     def get_block_by_hash(self, hash):
         data = self.db.get(hash)
 
