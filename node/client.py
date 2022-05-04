@@ -381,13 +381,24 @@ class Client(object):
         :param message: 待处理的message
         :return: None
         """
-        height = message.get('data', '')
+        data = message.get('data', {})
+
+        if not data:
+            return
+
+        height = data.get('height')
+        block_data = data.get('block')
         address = Config().get('node.address')
         bc = BlockChain()
         latest_block, prev_hash = bc.get_latest_block()
 
         if latest_block is None:
             return
+
+        if block_data != "":
+            block = Block.deserialize(block_data)
+            logging.debug("Append peer block#{}.".format(block.block_header.hash))
+            MergeThread().append_block(block)
 
         local_height = latest_block.block_header.height
         for i in range(height, local_height + 1):

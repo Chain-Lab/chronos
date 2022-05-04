@@ -230,7 +230,22 @@ class Server(object):
         # 本地高度低于邻居高度， 拉取区块
         if local_height < remote_height:
             logging.debug("Local height#{} lower than remote height#{}, pull block.".format(local_height, remote_height))
-            result = Message(STATUS.UPDATE_MSG, local_height)
+
+            if not block:
+                block, _ = bc.get_latest_block()
+
+            try:
+                block_data = block.serialize()
+                logging.debug("Send local height and latest block information.")
+            except AttributeError:
+                block_data = ""
+
+            data = {
+                'height': local_height,
+                'block': block_data
+            }
+
+            result = Message(STATUS.UPDATE_MSG, data)
             return result
 
         # 投票信息同步完成
