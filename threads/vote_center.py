@@ -98,6 +98,8 @@ class VoteCenter(Singleton):
             self.__has_voted = True
             self.__final_address = final_address
             logging.debug("Local address {} vote address {}.".format(Config().get("node.address"), final_address))
+        else:
+            logging.debug("Return vote result directly.")
         result = self.__final_address
         self.__vote_lock.release()
         return result
