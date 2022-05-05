@@ -140,7 +140,7 @@ class Client(object):
             except AttributeError:
                 height = -1
 
-            if height == self.height + 1:
+            if self.height < height:
                 # 当前线程最后共识的高度低于最新高度， 更新共识信息
                 self.send_vote = False
                 self.height = height
