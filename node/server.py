@@ -267,8 +267,9 @@ class Server(object):
             # x[1]取后面的列表
             try:
                 address = a[0][0]
-                result = Message(STATUS.SYNC_MSG, "{}#{}".format(address, local_height))
-                logging.debug("Send vote result {} to client.".format(address))
+                result = Message(STATUS.SYNC_MSG, "{}#{}".format(address, VoteCenter().height))
+                logging.debug("Send vote result {}#{} to client.".format(address, VoteCenter().height))
+                time.sleep(1)
                 return result
             except IndexError:
                 # 如果本地没有投票信息直接略过
