@@ -66,7 +66,9 @@ class VoteCenter(Singleton):
 
     def refresh(self, height):
         logging.debug("Trying refresh vote center height #{} to new height #{}".format(self.__height, height))
-        if height != self.__height + 1 or not self.__has_voted or self.__vote_lock.locked():
+        if height != self.__height + 1 or not self.__has_voted:
+            logging.debug("Local vote status: {}".format(self.__has_voted))
+            logging.debug("Vote lock status: {}".format("Locked" if self.__vote_lock.locked() else "Unlocked"))
             return
 
         self.__vote_lock.acquire()
