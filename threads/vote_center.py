@@ -101,6 +101,10 @@ class VoteCenter(Singleton):
     def has_vote(self):
         return self.__has_voted
 
+    @property
+    def height(self):
+        return self.__height
+
 
 if __name__ == "__main__":
     import dis

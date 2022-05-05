@@ -301,7 +301,7 @@ class Server(object):
         if genesis_block:
             logging.debug("Send data with genesis block data.")
             result_data = {
-                "latest_height": local_height,
+                "latest_height": VoteCenter().height,
                 "genesis_block": genesis_block.serialize(),
                 "address": Config().get('node.address'),
                 "time": time.time(),
