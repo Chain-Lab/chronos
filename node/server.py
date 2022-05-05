@@ -349,7 +349,7 @@ class Server(object):
 
         if self.tx_pool.is_full():
             local_address = Config().get('node.address')
-            final_address = VoteCenter().local_vote()
+            final_address = VoteCenter().local_vote(-1)
             if final_address is None:
                 final_address = local_address
             VoteCenter().vote_update(local_address, final_address, self.thread_local.height)
@@ -386,7 +386,7 @@ class Server(object):
             logging.debug("Add local vote information")
             address = Config().get("node.address")
 
-            final_address = VoteCenter().local_vote()
+            final_address = VoteCenter().local_vote(self.thread_local.height)
             if final_address is not None:
                 VoteCenter().vote_update(address, final_address, self.thread_local.height)
             self.thread_local.server_synced = True

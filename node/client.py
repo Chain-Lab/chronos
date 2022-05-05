@@ -52,7 +52,7 @@ class Client(object):
         rec_message = None
         data = json.dumps(message.__dict__)
         try:
-            # self.sock.sendallsendall(data.encode())
+            # self.sock.sendall(data.encode())
             TCPConnect.send_msg(self.sock, data)
         except BrokenPipeError:
             logging.info("Lost connect, client close.")
@@ -135,6 +135,11 @@ class Client(object):
                     pass
                 packaged = False
 
+            try:
+                height = latest_block.block_header.height
+            except AttributeError:
+                height = -1
+
             # v1.1.2 upd: 删除发送交易逻辑， 改为gossip协议使用UDP进行交易的广播
             logging.debug("Consensus data send status: {}".format(self.send_vote))
 
@@ -143,23 +148,26 @@ class Client(object):
                     Timer().reach() and not self.send_vote):
                 logging.debug("Start consensus.")
                 address = Config().get('node.address')
-                final_address = VoteCenter().local_vote()
+                final_address = VoteCenter().local_vote(height)
                 if final_address is None:
                     final_address = address
-                VoteCenter().vote_update(address, final_address, self.height)
-                logging.debug("Send local vote information to server.")
 
-                message_data = {
-                    'vote': address + ' ' + final_address,
-                    'address': address,
-                    'time': time.time(),
-                    'id': int(Config().get('node.id')),
-                    'height': self.height
-                }
-                send_message = Message(STATUS.POT, message_data)
-                self.send(send_message)
-                # 不论是否进行过数据的发送，都设置为True
-                self.send_vote = True
+                if final_address != -1:
+                    VoteCenter().vote_update(address, final_address, self.height)
+                    logging.debug("Send local vote information to server.")
+
+                    message_data = {
+                        'vote': address + ' ' + final_address,
+                        'address': address,
+                        'time': time.time(),
+                        'id': int(Config().get('node.id')),
+                        'height': self.height
+                    }
+                    send_message = Message(STATUS.POT, message_data)
+                    logging.debug("Send consensus address to server.")
+                    self.send(send_message)
+                    # 不论是否进行过数据的发送，都设置为True
+                    self.send_vote = True
 
             try:
                 genesis_block = bc.get_block_by_height(0)
@@ -280,6 +288,7 @@ class Client(object):
         """
         状态码为STATUS.TRANSACTION_MSG = 3
         处理服务器发送过来的交易， 将交易添加到交易池
+        upd: 这里在修改了交易广播协议之后弃用
         :param message: 包含交易数据的消息
         :return: None
         """
@@ -295,7 +304,7 @@ class Client(object):
 
         if self.tx_pool.is_full():
             address = Config().get('node.address')
-            final_address = VoteCenter().local_vote()
+            final_address = VoteCenter().local_vote(-1)
 
             # 如果本地投票信息为空， 说明该节点不是共识节点或者连接的其他节点不是共识节点
             if final_address is None:

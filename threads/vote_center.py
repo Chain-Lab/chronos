@@ -84,8 +84,14 @@ class VoteCenter(Singleton):
         self.__has_voted = False
         self.__vote_lock.release()
 
-    def local_vote(self):
+    def local_vote(self, height):
         self.__vote_lock.acquire()
+
+        if height < self.__height:
+            self.__vote_lock.release()
+            # 返回值需要进行修改
+            return -1
+
         if not self.__has_voted:
             pot = ProofOfTime()
             final_address = pot.local_vote()
