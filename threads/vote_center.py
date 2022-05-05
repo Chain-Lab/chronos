@@ -15,7 +15,7 @@ class VoteCenter(Singleton):
         self.__vote = {}
         self.__queue = []
         self.__height = -1
-        self.__vote_height = -1
+        self.__vote_height = 0
 
         self.__has_voted = False
         self.__final_address = None
@@ -65,6 +65,7 @@ class VoteCenter(Singleton):
                 self.vote_update(vote_data[final_address][i], final_address, height)
 
     def refresh(self, height):
+        logging.debug("Trying refresh vote center height #{} to new height #{}".format(self.__height, height))
         if height != self.__height + 1 or not self.__has_voted or self.__vote_lock.locked():
             return
 
