@@ -206,6 +206,7 @@ class Client(object):
                 except AttributeError:
                     data['latest_height'] = -1
                 data['genesis_block'] = genesis_block.serialize()
+                logging.debug("Send latest height #{} to server.".format(data['latest_height']))
 
             send_message = Message(STATUS.HAND_SHAKE_MSG, data)
             # logging.debug("Send message: {}".format(data))

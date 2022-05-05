@@ -205,6 +205,7 @@ class Server(object):
         data = message.get("data", {})
         vote_data = data.get("vote", {})
         remote_height = data.get("latest_height", 0)
+        remote_address = data.get("address")
         node_id = data.get("id")
 
         bc = BlockChain()
@@ -217,14 +218,11 @@ class Server(object):
             self.thread_local.client_id = node_id
             Counter().client_reg()
 
+        logging.debug("Remote address {} height #{}.".format(remote_address, remote_height))
+
         # 获取本地高度之前检查是否存在区块
         if block:
             local_height = block.block_header.height
-
-        # 本地高度低于远端高度， 清除交易和投票信息
-        if local_height < remote_height:
-            self.txs.clear()
-            logging.debug("Local vote and transaction cleared.")
 
         # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
         if self.thread_local.height != local_height:
