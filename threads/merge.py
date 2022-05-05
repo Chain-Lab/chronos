@@ -144,7 +144,7 @@ class MergeThread(Singleton):
                     equal_block = bc.get_block_by_height(block_height)
                     equal_count = equal_block.vote_count
                     equal_hash = equal_block.block_header.hash
-                    equal_timestamp = equal_timestamp.block_header.timestamp
+                    equal_timestamp = equal_block.block_header.timestamp
                     equal_prev_hash = equal_block.block_header.prev_block_hash
                     # 比较的大前提是两个区块的前一个区块一致（分叉点）， 并且区块哈希值不一样
 
