@@ -140,6 +140,12 @@ class Client(object):
             except AttributeError:
                 height = -1
 
+            if height == self.height + 1:
+                # 当前线程最后共识的高度低于最新高度， 更新共识信息
+                self.send_vote = False
+                self.height = height
+                logging.debug("Refresh client instance height information.")
+
             # v1.1.2 upd: 删除发送交易逻辑， 改为gossip协议使用UDP进行交易的广播
             logging.debug("Consensus data send status: {}".format(self.send_vote))
             logging.debug("Vote center vote status: {}".format(VoteCenter().has_vote))
@@ -249,11 +255,6 @@ class Client(object):
             local_height = latest_block.block_header.height
         else:
             local_height = -1
-
-        if local_height == self.height + 1:
-            # 当前线程最后共识的高度低于最新高度， 更新共识信息
-            self.send_vote = False
-            self.height = local_height
 
         if local_height >= remote_height:
             logging.debug("Local height >= remote height.")
