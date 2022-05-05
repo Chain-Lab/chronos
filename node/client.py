@@ -358,6 +358,22 @@ class Client(object):
                 logging.debug("Package locked.")
                 return
             package_lock.acquire()
+
+            a = sorted(VoteCenter().vote.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
+            try:
+                if a[0][0] != address:
+                    package_lock.release()
+                    with package_cond:
+                        package_cond.notify_all()
+                    logging.debug("Local address is not package node.")
+                    return
+            except IndexError:
+                package_lock.release()
+                with package_cond:
+                    package_cond.notify_all()
+                logging.debug("Local address is not package node.")
+                return
+
             logging.debug("Lock package lock. Start package memory pool.")
             transactions = self.tx_pool.package(vote_height + 1)
             logging.debug("Package transaction result: {}".format(transactions))

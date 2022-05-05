@@ -291,7 +291,8 @@ class Server(object):
             "address": Config().get('node.address'),
             "time": time.time(),
             "id": int(Config().get('node.id')),
-            "vote": VoteCenter().vote
+            "vote": VoteCenter().vote,
+            "vote_height": VoteCenter().height,
         }
 
         if genesis_block:
