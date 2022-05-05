@@ -147,6 +147,10 @@ class MergeThread(Singleton):
                     equal_timestamp = block.block_header.timestamp
                     equal_prev_hash = equal_block.block_header.prev_block_hash
                     # 比较的大前提是两个区块的前一个区块一致（分叉点）， 并且区块哈希值不一样
+
+                    logging.debug("Block vote count is {}. Equal block vote count is {}.".format(block_count, equal_count))
+                    logging.debug("Block timestamp is {}. Equal block timestamp is {}.".format(block_timestamp, equal_timestamp))
+
                     if block_hash == equal_hash or block_prev_hash != equal_prev_hash or block_count < equal_count or (
                             block_count == equal_count and block_timestamp > equal_timestamp):
                         logging.info("block#{} < equal block.".format(block_hash))
