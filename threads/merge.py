@@ -125,8 +125,8 @@ class MergeThread(Singleton):
 
                 if not latest_block:
                     logging.info("Insert genesis block to database.")
-                    bc.insert_block(block)
                     self.__update(block)
+                    bc.insert_block(block)
                     continue
 
                 latest_height = latest_block.block_header.height
@@ -164,15 +164,16 @@ class MergeThread(Singleton):
                         logging.info("Rollback block#{}.".format(latest_block.block_header.hash))
                         UTXOSet().roll_back(latest_block)
                         bc.roll_back()
-                    bc.insert_block(block)
                     self.__update(block)
+                    bc.insert_block(block)
                     continue
                 elif block_height == latest_height + 1:
                     # 取得区块的前一个区块哈希
                     block_prev_hash = block.block_header.prev_block_hash
                     if block_prev_hash == latest_hash:
-                        bc.insert_block(block)
+                        # 在需要insert时优先更新同步使用的信息
                         self.__update(block)
+                        bc.insert_block(block)
                     else:
                         # 最前面的区块没有被处理过， 将区块返回到队列中等待
                         if block_prev_hash in self.cache.keys() and not self.cache[block_prev_hash]:
