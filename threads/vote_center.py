@@ -71,7 +71,7 @@ class VoteCenter(Singleton):
 
         self.__vote_lock.acquire()
         # 避免另外一个线程拿到锁后进行多余的操作
-        if heigvht < self.__height:
+        if height < self.__height:
             self.__vote_lock.release()
             return
         logging.debug("Synced height #{}, latest height #{}, clear information.".format(self.__height, height))
