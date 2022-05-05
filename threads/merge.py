@@ -53,17 +53,18 @@ class MergeThread(Singleton):
         block_hash = block.header_hash
 
         bc = BlockChain()
-        latest_block, _ = bc.get_latest_block()
-        if latest_block is not None:
-            latest_height = latest_block.block_header.height
-        else:
-            latest_height = 0
+        # latest_block, _ = bc.get_latest_block()
+        # if latest_block is not None:
+        #     latest_height = latest_block.block_header.height
+        # else:
+        #     latest_height = 0
         block_height = block.height
         prev_hash = block.block_header.prev_block_hash
         prev_block = bc.get_block_by_hash(prev_hash)
-        delta = abs(latest_height - block_height)
+        # delta = abs(latest_height - block_height)
 
-        if prev_hash not in self.cache.keys() and block_height != 0 and prev_block is None and delta < 5:
+        if prev_hash not in self.cache.keys() and block_height != 0 and prev_block is None:
+            # and delta < 5:
             logging.info("Previous block#{} not exists, pull block.".format(prev_hash))
             return MergeThread.STATUS_EXISTS
 

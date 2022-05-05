@@ -30,6 +30,7 @@ class TxMemPool(Singleton):
 
         with self.__cond:
             while self.__read_lock.locked():
+                logging.debug("Node packaging block, stay wait.")
                 self.__cond.wait()
 
         tx_hash = tx.tx_hash
