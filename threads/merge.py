@@ -84,11 +84,11 @@ class MergeThread(Singleton):
         self.__lock.release()
         return MergeThread.STATUS_APPEND
 
-    def __update(self, block):
+    def __update(self, block, rolled_back=False):
         height = block.block_header.height
 
-        VoteCenter().refresh(height)
-        Counter().refresh(height)
+        VoteCenter().refresh(height, rolled_back)
+        Counter().refresh(height, rolled_back)
         Timer().refresh()
 
         delay_params = block.transactions[0].inputs[0].delay_params
@@ -164,7 +164,7 @@ class MergeThread(Singleton):
                         logging.info("Rollback block#{}.".format(latest_block.block_header.hash))
                         UTXOSet().roll_back(latest_block)
                         bc.roll_back()
-                    self.__update(block)
+                    self.__update(block, True)
                     bc.insert_block(block)
                     continue
                 elif block_height == latest_height + 1:

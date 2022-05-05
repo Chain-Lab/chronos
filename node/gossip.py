@@ -9,6 +9,7 @@ from core.config import Config
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
 from node.peer import Peer
+from utils.locks import package_cond, package_lock
 from utils.singleton import Singleton
 from utils.validator import json_validator
 
@@ -34,6 +35,12 @@ class Gossip(Singleton):
         s.bind(addr)
 
         while True:
+
+            with package_cond:
+                while package_lock.locked():
+                    logging.debug("Wait block package finished.")
+                    package_cond.wait()
+
             data, addr = s.recvfrom(20480)           # 15kb
             logging.debug("Receive transaction from {}.".format(addr))
             try:
@@ -63,6 +70,11 @@ class Gossip(Singleton):
         local_ip = Config().get('node.listen_ip')
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         while True:
+            with package_cond:
+                while package_lock.locked():
+                    logging.debug("Wait block package finished.")
+                    package_cond.wait()
+
             with self.__cond:
                 while not len(self.__queue) or len(Peer().nodes) == 0:
                     logging.debug("Client wait insert new transaction.")
