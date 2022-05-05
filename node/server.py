@@ -87,7 +87,6 @@ class Server(object):
         self.thread_local.client_synced = False
         # server同步标志， 确认本地投票的信息是否放入到vote_center
         self.thread_local.server_synced = False
-        self.thread_local.server_send = False
         self.thread_local.height = -1
 
         while True:
@@ -192,7 +191,7 @@ class Server(object):
             if a != b:
                 logging.debug("Sorted list is not equal.")
                 return False
-            logging.debug("Vote list same, return True.")
+        logging.debug("Vote list same, return True.")
         return True
 
     def handle_handshake(self, message: dict):
@@ -234,7 +233,6 @@ class Server(object):
             self.thread_local.height = local_height
             self.thread_local.client_synced = False
             self.thread_local.server_synced = False
-            self.thread_local.server_send = False
 
         # 本地高度低于邻居高度， 拉取区块
         if local_height < remote_height:
@@ -262,7 +260,7 @@ class Server(object):
         # 这里的逻辑实际是存在问题的， server和每个client都有建立连接， 但是只和一个client判断信息同步完成， 并且每一次都要判断
         logging.debug("Server vote result send status: {}".format(self.thread_local.server_send))
 
-        if not self.thread_local.server_send and (Timer().finish() or self.check_vote_synced(vote_data)):
+        if Timer().finish() or self.check_vote_synced(vote_data):
             a = sorted(VoteCenter().vote.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
             # 如果同步完成， 按照第一关键字为投票数，第二关键字为地址字典序来进行排序
             # x的结构： addr1: [addr2 , addr3, ..., count]
@@ -270,7 +268,6 @@ class Server(object):
             try:
                 address = a[0][0]
                 result = Message(STATUS.SYNC_MSG, "{}#{}".format(address, local_height))
-                self.thread_local.server_send = True
                 logging.debug("Send vote result {} to client.".format(address))
                 return result
             except IndexError:
