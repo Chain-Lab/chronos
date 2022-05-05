@@ -227,10 +227,11 @@ class Client(object):
         logging.debug("Receive handshake status code.")
         data = message.get('data', {})
         remote_height = data.get('latest_height', 0)
+        vote_height = data.get('vote_height', 0)
         vote_data = data['vote']
 
         if bool(vote_data):
-            VoteCenter().vote_sync(vote_data, remote_height)
+            VoteCenter().vote_sync(vote_data, vote_height)
 
         bc = BlockChain()
         latest_block, prev_hash = bc.get_latest_block()

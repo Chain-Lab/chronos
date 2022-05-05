@@ -301,12 +301,13 @@ class Server(object):
         if genesis_block:
             logging.debug("Send data with genesis block data.")
             result_data = {
-                "latest_height": VoteCenter().height,
+                "latest_height": local_height,
                 "genesis_block": genesis_block.serialize(),
                 "address": Config().get('node.address'),
                 "time": time.time(),
                 "id": int(Config().get('node.id')),
-                "vote": VoteCenter().vote
+                "vote": VoteCenter().vote,
+                "vote_height": VoteCenter().height,
             }
         result = Message(STATUS.HAND_SHAKE_MSG, result_data)
         logging.debug("Return handshake data.")
