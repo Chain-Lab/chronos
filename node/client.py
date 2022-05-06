@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import socket
@@ -376,6 +377,8 @@ class Client(object):
                 logging.debug("Local address is not package node.")
                 return
 
+            vote_data = copy.deepcopy(VoteCenter().vote)
+
             logging.debug("Lock package lock. Start package memory pool.")
             transactions = self.tx_pool.package(vote_height + 1)
             logging.debug("Package transaction result: {}".format(transactions))
@@ -391,7 +394,7 @@ class Client(object):
 
             bc = BlockChain()
             logging.debug("Start package new block.")
-            self.new_block = bc.package_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
+            self.new_block = bc.package_new_block(transactions, vote_data, Calculator().delay_params)
             # 如果区块打包失败， 则将交易池回退到上一个高度
             if not self.new_block:
                 self.tx_pool.rollback_height(vote_height)
