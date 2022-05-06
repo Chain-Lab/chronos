@@ -1,3 +1,5 @@
+import logging
+
 from core.block_header import BlockHeader
 from core.config import Config
 from core.transaction import Transaction
@@ -38,6 +40,7 @@ class Block(object):
         vote_info = self.vote_info
         result = 0
         for item in vote_info.values():
+            logging.debug("Vote info item: {}".format(item))
             result += item[-1]
         return result
 
