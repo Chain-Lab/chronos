@@ -390,22 +390,19 @@ class Client(object):
             bc = BlockChain()
             logging.debug("Start package new block.")
             self.new_block = bc.package_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
-            logging.debug("Append new block to merge thread.")
+            # 如果区块打包失败， 则将交易池回退到上一个高度
+            if not self.new_block:
+                self.tx_pool.rollback_height(vote_height)
             package_lock.release()
-            with package_cond:
-                package_cond.notify_all()
-            MergeThread().append_block(self.new_block)
-            # todo: 这里假设能够正常运行, 需要考虑一下容错
-            block, _ = bc.get_latest_block()
 
-            if not block:
-                height = -1
-            else:
-                height = block.block_header.height
-            Timer().refresh(height)
-            Calculator().update()
+            with package_cond:
+                logging.debug("Notify all thread.")
+                package_cond.notify_all()
+
+            if self.new_block:
+                logging.debug("Append new block to merge thread.")
+                MergeThread().append_block(self.new_block)
             logging.debug("Package new block.")
-            # self.txs.clear()
 
     def handle_update(self, message: dict):
         """

@@ -113,6 +113,9 @@ class TxMemPool(Singleton):
         self.__status = TxMemPool.STATUS_NONE
         return result
 
+    def rollback_height(self, height):
+        self.__height = height
+
     def remove(self, tx_hash):
         """
         从交易池移出交易

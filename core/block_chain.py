@@ -69,7 +69,7 @@ class BlockChain(Singleton):
         logging.debug("Start verify block.")
         if not self.verify_block(block):
             logging.error("Block verify failed. Block struct: {}".format(block))
-            return
+            return None
 
         # todo: 区块头的哈希是根据merkle树的根哈希值来进行哈希的， 和交易存在关系
         #  那么是否可以在区块中仅仅存入交易的哈希列表，交易的具体信息存在其他的表中以提高查询效率，区块不存储区块具体的信息？
