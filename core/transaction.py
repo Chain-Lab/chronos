@@ -20,7 +20,17 @@ class Transaction(object):
         设置当前交易的交易id，根据输入和输出的数据哈希得到
         :return: None
         """
-        data_list = [str(_) for _ in self.inputs]
+        data_list = []
+
+        for _input in self.inputs:
+            input_dict = copy.deepcopy(_input.serialize())
+            if "vote_info" in input_dict:
+                input_dict.pop("vote_info")
+            if "delay_params" in input_dict:
+                input_dict.pop("delay_params")
+            data_list.append(str(input_dict))
+
+
         output_list = [str(_) for _ in self.outputs]
         # 加入随机数保证同一个节点coinbase交易的hash不一样
         if is_coinbase:
@@ -174,12 +184,7 @@ class TxInput(object):
         return self.__dict__
 
     def __repr__(self):
-        result = copy.deepcopy(self.__dict__)
-        if "vote_info" in result.keys():
-            result.pop("vote_info")
-        if "delay_params" in result.keys():
-            result.pop("delay_params")
-        return str(result)
+        return str(self.__dict__)
 
     # 直接更新dict进行初始化, 后面需要通过json-schema校验
     @classmethod
@@ -238,9 +243,4 @@ class CoinBaseInput(TxInput):
         重写方法， 相比tx_input多了投票信息, 去掉投票信息
         保证在出现coinbase交易时与用户的签名信息一致
         """
-        result = copy.deepcopy(self.__dict__)
-        if "vote_info" in result.keys():
-            result.pop("vote_info")
-        if "delay_params" in result.keys():
-            result.pop("delay_params")
-        return str(result)
+        return str(self.__dict__)
