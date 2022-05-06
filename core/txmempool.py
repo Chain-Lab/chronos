@@ -42,7 +42,7 @@ class TxMemPool(Singleton):
                 logging.debug("Transaction #{} existed.".format(tx_hash))
                 self.__status = TxMemPool.STATUS_NONE
                 return False
-            if tx_hash not in self.tx_hashes:
+            if tx_hash not in self.txs:
                 self.txs[tx_hash] = tx
                 # self.tx_hashes.append(tx_hash)
                 self.tx_hashes.put(tx_hash)
@@ -121,3 +121,8 @@ class TxMemPool(Singleton):
             self.txs.pop(tx_hash)
             logging.debug("Remove tx#{} from memory pool.".format(tx_hash))
         self.pool_lock.release()
+
+
+if __name__ == "__main__":
+    dict = {"test": 1}
+    print(1 in dict)
