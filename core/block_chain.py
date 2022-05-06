@@ -20,6 +20,7 @@ class BlockChain(Singleton):
     def __init__(self):
         db_url = Config().get('database.url')
         self.db = DBUtil(db_url)
+        self.__cache = {}
 
     def __getitem__(self, index):
         """
@@ -174,9 +175,14 @@ class BlockChain(Singleton):
         latest_block, block_hash = self.get_latest_block()
         block = latest_block
 
+        if tx_hash in self.__cache:
+            logging.debug("Hit cache, return result directly.")
+            return self.__cache[tx_hash]
+
         while block:
             for tx in block.transactions:
                 if tx.tx_hash == tx_hash:
+                    self.__cache[tx_hash] = tx
                     return tx
             prev_hash = block.block_header.prev_block_hash
             logging.debug("Search tx in prev block#{}".format(prev_hash))
