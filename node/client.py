@@ -278,6 +278,8 @@ class Client(object):
         block = Block.deserialize(data)
         height = block.block_header.height
 
+        logging.debug("Receive server block data: {}".format(data))
+
         try:
             result = MergeThread().append_block(block)
             if result == MergeThread.STATUS_EXISTS:

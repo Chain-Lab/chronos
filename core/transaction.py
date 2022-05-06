@@ -174,9 +174,11 @@ class TxInput(object):
         return self.__dict__
 
     def __repr__(self):
-        result = self.__dict__
-        if "vote_info" in self.__dict__.keys():
+        result = copy.deepcopy(self.__dict__)
+        if "vote_info" in result.keys():
             result.pop("vote_info")
+        if "delay_params" in result.keys():
+            result.pop("delay_params")
         return str(result)
 
     # 直接更新dict进行初始化, 后面需要通过json-schema校验
