@@ -66,6 +66,7 @@ class BlockChain(Singleton):
         txs = UTXOSet().clear_transactions(transactions)
         block = Block(block_header, txs)
 
+        logging.debug("Start verify block.")
         if not self.verify_block(block):
             logging.error("Block verify failed. Block struct: {}".format(block))
             return
@@ -246,6 +247,8 @@ class BlockChain(Singleton):
         """
         start_time = time.time()
         for tx in block.transactions:
+            if tx.is_coinbase:
+                continue
             if not self.verify_transaction(tx):
                 end_time = time.time()
                 logging.debug("Verify block use {} s.".format(end_time - start_time))
