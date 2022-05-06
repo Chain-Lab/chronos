@@ -18,7 +18,7 @@ class Counter(Singleton):
 
         self.__lock.acquire()
 
-        if self.__rolled_back or (not rolled_back and height < self.__height):
+        if (self.__rolled_back and height <= self.__height) or (not rolled_back and height < self.__height):
             self.__lock.release()
             return
 
