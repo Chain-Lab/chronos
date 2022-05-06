@@ -40,7 +40,7 @@ class Block(object):
         vote_info = self.vote_info
         result = 0
         for item in vote_info.values():
-            logging.debug("Vote info item: {}".format(item))
+            logging.debug("Block#{} info item: {} counts {}".format(self.block_header.hash, item, result))
             result += item[-1]
         return result
 
