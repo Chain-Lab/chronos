@@ -145,6 +145,7 @@ class Transaction(object):
         vote_node = data
         _input = CoinBaseInput('', -1, Config().get('node.public_key'))
         _input.vote_info = vote_node
+        logging.debug("Set coinbase input vote info: {}".format(vote_node))
         _input.delay_params = delay_params
         output = TxOutput(int(Config().get('node.coinbase_reward')),
                           Config().get('node.address'))

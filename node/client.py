@@ -377,6 +377,7 @@ class Client(object):
                 logging.debug("Local address is not package node.")
                 return
 
+            start_time = time.time()
             vote_data = copy.deepcopy(VoteCenter().vote)
 
             logging.debug("Lock package lock. Start package memory pool.")
@@ -395,6 +396,10 @@ class Client(object):
             bc = BlockChain()
             logging.debug("Start package new block.")
             self.new_block = bc.package_new_block(transactions, vote_data, Calculator().delay_params)
+
+            end_time = time.time()
+            logging.debug("Package block use {}s".format(end_time - start_time))
+
             # 如果区块打包失败， 则将交易池回退到上一个高度
             if not self.new_block:
                 self.tx_pool.rollback_height(vote_height)
