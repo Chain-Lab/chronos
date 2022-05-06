@@ -99,9 +99,9 @@ class MergeThread(Singleton):
         Calculator().update(seed, pi)
 
         tx_mem_pool = TxMemPool()
-        for tx in block.transactions:
-            tx_hash = tx.tx_hash
-            tx_mem_pool.remove(tx_hash)
+        # for tx in block.transactions:
+        #     tx_hash = tx.tx_hash
+        #     tx_mem_pool.remove(tx_hash)
 
     def __task(self):
         """

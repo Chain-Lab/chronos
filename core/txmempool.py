@@ -1,5 +1,6 @@
 import logging
 import threading
+from queue import Queue
 
 from core.block_chain import BlockChain
 from core.config import Config
@@ -13,7 +14,7 @@ class TxMemPool(Singleton):
 
     def __init__(self):
         self.txs = {}
-        self.tx_hashes = []
+        self.tx_hashes = Queue()
         self.bc = BlockChain()
         # todo: 存在潜在的类型转换错误，如果config文件配置错误可能抛出错误
         self.SIZE = int(Config().get("node.mem_pool_size"))
@@ -43,7 +44,8 @@ class TxMemPool(Singleton):
                 return False
             if tx_hash not in self.tx_hashes:
                 self.txs[tx_hash] = tx
-                self.tx_hashes.append(tx_hash)
+                # self.tx_hashes.append(tx_hash)
+                self.tx_hashes.put(tx_hash)
                 logging.debug("Add tx#{} in memory pool.".format(tx_hash))
                 self.__status = TxMemPool.STATUS_NONE
                 return True
@@ -53,7 +55,7 @@ class TxMemPool(Singleton):
     def clear(self):
         self.pool_lock.acquire()
         self.txs.clear()
-        self.tx_hashes.clear()
+        # self.tx_hashes.clear()
         self.pool_lock.release()
 
     def package(self, height):
@@ -85,15 +87,14 @@ class TxMemPool(Singleton):
                 self.__height = height
                 pool_size = int(Config().get("node.mem_pool_size"))
                 count = 0
-                length = len(self.tx_hashes)
 
-                while count < pool_size and count < length:
+                while count < pool_size and not self.tx_hashes.empty():
                     logging.debug("Pop transaction from pool.")
 
-                    if len(self.tx_hashes) <= 0:
+                    if self.tx_hashes.empty():
                         logging.debug("Memory pool cleaned.")
                         break
-                    tx_hash = self.tx_hashes.pop(0)
+                    tx_hash = self.tx_hashes.get()
                     transaction = self.txs.pop(tx_hash)
                     db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
@@ -116,7 +117,7 @@ class TxMemPool(Singleton):
         """
         self.pool_lock.acquire()
         if tx_hash in self.tx_hashes:
-            self.tx_hashes.remove(tx_hash)
+            # self.tx_hashes.remove(tx_hash)
             self.txs.pop(tx_hash)
             logging.debug("Remove tx#{} from memory pool.".format(tx_hash))
         self.pool_lock.release()

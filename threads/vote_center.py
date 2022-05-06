@@ -1,5 +1,6 @@
 import logging
 import threading
+from queue import Queue
 
 from core.config import Config
 from core.pot import ProofOfTime
@@ -13,7 +14,7 @@ class VoteCenter(Singleton):
         self.__vote_dict = {}
         # 汇总的投票信息
         self.__vote = {}
-        self.__queue = []
+        self.__queue = Queue()
         self.__height = 0
         self.__vote_height = 0
 
@@ -34,16 +35,16 @@ class VoteCenter(Singleton):
         logging.debug("Insert task to queue successful.")
         self.__vote_dict[address] = final_address
         with self.__cond:
-            self.__queue.append(address)
+            self.__queue.put(address)
             logging.debug("Notify to merge vote queue.")
             self.__cond.notify_all()
 
     def task(self):
         while True:
             with self.__cond:
-                while not len(self.__queue):
+                while not self.__queue.empty():
                     self.__cond.wait()
-                current = self.__queue.pop(0)
+                current = self.__queue.get()
                 address = current
                 final_address = self.__vote_dict[address]
                 logging.debug("Pop task {} vote {}".format(address, final_address))
@@ -82,7 +83,10 @@ class VoteCenter(Singleton):
 
         logging.debug("Synced height #{}, latest height #{}, clear information.".format(self.__height, height))
         self.__height = height
-        self.__queue.clear()
+
+        with self.__queue.mutex:
+            self.__queue.queue.clear()
+
         self.__vote_dict.clear()
         self.__vote.clear()
         self.__has_voted = False

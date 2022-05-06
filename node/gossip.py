@@ -5,6 +5,8 @@ import threading
 import socket
 import time
 
+from queue import Queue
+
 from core.config import Config
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
@@ -16,7 +18,7 @@ from utils.validator import json_validator
 
 class Gossip(Singleton):
     def __init__(self):
-        self.__queue = []
+        self.__queue = Queue()
         self.__cond = threading.Condition()
         self.server_thread = threading.Thread(target=self.server, args=(), name="UDP Server")
         self.client_thread = threading.Thread(target=self.__task, args=(), name="UDP Client")
@@ -62,7 +64,7 @@ class Gossip(Singleton):
         if TxMemPool().add(tx):
             logging.debug("Append transaction to queue.")
             with self.__cond:
-                self.__queue.append(tx)
+                self.__queue.put(tx)
                 self.__cond.notify_all()
 
     def __task(self):
@@ -76,12 +78,12 @@ class Gossip(Singleton):
                     package_cond.wait()
 
             with self.__cond:
-                while not len(self.__queue) or len(Peer().nodes) == 0:
+                while not self.__queue.empty() or len(Peer().nodes) == 0:
                     logging.debug("Client wait insert new transaction.")
                     self.__cond.wait()
 
                 tx: Transaction
-                tx = self.__queue.pop(0)
+                tx = self.__queue.get()
                 logging.debug("Client pop transaction.")
 
                 data = json.dumps(tx.serialize())

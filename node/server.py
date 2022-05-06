@@ -412,9 +412,9 @@ class Server(object):
                 self.thread_local.client_synced = False
                 self.thread_local.server_synced = False
                 # 从交易池中移除已有的交易
-                for tx in block.transactions:
-                    tx_hash = tx.tx_hash
-                    self.tx_pool.remove(tx_hash)
+                # for tx in block.transactions:
+                #     tx_hash = tx.tx_hash
+                #     self.tx_pool.remove(tx_hash)
             elif result == MergeThread.STATUS_EXISTS:
                 send_msg = Message(STATUS.BLOCK, height - 1)
                 return send_msg
