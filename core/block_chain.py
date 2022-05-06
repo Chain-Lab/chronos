@@ -179,7 +179,8 @@ class BlockChain(Singleton):
             for tx in block.transactions:
                 if tx.tx_hash == tx_hash:
                     return tx
-            prev_hash = block.block_header.hash
+            prev_hash = block.block_header.prev_block_hash
+            logging.debug("Search tx in prev block#{}".format(prev_hash))
             block = self.get_block_by_hash(prev_hash)
             height = block.block_header.height
         return None
