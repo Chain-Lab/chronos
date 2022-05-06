@@ -150,8 +150,8 @@ class BlockChain(Singleton):
             block = Block.deserialize(block_data)
         return block
 
-    # 平均每个tx占用20kb的话， 10000的cache占用200M左右的内存
-    @lru_cache(maxsize=10000)
+    # 缓存100个区块数据
+    @lru_cache(maxsize=100)
     def get_block_by_hash(self, hash):
         data = self.db.get(hash)
 
@@ -170,14 +170,17 @@ class BlockChain(Singleton):
         :param tx_hash: 需要检索的交易id
         :return: 检索到交易返回交易， 否则返回None
         """
-        latest_block, prev_hash = self.get_latest_block()
-        latest_height = latest_block.block_header.height
+        latest_block, block_hash = self.get_latest_block()
+        height = latest_block.block_header.height
+        block = latest_block
 
-        for height in range(latest_height, -1, -1):
-            block = self.get_block_by_height(height)
+        while height > 0:
             for tx in block.transactions:
                 if tx.tx_hash == tx_hash:
                     return tx
+            prev_hash = block.block_header.hash
+            block = self.get_block_by_hash(prev_hash)
+            height = block.block_header.height
         return None
 
     def roll_back(self):
