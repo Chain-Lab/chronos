@@ -39,8 +39,9 @@ class Block(object):
         vote_info: dict
         vote_info = self.vote_info
         result = 0
+        logging.debug("BLock#{} vote info data: {}".format(self.block_header.hash, vote_info))
+        logging.debug("Block data: {}".format(self.serialize()))
         for item in vote_info.values():
-            logging.debug("Block#{} info item: {} counts {}".format(self.block_header.hash, item, result))
             result += item[-1]
         return result
 
