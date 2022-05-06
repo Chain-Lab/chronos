@@ -58,6 +58,7 @@ class Transaction(object):
             if not prev_tx:
                 # raise ValueError('Previous transaction error.')
                 ed = time.time()
+                logging.error("Previous transaction error")
                 logging.debug("Verify transaction use {} s.".format(ed - st))
                 return False
             tx_copy.inputs[idx].signature = None

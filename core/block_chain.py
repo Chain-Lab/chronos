@@ -172,17 +172,15 @@ class BlockChain(Singleton):
         :return: 检索到交易返回交易， 否则返回None
         """
         latest_block, block_hash = self.get_latest_block()
-        height = latest_block.block_header.height
         block = latest_block
 
-        while height > 0:
+        while block:
             for tx in block.transactions:
                 if tx.tx_hash == tx_hash:
                     return tx
             prev_hash = block.block_header.prev_block_hash
             logging.debug("Search tx in prev block#{}".format(prev_hash))
             block = self.get_block_by_hash(prev_hash)
-            height = block.block_header.height
         return None
 
     def roll_back(self):
@@ -248,8 +246,6 @@ class BlockChain(Singleton):
         """
         start_time = time.time()
         for tx in block.transactions:
-            if tx.is_coinbase:
-                continue
             if not self.verify_transaction(tx):
                 end_time = time.time()
                 logging.debug("Verify block use {} s.".format(end_time - start_time))
