@@ -94,7 +94,11 @@ class TxMemPool(Singleton):
                     if self.tx_hashes.empty():
                         logging.debug("Memory pool cleaned.")
                         break
+
                     tx_hash = self.tx_hashes.get()
+
+                    if tx_hash not in self.txs:
+                        continue
                     transaction = self.txs.pop(tx_hash)
                     db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
@@ -116,8 +120,7 @@ class TxMemPool(Singleton):
         :return:
         """
         self.pool_lock.acquire()
-        if tx_hash in self.tx_hashes:
-            # self.tx_hashes.remove(tx_hash)
+        if tx_hash in self.txs:
             self.txs.pop(tx_hash)
             logging.debug("Remove tx#{} from memory pool.".format(tx_hash))
         self.pool_lock.release()
