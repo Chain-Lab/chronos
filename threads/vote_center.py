@@ -42,7 +42,7 @@ class VoteCenter(Singleton):
     def task(self):
         while True:
             with self.__cond:
-                while not self.__queue.empty():
+                while self.__queue.empty():
                     self.__cond.wait()
                 current = self.__queue.get()
                 address = current
@@ -126,6 +126,7 @@ class VoteCenter(Singleton):
 
 
 if __name__ == "__main__":
-    import dis
+    q = Queue()
 
-    dis.dis(VoteCenter.refresh)
+    q.put("test")
+    print(q.get())

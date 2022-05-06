@@ -78,7 +78,7 @@ class Gossip(Singleton):
                     package_cond.wait()
 
             with self.__cond:
-                while not self.__queue.empty() or len(Peer().nodes) == 0:
+                while self.__queue.empty() or len(Peer().nodes) == 0:
                     logging.debug("Client wait insert new transaction.")
                     self.__cond.wait()
 
