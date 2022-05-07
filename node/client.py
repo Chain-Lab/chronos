@@ -224,8 +224,6 @@ class Client(object):
             self.handle_shake(message)
         elif code == STATUS.GET_BLOCK_MSG:
             self.handle_get_block(message)
-        elif code == STATUS.TRANSACTION_MSG:
-            self.handle_transaction(message)
         elif code == STATUS.POT:
             self.handle_pot(message)
         elif code == STATUS.SYNC_MSG:
@@ -285,47 +283,9 @@ class Client(object):
             send_msg = Message(STATUS.BLOCK, height - 1)
             self.send(send_msg)
 
-    def handle_transaction(self, message: dict):
-        """
-        状态码为STATUS.TRANSACTION_MSG = 3
-        处理服务器发送过来的交易， 将交易添加到交易池
-        upd: 这里在修改了交易广播协议之后弃用
-        :param message: 包含交易数据的消息
-        :return: None
-        """
-        # 可能出现的问题： 在client更新本地高度之后， 收到服务器发送过来的交易，而此时交易池还没有清空，又以更新完成的高度去进行一次投票
-        # upd： server端接收到其他节点发送的区块后，会从交易池中移除交易，与此同时tx_pool是无法再次添加同一笔交易的, 也无法触发下面的逻辑
-        data = message.get('data', {})
-        transaction = Transaction.deserialize(data)
-        if not self.tx_pool.add(transaction):
-            return
-
-        bc = BlockChain()
-        latest_block, _ = bc.get_latest_block()
-
-        if self.tx_pool.is_full():
-            address = Config().get('node.address')
-            final_address = VoteCenter().local_vote(-1)
-
-            # 如果本地投票信息为空， 说明该节点不是共识节点或者连接的其他节点不是共识节点
-            if final_address is None:
-                final_address = address
-
-            VoteCenter().vote_update(address, final_address, self.height)
-
-            message_data = {
-                'vote': address + ' ' + final_address,
-                'address': address,
-                'time': time.time(),
-                'id': int(Config().get('node.id')),
-                'height': self.height
-            }
-            send_message = Message(STATUS.POT, message_data)
-            self.send(send_message)
-
     def handle_pot(self, message: dict):
         """
-        状态码为STATUS.POT = 4, 进行时间共识投票
+        状态码为STATUS.POT = 3, 进行时间共识投票
         """
         data = message.get('data', {})
         vote_data = data.get('vote', '')
@@ -339,7 +299,7 @@ class Client(object):
 
     def handle_sync(self, message: dict):
         """
-        状态码为STATUS.SYNC_MSG = 5, 该节点为共识节点， 生成新区块
+        状态码为STATUS.SYNC_MSG = 4, 该节点为共识节点， 生成新区块
         :param message: 待处理的message
         :return: None
         """
@@ -411,7 +371,7 @@ class Client(object):
 
     def handle_update(self, message: dict):
         """
-        状态码为STATUS.UPDATE_MSG = 6, 拉取最新的区块发送给server
+        状态码为STATUS.UPDATE_MSG = 5, 拉取最新的区块发送给server
         :param message: 待处理的message
         :return: None
         """
@@ -448,7 +408,7 @@ class Client(object):
 
     def handle_send_block(self, message: dict):
         """
-        状态码为STATUS.BLOCK = 7, 发送对应高度的区块给对端
+        状态码为STATUS.BLOCK = 6, 发送对应高度的区块给对端
         这里逻辑和状态码为2的逻辑是一样的， 但是为了保证C/S的统一所以还是需要定义一下
         :param message: 包含高度信息的message
         :return:

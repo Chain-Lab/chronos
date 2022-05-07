@@ -147,8 +147,6 @@ class Server(object):
             result_message = self.handle_handshake(message)
         elif code == STATUS.GET_BLOCK_MSG:
             result_message = self.handle_get_block(message)
-        elif code == STATUS.TRANSACTION_MSG:
-            result_message = self.handle_transaction(message)
         elif code == STATUS.POT:
             self.handle_sync_vote(message)
             result_message = Message(STATUS.NODE_MSG, "4")
@@ -329,43 +327,9 @@ class Server(object):
             result = Message(STATUS.GET_BLOCK_MSG, result_data)
         return result
 
-    def handle_transaction(self, message: dict):
-        """
-        状态码为STATUS.TRANSACTION_MSG = 3
-        处理客户端发送的交易信息
-        将交易添加到交易内存池， 如果满了就添加到区块
-        :param message: 客户端发送过来的交易信息
-        :return: None
-        """
-        transaction_data = message.get("data", [])
-
-        self.txs.append(transaction_data)
-        transaction = Transaction.deserialize(transaction_data)
-        # 如果对端的交易添加失败， 说明交易已经存在或上一轮共识结束不进行后面的操作， 避免出现重复发出共识信息
-        if not self.tx_pool.add(transaction):
-            return Message.empty_message()
-
-        if self.tx_pool.is_full():
-            local_address = Config().get('node.address')
-            final_address = VoteCenter().local_vote(-1)
-            if final_address is None:
-                final_address = local_address
-            VoteCenter().vote_update(local_address, final_address, self.thread_local.height)
-            result_data = {
-                'vote': local_address + ' ' + final_address,
-                'address': local_address,
-                'time': time.time(),
-                # 这里是不是每一次都要从Config中读取？或许需要优化一下
-                'id': int(Config().get('node.id')),
-                'height': self.thread_local.height
-            }
-            result = Message(STATUS.POT, result_data)
-            return result
-        return Message.empty_message()
-
     def handle_sync_vote(self, message: dict):
         """
-        状态码为STATUS.POT = 4， 同步时间共识的投票信息, 将远端的投票信息加入本地
+        状态码为STATUS.POT = 3， 同步时间共识的投票信息, 将远端的投票信息加入本地
         :param message: 需要处理的message
         :return: None
         """
@@ -395,7 +359,7 @@ class Server(object):
 
     def handle_update(self, message: dict):
         """
-        状态码为STATUS.UPDATE_MSG = 6, 从邻居节点更新区块
+        状态码为STATUS.UPDATE_MSG = 5, 从邻居节点更新区块
         :param message: 需要处理的message
         :return: None
         """
@@ -426,7 +390,7 @@ class Server(object):
     @staticmethod
     def handle_send_block(message: dict):
         """
-        状态码为STATUS.BLOCK = 7, 发送对应高度的区块给对端
+        状态码为STATUS.BLOCK = 6, 发送对应高度的区块给对端
         :param message: 包含高度信息的message
         :return:
         """
