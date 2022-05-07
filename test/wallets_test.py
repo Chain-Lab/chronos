@@ -2,8 +2,9 @@ import binascii
 import json
 
 from ecdsa import SigningKey, SECP256k1
-from utils.b58code import Base58Code
+
 from utils import funcs
+from utils.b58code import Base58Code
 
 """
 用于进行性能测试生成钱包的代码

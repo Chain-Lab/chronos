@@ -298,4 +298,3 @@ class BlockChain(Singleton):
             return
         self.set_latest_hash(block_hash)
         UTXOSet().update(block)
-

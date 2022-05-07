@@ -1,9 +1,9 @@
 import json
 import logging
 
+from core.utxo import UTXOSet
 from rpc.grpcs import address_pb2
 from rpc.grpcs import address_pb2_grpc
-from core.utxo import UTXOSet
 
 
 class AddressService(address_pb2_grpc.AddressServicer):

@@ -7,7 +7,6 @@ import time
 from core.block import Block
 from core.block_chain import BlockChain
 from core.config import Config
-from core.transaction import Transaction
 from core.txmempool import TxMemPool
 from node.constants import STATUS
 from node.message import Message
@@ -232,7 +231,8 @@ class Server(object):
 
         # 本地高度低于邻居高度， 拉取区块
         if local_height < remote_height:
-            logging.debug("Local height#{} lower than remote height#{}, pull block.".format(local_height, remote_height))
+            logging.debug(
+                "Local height#{} lower than remote height#{}, pull block.".format(local_height, remote_height))
 
             if not block:
                 block, _ = bc.get_latest_block()

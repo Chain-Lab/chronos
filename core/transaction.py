@@ -30,7 +30,6 @@ class Transaction(object):
                 input_dict.pop("delay_params")
             data_list.append(str(input_dict))
 
-
         output_list = [str(_) for _ in self.outputs]
         # 加入随机数保证同一个节点coinbase交易的hash不一样
         if is_coinbase:

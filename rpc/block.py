@@ -1,14 +1,15 @@
 import json
 
+from core.block_chain import BlockChain
 from rpc.grpcs import block_pb2
 from rpc.grpcs import block_pb2_grpc
-from core.block_chain import BlockChain
 
 
 class BlockService(block_pb2_grpc.BlockServicer):
     """
     block相关的RPC服务端接口， 定义在protos/block.proto中
     """
+
     def get_block(self, request, context):
         """
         拉取区块， 可以指定高度、哈希， 或是直接获取最新区块

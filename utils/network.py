@@ -31,7 +31,6 @@ class TCPConnect(object):
             data.extend(packet)
         return data
 
-
 # class UDPConnect(object):
 #     @staticmethod
 #     def send_msg(sock, addr, msg: str):

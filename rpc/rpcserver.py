@@ -1,13 +1,14 @@
-import threading
 import logging
-import grpc
+import threading
 from concurrent import futures
 
-from rpc.grpcs import block_pb2_grpc
-from rpc.grpcs import address_pb2_grpc
-from rpc.grpcs import transaction_pb2_grpc
-from rpc.block import BlockService
+import grpc
+
 from rpc.address import AddressService
+from rpc.block import BlockService
+from rpc.grpcs import address_pb2_grpc
+from rpc.grpcs import block_pb2_grpc
+from rpc.grpcs import transaction_pb2_grpc
 from rpc.transaction import TransactionService
 
 

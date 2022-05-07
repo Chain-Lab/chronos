@@ -27,6 +27,7 @@ else:
 Code from ecdsa: keys.py
 """
 
+
 def quick_pow(a, b, p):
     """
     快速幂，计算a^b mod p

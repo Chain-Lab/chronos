@@ -5,12 +5,12 @@ import time
 from core.block_chain import BlockChain
 from core.txmempool import TxMemPool
 from core.utxo import UTXOSet
+from node.timer import Timer
 from threads.calculator import Calculator
 from threads.counter import Counter
 from threads.vote_center import VoteCenter
 from utils import funcs
 from utils.singleton import Singleton
-from node.timer import Timer
 
 
 class MergeThread(Singleton):
@@ -19,9 +19,9 @@ class MergeThread(Singleton):
     该线程专门处理区块信息， 保证在链上只有一条主链
     """
 
-    STATUS_APPEND = 0                        # 区块成功添加到队列
-    STATUS_LOCKED = 1                        # 队列被锁
-    STATUS_EXISTS = 2                        # 区块已经存在
+    STATUS_APPEND = 0  # 区块成功添加到队列
+    STATUS_LOCKED = 1  # 队列被锁
+    STATUS_EXISTS = 2  # 区块已经存在
 
     def __init__(self):
         """
@@ -149,8 +149,10 @@ class MergeThread(Singleton):
                     equal_prev_hash = equal_block.block_header.prev_block_hash
                     # 比较的大前提是两个区块的前一个区块一致（分叉点）， 并且区块哈希值不一样
 
-                    logging.debug("Block vote count is {}. Equal block vote count is {}.".format(block_count, equal_count))
-                    logging.debug("Block timestamp is {}. Equal block timestamp is {}.".format(block_timestamp, equal_timestamp))
+                    logging.debug(
+                        "Block vote count is {}. Equal block vote count is {}.".format(block_count, equal_count))
+                    logging.debug(
+                        "Block timestamp is {}. Equal block timestamp is {}.".format(block_timestamp, equal_timestamp))
 
                     if block_hash == equal_hash or block_prev_hash != equal_prev_hash or block_count < equal_count or (
                             block_count == equal_count and block_timestamp > equal_timestamp):

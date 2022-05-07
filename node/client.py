@@ -10,16 +10,13 @@ import couchdb
 from core.block import Block
 from core.block_chain import BlockChain
 from core.config import Config
-from core.transaction import Transaction
 from core.txmempool import TxMemPool
 from node.constants import STATUS
 from node.message import Message
 from node.timer import Timer
 from threads.calculator import Calculator
-from threads.counter import Counter
 from threads.merge import MergeThread
 from threads.vote_center import VoteCenter
-from utils import funcs
 from utils.dbutil import DBUtil
 from utils.locks import package_lock, package_cond
 from utils.network import TCPConnect

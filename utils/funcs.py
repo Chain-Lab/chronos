@@ -50,4 +50,3 @@ def hex2int(s: str):
     if s is None:
         return 0
     return int.from_bytes(bytes.fromhex(s), byteorder='big')
-

@@ -1,10 +1,9 @@
 import json
 import logging
 import random
-import threading
 import socket
+import threading
 import time
-
 from queue import Queue
 
 from core.config import Config
@@ -43,7 +42,7 @@ class Gossip(Singleton):
                     logging.debug("Wait block package finished.")
                     package_cond.wait()
 
-            data, addr = s.recvfrom(20480)           # 15kb
+            data, addr = s.recvfrom(20480)  # 15kb
             logging.debug("Receive transaction from {}.".format(addr))
             try:
                 data = json.loads(data.decode())
