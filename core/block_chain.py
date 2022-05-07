@@ -1,7 +1,10 @@
 import json
 import logging
+import time
+from functools import lru_cache
 
-from couchdb import ResourceNotFound, ResourceConflict
+import couchdb
+from couchdb import ResourceNotFound
 
 from core.block import Block
 from core.block_header import BlockHeader
@@ -10,13 +13,14 @@ from core.merkle import MerkleTree
 from core.transaction import Transaction
 from core.utxo import UTXOSet
 from utils.dbutil import DBUtil
+from utils.singleton import Singleton
 
 
-class BlockChain(object):
-
+class BlockChain(Singleton):
     def __init__(self):
         db_url = Config().get('database.url')
         self.db = DBUtil(db_url)
+        self.__cache = {}
 
     def __getitem__(self, index):
         """
@@ -35,7 +39,7 @@ class BlockChain(object):
             logging.warning("Index overflow while get block #{}".format(index))
             raise IndexError('Index overflow')
 
-    def add_new_block(self, transactions: list, vote: dict, delay_params: dict):
+    def package_new_block(self, transactions: list, vote: dict, delay_params: dict):
         """
         新区块的产生逻辑， 传入待打包的交易列表和投票信息
         :param transactions:
@@ -62,20 +66,18 @@ class BlockChain(object):
         txs = UTXOSet().clear_transactions(transactions)
         block = Block(block_header, txs)
 
+        logging.debug("Start verify block.")
         if not self.verify_block(block):
             logging.error("Block verify failed. Block struct: {}".format(block))
-            return
+            return None
 
         # todo: 区块头的哈希是根据merkle树的根哈希值来进行哈希的， 和交易存在关系
         #  那么是否可以在区块中仅仅存入交易的哈希列表，交易的具体信息存在其他的表中以提高查询效率，区块不存储区块具体的信息？
         block.set_header_hash()
-        latest_hash = block.block_header.hash
         logging.debug(block.serialize())
         # 先添加块再更新最新哈希， 避免添加区块时出现问题更新数据库
-        self.db.create(block.block_header.hash, block.serialize())
-        self.set_latest_hash(latest_hash)
-
-        UTXOSet().update(block)
+        # self.insert_block(block)
+        return block
 
     def new_genesis_block(self, transaction):
         """
@@ -90,8 +92,9 @@ class BlockChain(object):
 
             logging.info("Create genesis block : {}".format(genesis_block))
 
-            self.set_latest_hash(genesis_block.block_header.hash)
+            # 更新顺序应该先创建区块再创建索引， 否则会出现获取为空的问题
             self.db.create(genesis_block.block_header.hash, genesis_block.serialize())
+            self.set_latest_hash(genesis_block.block_header.hash)
 
             UTXOSet().update(genesis_block)
 
@@ -146,8 +149,14 @@ class BlockChain(object):
             block = Block.deserialize(block_data)
         return block
 
+    # 缓存100个区块数据
+    @lru_cache(maxsize=100)
     def get_block_by_hash(self, hash):
         data = self.db.get(hash)
+
+        if hash == "" or not data:
+            return None
+
         block = Block.deserialize(data)
         return block
 
@@ -160,74 +169,22 @@ class BlockChain(object):
         :param tx_hash: 需要检索的交易id
         :return: 检索到交易返回交易， 否则返回None
         """
-        latest_block, prev_hash = self.get_latest_block()
-        latest_height = latest_block.block_header.height
+        latest_block, block_hash = self.get_latest_block()
+        block = latest_block
 
-        for height in range(latest_height, -1, -1):
-            block = self.get_block_by_height(height)
+        if tx_hash in self.__cache:
+            logging.debug("Hit cache, return result directly.")
+            return self.__cache[tx_hash]
+
+        while block:
             for tx in block.transactions:
                 if tx.tx_hash == tx_hash:
+                    self.__cache[tx_hash] = tx
                     return tx
+            prev_hash = block.block_header.prev_block_hash
+            logging.debug("Search tx in prev block#{}".format(prev_hash))
+            block = self.get_block_by_hash(prev_hash)
         return None
-
-    def add_block_from_peers(self, block):
-        """
-        从邻居节点接收到区块， 更新本地区块
-        todo: 添加区块验证逻辑， 并且比对区块数据， 以投票信息多的为主
-        :param block: 从邻居节点接收到的区块
-        :return: None
-        """
-        latest_block, prev_hash = self.get_latest_block()
-        peer_height = block.block_header.height
-        peer_hash = block.header_hash
-        peer_prev_hash = block.block_header.prev_block_hash
-
-        block_added = False
-
-        # 首先检查本地存在最新区块
-        if latest_block:
-            # 获取最新区块的高度
-            latest_height = latest_block.block_header.height
-            logging.info("Receive block#{} from neighborhood, local height #{}".format(peer_height, latest_height))
-            if peer_height < latest_height:
-                # 从邻居节点收到的区块高度低于本地， 抛出错误
-                logging.warning("Neighborhood height {} lower than local height {}.".format(peer_height, latest_height))
-                raise ValueError('Block height error')
-
-            # 如果区块验证失败， 抛出错误
-            if not self.verify_block(block):
-                logging.error("Block#{} verify failed.".format(block.block_header.height))
-                raise ValueError('Block invalid.')
-
-            # 高度相同但是数据不一致， 回滚本地区块
-            # todo: 保证可以存在分叉，但是在后续以投票信息最多的链为准
-            if peer_height == latest_height and block != latest_block:
-                if block.vote_count > latest_block.vote_count:
-                    logging.error("Same height but different data, rollback local blockchain data.")
-                    UTXOSet().roll_back(latest_block)
-                    self.roll_back()
-
-            if peer_height == latest_height + 1 and peer_prev_hash == latest_block.block_header.hash:
-                logging.debug("Local height: {}, Neighborhood height: {}".format(latest_height, peer_height))
-                latest_hash = peer_hash
-                
-                try:
-                    self.db.create(peer_hash, block.serialize())
-                    self.set_latest_hash(latest_hash)
-                    UTXOSet().update(block)
-                    return True
-                except ResourceConflict:
-                    logging.error("Create block in db resource conflict.")
-        else:
-            try:
-                self.db.create(block.block_header.hash, block.serialize())
-                last_hash = block.block_header.hash
-                self.set_latest_hash(last_hash)
-                UTXOSet().update(block)
-                return True
-            except ResourceConflict:
-                logging.error("Create block in db resource conflict.")
-        return False
 
     def roll_back(self):
         """
@@ -236,14 +193,15 @@ class BlockChain(object):
         """
         latest_block, prev_hash = self.get_latest_block()
         latest_height = latest_block.block_header.height
+
+        # 先修改索引， 再删除数据， 尽量避免拿到空数据
+        block = self.get_block_by_height(latest_height - 1)
+        self.set_latest_hash(block.block_header.hash)
         doc = self.db.get(latest_block.block_header.hash)
         try:
             self.db.delete(doc)
         except ResourceNotFound as e:
             logging.error(e)
-        # 回滚时没有查询到对应hash的记录， 原逻辑可以照常执行
-        block = self.get_block_by_height(latest_height - 1)
-        self.set_latest_hash(block.block_header.hash)
 
     def find_utxo(self):
         """
@@ -289,9 +247,14 @@ class BlockChain(object):
         :param block: 待校验区块
         :return: 是否校验通过
         """
+        start_time = time.time()
         for tx in block.transactions:
             if not self.verify_transaction(tx):
+                end_time = time.time()
+                logging.debug("Verify block use {} s.".format(end_time - start_time))
                 return False
+        end_time = time.time()
+        logging.debug("Verify block use {} s.".format(end_time - start_time))
         return True
 
     def verify_transaction(self, transaction: Transaction):
@@ -301,8 +264,15 @@ class BlockChain(object):
         :return: 是否校验通过
         """
         prev_txs = {}
+        tx_cache = {}
         for _input in transaction.inputs:
-            prev_tx = self.get_transaction_by_tx_hash(_input.tx_hash)
+            tx_hash = _input.tx_hash
+            if tx_hash not in tx_cache.keys():
+                # 优化： 先在cache里面查询， 如果没有的话再从数据库里面查询
+                prev_tx = self.get_transaction_by_tx_hash(tx_hash)
+                tx_cache[tx_hash] = prev_tx
+            else:
+                prev_tx = tx_cache[tx_hash]
             if not prev_tx:
                 continue
             prev_txs[prev_tx.tx_hash] = prev_tx
@@ -312,3 +282,20 @@ class BlockChain(object):
         latest_block, _ = self.get_latest_block()
         coinbase_tx_input = latest_block.transactions[0].inputs[0]
         return coinbase_tx_input.delay_params
+
+    def insert_block(self, block: Block):
+        """
+        追加最新区块, 由单一的另外一个线程调用
+        先更新区块， 再更新索引信息， 避免返回空区块
+        @param block: 需要添加的区块
+        @return:
+        """
+        block_hash = block.block_header.hash
+        logging.info("Insert new block#{} height {}".format(block_hash, block.block_header.height))
+        try:
+            self.db.create(block_hash, block.serialize())
+        except couchdb.http.ResourceConflict:
+            return
+        self.set_latest_hash(block_hash)
+        UTXOSet().update(block)
+

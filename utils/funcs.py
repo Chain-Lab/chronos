@@ -39,10 +39,15 @@ def sum256_hex(*args):
 
 
 def int2hex(value: int):
+    if value is None:
+        value = 0
+
     bit_length = value.bit_length()
     return binascii.b2a_hex(value.to_bytes(length=(bit_length + 7) // 8, byteorder='big', signed=False)).decode()
 
 
 def hex2int(s: str):
+    if s is None:
+        return 0
     return int.from_bytes(bytes.fromhex(s), byteorder='big')
 

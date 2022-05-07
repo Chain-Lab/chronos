@@ -1,3 +1,5 @@
+import logging
+
 from core.block_header import BlockHeader
 from core.config import Config
 from core.transaction import Transaction
@@ -37,6 +39,8 @@ class Block(object):
         vote_info: dict
         vote_info = self.vote_info
         result = 0
+        logging.debug("BLock#{} vote info data: {}".format(self.block_header.hash, vote_info))
+        logging.debug("Block data: {}".format(self.serialize()))
         for item in vote_info.values():
             result += item[-1]
         return result
@@ -55,6 +59,10 @@ class Block(object):
     @property
     def header_hash(self):
         return self._block_header.hash
+
+    @property
+    def height(self):
+        return self._block_header.height
 
     def __repr__(self):
         return "Block(block_header=%s)" % self._block_header

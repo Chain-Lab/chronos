@@ -1,8 +1,9 @@
+import binascii
 import logging
 import os
 import random
-import binascii
 from configparser import ConfigParser, NoOptionError
+
 from ecdsa import SigningKey, SECP256k1
 
 from utils import funcs

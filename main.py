@@ -13,6 +13,7 @@ from core.block_chain import BlockChain
 from core.config import Config
 from core.transaction import Transaction
 from core.utxo import UTXOSet
+from node.gossip import Gossip
 from node.peer import Peer
 from node.peer_to_peer import P2p
 from node.server import Server
@@ -20,6 +21,7 @@ from utils import funcs
 from utils.b58code import Base58Code
 from utils import number_theory
 from rpc.rpcserver import RPCServer
+from threads.merge import MergeThread
 
 """
 注意： 该文件仅用于测试
@@ -47,6 +49,9 @@ def run():
     utxo_set = UTXOSet()
     utxo_set.reindex(bc)
     logging.info("UTXO set reindex finish")
+
+    gossip = Gossip()
+    gossip.run()
 
     tcpserver = Server()
     tcpserver.listen()

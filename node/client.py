@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import socket
@@ -11,15 +12,17 @@ from core.block_chain import BlockChain
 from core.config import Config
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
-from node.counter import Counter
-from node.vote_center import VoteCenter
 from node.constants import STATUS
 from node.message import Message
 from node.timer import Timer
-from utils.network import TCPConnect
-from utils.dbutil import DBUtil
+from threads.calculator import Calculator
+from threads.counter import Counter
+from threads.merge import MergeThread
+from threads.vote_center import VoteCenter
 from utils import funcs
-from node.calculator import Calculator
+from utils.dbutil import DBUtil
+from utils.locks import package_lock, package_cond
+from utils.network import TCPConnect
 
 
 class Client(object):
@@ -32,6 +35,7 @@ class Client(object):
         self.tx_pool = TxMemPool()
         self.send_vote = False
         self.height = -1
+        self.new_block = None
 
     def add_transaction(self, transaction):
         """
@@ -58,7 +62,8 @@ class Client(object):
         try:
             # rec_data = self.sock.recv(4096 * 2)
             rec_data = TCPConnect.recv_msg(self.sock)
-            if rec_data == b"":
+            if rec_data is None:
+                logging.debug("Receive data is empty")
                 return True
             rec_message = json.loads(rec_data.decode('utf-8'))
 
@@ -92,7 +97,11 @@ class Client(object):
             return True
 
         if rec_message is not None:
-            self.handle(rec_message)
+            try:
+                self.handle(rec_message)
+            # 在出现异常的情况下不断开连接， 保证线程能够正常运行， 对于具体异常的处理待完成
+            except:
+                return False
 
         return False
 
@@ -103,75 +112,110 @@ class Client(object):
         """
         thread_obj = threading.current_thread()
         thread_obj.name = "Client Thread - " + thread_obj.getName().split("-")[-1]
+        bc = BlockChain()
+        packaged = False
         while True:
-            bc = BlockChain()
-            latest_block, prev_hash = bc.get_latest_block()
-            # client开始一轮共识的逻辑：没有待发送交易，交易池为空且没有本地投票数据
-            # 或已经投票但是client没有发送
-            # 或到达时间并且没有发送投票信息
-            if (not self.txs and self.tx_pool.is_full() and VoteCenter().vote == {}) or (
-                    not self.txs and VoteCenter().has_vote and not self.send_vote) or (
-                    not self.txs and Timer().reach() and not self.send_vote):
+            # 在本地进行打包区块时让出cpu资源
+            with package_cond:
+                while package_lock.locked():
+                    logging.debug("Wait block package finished.")
+                    package_cond.wait()
+                    packaged = True
+
+            # get_latest_block会返回None导致线程挂掉， 需要catch一下
+            try:
+                latest_block, prev_hash = bc.get_latest_block()
+            except TypeError:
+                continue
+
+            if packaged:
+                try:
+                    send_message = Message(STATUS.UPDATE_MSG, self.new_block.serialize())
+                    self.send(send_message)
+                except AttributeError:
+                    pass
+                packaged = False
+
+            try:
+                height = latest_block.block_header.height
+            except AttributeError:
+                height = -1
+
+            if self.height < height:
+                # 当前线程最后共识的高度低于最新高度， 更新共识信息
+                self.send_vote = False
+                self.height = height
+                logging.debug("Refresh client instance height information.")
+
+            # v1.1.2 upd: 删除发送交易逻辑， 改为gossip协议使用UDP进行交易的广播
+            logging.debug("Consensus data send status: {}".format(self.send_vote))
+            logging.debug("Vote center vote status: {}".format(VoteCenter().has_vote))
+
+            if (self.tx_pool.is_full() and not bool(VoteCenter().vote)) or (
+                    VoteCenter().has_vote and not self.send_vote) or (
+                    Timer().reach() and not self.send_vote):
+                logging.debug("Start consensus.")
                 address = Config().get('node.address')
-                final_address = VoteCenter().local_vote()
+                final_address = VoteCenter().local_vote(height)
                 if final_address is None:
                     final_address = address
-                VoteCenter().vote_update(address, final_address, self.height)
 
-                message_data = {
-                    'vote': address + ' ' + final_address,
-                    'address': address,
-                    'time': time.time(),
-                    'id': int(Config().get('node.id')),
-                    'height': self.height
-                }
-                send_message = Message(STATUS.POT, message_data)
-                self.send(send_message)
-                # 不论是否进行过数据的发送，都设置为True
-                self.send_vote = True
+                if final_address != -1:
+                    VoteCenter().vote_update(address, final_address, self.height)
+                    logging.debug("Send local vote information to server.")
 
-            if self.txs:
-                # 如果本地存在交易， 将交易发送到邻居节点
-                # todo： 如果有多个交易的情况下需要进行处理， 目前仅仅针对一个交易
-                #  修改clear的逻辑
-                logging.debug("Send transaction to peer.")
-                data = self.txs[0].serialize()
-                self.tx_pool.add(self.txs[0])
-                message = Message(STATUS.TRANSACTION_MSG, data)
-                is_closed = self.send(message)
-                if is_closed:
-                    self.close()
-                    break
-                self.txs.clear()
-            else:
+                    message_data = {
+                        'vote': address + ' ' + final_address,
+                        'address': address,
+                        'time': time.time(),
+                        'id': int(Config().get('node.id')),
+                        'height': self.height
+                    }
+                    send_message = Message(STATUS.POT, message_data)
+                    logging.debug("Send consensus address to server.")
+                    self.send(send_message)
+                    # 不论是否进行过数据的发送，都设置为True
+                    self.send_vote = True
+
+            try:
+                genesis_block = bc.get_block_by_height(0)
+            except IndexError as e:
+                genesis_block = None
+            except TypeError:
+                genesis_block = None
+
+            logging.debug("Send vote list to server.")
+            data = {
+                "latest_height": -1,
+                "genesis_block": "",
+                "address": Config().get('node.address'),
+                "time": time.time(),
+                "id": int(Config().get('node.id')),
+                "vote": VoteCenter().vote
+            }
+
+            if genesis_block:
+                # 如果存在创世区块， 发送创世区块
+                # 考虑一下创世区块的用处
+
+                # 如果存在创世区块， 那么最新区块必然是存在的， 为了避免创建创世区块的时候刚好到达
+                # 这里的逻辑，所以需要再获取一次
+                if not latest_block:
+                    latest_block, prev_hash = bc.get_latest_block()
                 try:
-                    genesis_block = bc[0]
-                except IndexError as e:
-                    genesis_block = None
-
-                data = {
-                    "latest_height": -1,
-                    "genesis_block": "",
-                    "address": Config().get('node.address'),
-                    "time": time.time(),
-                    "id": int(Config().get('node.id')),
-                    "vote": VoteCenter().vote
-                }
-
-                if genesis_block:
-                    # logging.debug(genesis_block.transactions)
-                    # 如果存在创世区块， 发送创世区块
-                    # 考虑一下创世区块的用处
                     data['latest_height'] = latest_block.block_header.height
-                    data['genesis_block'] = genesis_block.serialize()
+                except AttributeError:
+                    data['latest_height'] = -1
+                data['genesis_block'] = genesis_block.serialize()
+                logging.debug("Send latest height #{} to server.".format(data['latest_height']))
 
-                send_message = Message(STATUS.HAND_SHAKE_MSG, data)
-                # logging.debug("Send message: {}".format(data))
-                is_closed = self.send(send_message)
-                if is_closed:
-                    self.close()
-                    break
-                time.sleep(1)
+            send_message = Message(STATUS.HAND_SHAKE_MSG, data)
+            # logging.debug("Send message: {}".format(data))
+            is_closed = self.send(send_message)
+            if is_closed:
+                self.close()
+                break
+            time.sleep(1)
 
     def handle(self, message: dict):
         code = message.get('code', 0)
@@ -188,6 +232,8 @@ class Client(object):
             self.handle_sync(message)
         elif code == STATUS.UPDATE_MSG:
             self.handle_update(message)
+        elif code == STATUS.BLOCK:
+            self.handle_send_block(message)
 
     def handle_shake(self, message: dict):
         """
@@ -195,15 +241,14 @@ class Client(object):
         :param message: 待处理的消息
         :return: None
         """
+        logging.debug("Receive handshake status code.")
         data = message.get('data', {})
         remote_height = data.get('latest_height', 0)
+        vote_height = data.get('vote_height', 0)
         vote_data = data['vote']
 
-        if vote_data == {}:
-            # self.txs.clear()
-            pass
-        else:
-            VoteCenter().vote_sync(vote_data, remote_height)
+        if bool(vote_data):
+            VoteCenter().vote_sync(vote_data, vote_height)
 
         bc = BlockChain()
         latest_block, prev_hash = bc.get_latest_block()
@@ -213,53 +258,38 @@ class Client(object):
         else:
             local_height = -1
 
-        if self.height != local_height:
-            # 当前线程最后共识的高度低于最新高度， 更新共识信息
-            VoteCenter().refresh(local_height)
-            self.send_vote = False
-            self.height = local_height
-
         if local_height >= remote_height:
+            logging.debug("Local height >= remote height.")
             return
 
         # 发送邻居节点没有的区块
         start_height = 0 if local_height == -1 else local_height
         for i in range(start_height, remote_height + 1):
+            logging.debug("Client pull block#{}.".format(i))
             send_msg = Message(STATUS.GET_BLOCK_MSG, i)
             self.send(send_msg)
 
-    @staticmethod
-    def handle_get_block(message: dict):
+    def handle_get_block(self, message: dict):
         """
         状态码为STATUS.GET_BLOCK_MSG = 2, 处理服务器发送过来的区块数据
         :param message: 包含区块数据的消息
         :return: None
         """
-        # todo: 这一句挪到前面统一处理？
         data = message.get('data', {})
         block = Block.deserialize(data)
-        bc = BlockChain()
         height = block.block_header.height
 
-        try:
-            is_added = bc.add_block_from_peers(block)
-            if is_added:
-                Counter().refresh(height)
-                Timer().refresh(height)
-                delay_params = block.transactions[0].inputs[0].delay_params
-                hex_seed = delay_params.get("seed")
-                hex_pi = delay_params.get("pi")
-                seed = funcs.hex2int(hex_seed)
-                pi = funcs.hex2int(hex_pi)
-                Calculator().update(seed, pi)
-        except ValueError as e:
-            # todo: 这里应该需要进行回滚， 但是回滚涉及到线程安全问题， 需要重新考虑
-            logging.error(e)
+        logging.debug("Receive server block data: {}".format(data))
+        result = MergeThread().append_block(block)
+        if result == MergeThread.STATUS_EXISTS:
+            send_msg = Message(STATUS.BLOCK, height - 1)
+            self.send(send_msg)
 
     def handle_transaction(self, message: dict):
         """
         状态码为STATUS.TRANSACTION_MSG = 3
         处理服务器发送过来的交易， 将交易添加到交易池
+        upd: 这里在修改了交易广播协议之后弃用
         :param message: 包含交易数据的消息
         :return: None
         """
@@ -275,7 +305,7 @@ class Client(object):
 
         if self.tx_pool.is_full():
             address = Config().get('node.address')
-            final_address = VoteCenter().local_vote()
+            final_address = VoteCenter().local_vote(-1)
 
             # 如果本地投票信息为空， 说明该节点不是共识节点或者连接的其他节点不是共识节点
             if final_address is None:
@@ -314,28 +344,70 @@ class Client(object):
         :return: None
         """
         # 一轮共识结束的第二个标志：本地被投票为打包区块的节点，产生新区块
-        data = message.get('data', '')
+        data = message.get('data', '0#0')
         address = Config().get('node.address')
-        logging.debug("Receive package wallet is: {}".format(data))
-        if data == address:
-            transactions = self.tx_pool.package(self.height + 1)
+        logging.debug("Client receive package address: {}".format(data))
+        items = data.split("#")
+        dst_address = items[0]
+        vote_height = int(items[1])
+
+        if address == dst_address:
+            if package_lock.locked():
+                logging.debug("Package locked.")
+                return
+            package_lock.acquire()
+
+            a = sorted(VoteCenter().vote.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
+            try:
+                if a[0][0] != address:
+                    package_lock.release()
+                    with package_cond:
+                        package_cond.notify_all()
+                    logging.debug("Local address is not package node.")
+                    return
+            except IndexError:
+                package_lock.release()
+                with package_cond:
+                    package_cond.notify_all()
+                logging.debug("Local address is not package node.")
+                return
+
+            start_time = time.time()
+            vote_data = copy.deepcopy(VoteCenter().vote)
+
+            logging.debug("Lock package lock. Start package memory pool.")
+            transactions = self.tx_pool.package(vote_height + 1)
             logging.debug("Package transaction result: {}".format(transactions))
 
             # 如果取出的交易数据是None， 说明另外一个线程已经打包了， 就不用再管
             # upd: 在新的逻辑里面，不论节点交易池是否存在交易都会进行区块的打包
             if transactions is None:
                 logging.debug("Tx memory pool has been packaged.")
+                package_lock.release()
+                with package_cond:
+                    package_cond.notify_all()
                 return
 
             bc = BlockChain()
-            bc.add_new_block(transactions, VoteCenter().vote, Calculator().delay_params)
-            # todo: 这里假设能够正常运行, 需要考虑一下容错
-            block, _ = bc.get_latest_block()
-            height = block.block_header.height
-            Timer().refresh(height)
-            Calculator().update()
+            logging.debug("Start package new block.")
+            self.new_block = bc.package_new_block(transactions, vote_data, Calculator().delay_params)
+
+            end_time = time.time()
+            logging.debug("Package block use {}s".format(end_time - start_time))
+
+            # 如果区块打包失败， 则将交易池回退到上一个高度
+            if not self.new_block:
+                self.tx_pool.rollback_height(vote_height)
+            package_lock.release()
+
+            with package_cond:
+                logging.debug("Notify all thread.")
+                package_cond.notify_all()
+
+            if self.new_block:
+                logging.debug("Append new block to merge thread.")
+                MergeThread().append_block(self.new_block)
             logging.debug("Package new block.")
-            self.txs.clear()
 
     def handle_update(self, message: dict):
         """
@@ -343,7 +415,13 @@ class Client(object):
         :param message: 待处理的message
         :return: None
         """
-        height = message.get('data', '')
+        data = message.get('data', {})
+
+        if not data:
+            return
+
+        height = data.get('height')
+        block_data = data.get('block')
         address = Config().get('node.address')
         bc = BlockChain()
         latest_block, prev_hash = bc.get_latest_block()
@@ -351,8 +429,15 @@ class Client(object):
         if latest_block is None:
             return
 
+        if block_data != "":
+            block = Block.deserialize(block_data)
+            logging.debug("Append peer block#{}.".format(block.block_header.hash))
+            MergeThread().append_block(block)
+
         local_height = latest_block.block_header.height
-        for i in range(height + 1, local_height + 1):
+        start_height = max(0, height - 5)
+        for i in range(start_height, local_height + 1):
+            logging.debug("Client send block #{}.".format(i))
             block = bc.get_block_by_height(i)
             data = block.serialize()
             data['address'] = address
@@ -360,6 +445,28 @@ class Client(object):
             data['id'] = int(Config().get('node.id'))
             send_message = Message(STATUS.UPDATE_MSG, data)
             self.send(send_message)
+
+    def handle_send_block(self, message: dict):
+        """
+        状态码为STATUS.BLOCK = 7, 发送对应高度的区块给对端
+        这里逻辑和状态码为2的逻辑是一样的， 但是为了保证C/S的统一所以还是需要定义一下
+        :param message: 包含高度信息的message
+        :return:
+        """
+        height = message.get('data', -1)
+
+        if height == -1:
+            send_message = Message.empty_message()
+            self.send(send_message)
+            return
+        block = BlockChain().get_block_by_height(height)
+
+        if block is None:
+            send_message = Message.empty_message()
+        else:
+            send_message = Message(STATUS.UPDATE_MSG, block.serialize())
+
+        self.send(send_message)
 
     def close(self):
         self.sock.close()

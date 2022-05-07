@@ -20,7 +20,17 @@ class Transaction(object):
         设置当前交易的交易id，根据输入和输出的数据哈希得到
         :return: None
         """
-        data_list = [str(_) for _ in self.inputs]
+        data_list = []
+
+        for _input in self.inputs:
+            input_dict = copy.deepcopy(_input.serialize())
+            if "vote_info" in input_dict:
+                input_dict.pop("vote_info")
+            if "delay_params" in input_dict:
+                input_dict.pop("delay_params")
+            data_list.append(str(input_dict))
+
+
         output_list = [str(_) for _ in self.outputs]
         # 加入随机数保证同一个节点coinbase交易的hash不一样
         if is_coinbase:
@@ -46,6 +56,7 @@ class Transaction(object):
         :param prev_txs: 当前交易的各个input对应哈希的交易
         :return: 验证是否通过
         """
+        st = time.time()
         if self.is_coinbase():
             logging.debug("Transaction is coinbase tx.")
             return True
@@ -55,7 +66,11 @@ class Transaction(object):
         for idx, _input in enumerate(self.inputs):
             prev_tx = prev_txs.get(_input.tx_hash, None)
             if not prev_tx:
-                raise ValueError('Previous transaction error.')
+                # raise ValueError('Previous transaction error.')
+                ed = time.time()
+                logging.error("Previous transaction error")
+                logging.debug("Verify transaction use {} s.".format(ed - st))
+                return False
             tx_copy.inputs[idx].signature = None
             tx_copy.inputs[idx].pub_key = prev_tx.outputs[_input.index].pub_key_hash
             tx_copy.set_id()
@@ -66,10 +81,16 @@ class Transaction(object):
 
             try:
                 if not vk.verify(signature, tx_copy.tx_hash.encode()):
+                    ed = time.time()
+                    logging.debug("Verify transaction use {} s.".format(ed - st))
                     return False
             except ecdsa.keys.BadSignatureError:
+                ed = time.time()
+                logging.debug("Verify transaction use {} s.".format(ed - st))
                 return False
 
+        ed = time.time()
+        logging.debug("Verify transaction use {} s.".format(ed - st))
         return True
 
     def serialize(self):
@@ -124,6 +145,7 @@ class Transaction(object):
         vote_node = data
         _input = CoinBaseInput('', -1, Config().get('node.public_key'))
         _input.vote_info = vote_node
+        logging.debug("Set coinbase input vote info: {}".format(vote_node))
         _input.delay_params = delay_params
         output = TxOutput(int(Config().get('node.coinbase_reward')),
                           Config().get('node.address'))
@@ -163,10 +185,7 @@ class TxInput(object):
         return self.__dict__
 
     def __repr__(self):
-        result = self.__dict__
-        if "vote_info" in self.__dict__.keys():
-            result.pop("vote_info")
-        return str(result)
+        return str(self.__dict__)
 
     # 直接更新dict进行初始化, 后面需要通过json-schema校验
     @classmethod
@@ -225,9 +244,4 @@ class CoinBaseInput(TxInput):
         重写方法， 相比tx_input多了投票信息, 去掉投票信息
         保证在出现coinbase交易时与用户的签名信息一致
         """
-        result = copy.deepcopy(self.__dict__)
-        if "vote_info" in result.keys():
-            result.pop("vote_info")
-        if "delay_params" in result.keys():
-            result.pop("delay_params")
-        return str(result)
+        return str(self.__dict__)

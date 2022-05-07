@@ -5,7 +5,7 @@ from rpc.grpcs import transaction_pb2_grpc
 from utils.validator import json_validator
 from core.transaction import Transaction
 from core.block_chain import BlockChain
-from node.peer import Peer
+from node.gossip import Gossip
 
 
 class TransactionService(transaction_pb2_grpc.TransactionServicer):
@@ -21,8 +21,9 @@ class TransactionService(transaction_pb2_grpc.TransactionServicer):
 
         assert bc.verify_transaction(transaction) is True
 
-        peer = Peer()
-        peer.broadcast(transaction)
+        # peer = Peer()
+        # peer.broadcast(transaction)
+        Gossip().append(transaction)
 
         return transaction_pb2.SubmitTransactionRespond(status=0)
 

@@ -10,3 +10,4 @@ class STATUS(object):
     POT = 4
     SYNC_MSG = 5
     UPDATE_MSG = 6
+    BLOCK = 7

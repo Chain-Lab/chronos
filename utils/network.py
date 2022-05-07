@@ -30,3 +30,13 @@ class TCPConnect(object):
                 return b""
             data.extend(packet)
         return data
+
+
+# class UDPConnect(object):
+#     @staticmethod
+#     def send_msg(sock, addr, msg: str):
+#         msg = struct.pack('>I', len(msg)) + msg.encode()
+#         sock.sendto(addr, msg)
+#
+#     @staticmethod
+#     def recv_msg():

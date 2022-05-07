@@ -1,12 +1,11 @@
-import binascii
 import logging
 import time
 
-from core.config import Config
 from core.block_chain import BlockChain
-from utils.dbutil import DBUtil
+from core.config import Config
 from utils import funcs
 from utils.b58code import Base58Code
+from utils.dbutil import DBUtil
 
 
 class ProofOfTime(object):
@@ -24,7 +23,7 @@ class ProofOfTime(object):
         address_number = int.from_bytes(Base58Code.decode_check(local_address), byteorder='big')
         node_hash = seed * address_number % 2 ** 256
         # 实验测试使用， 在每段时间内有一半的节点会被选为共识节点
-        if node_hash / 2 ** 256 > 0.3:
+        if node_hash / 2 ** 256 > 0.95:
             logging.debug("Local is not consensus node.")
             return None
 
@@ -47,7 +46,7 @@ class ProofOfTime(object):
             # 根据vdf的值和钱包地址来确定远端节点是否共识节点
             address_number = int.from_bytes(Base58Code.decode_check(item_address), byteorder='big')
             node_hash = seed * address_number % 2 ** 256
-            if node_hash / 2 ** 256 > 0.3:
+            if node_hash / 2 ** 256 > 0.95:
                 continue
 
             item_time = item[1].get('time')
