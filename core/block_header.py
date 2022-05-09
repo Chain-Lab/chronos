@@ -1,3 +1,4 @@
+import logging
 import time
 
 from utils import funcs
@@ -14,6 +15,8 @@ class BlockHeader(object):
         self.nonce = None
 
     def set_hash(self, prev_block_hash=None):
+        logging.debug("Set new block hash with prev block#{}".format(prev_block_hash))
+
         if not prev_block_hash:
             self.prev_block_hash = prev_block_hash
         data_list = [str(self.timestamp),

@@ -73,9 +73,14 @@ class BlockChain(Singleton):
 
         # todo: 区块头的哈希是根据merkle树的根哈希值来进行哈希的， 和交易存在关系
         #  那么是否可以在区块中仅仅存入交易的哈希列表，交易的具体信息存在其他的表中以提高查询效率，区块不存储区块具体的信息？
-        latest_block, block_hash = self.get_latest_block()
+        prev_block = self.get_block_by_height(height)
 
-        block.set_header_hash(block_hash)
+        if not prev_block:
+            logging.debug("Prev block has been rolled back.")
+            return None
+
+        logging.debug("Set block hash with previous block.".format(prev_block.block_header.hash))
+        block.set_header_hash(prev_block.block_header.hash)
         logging.debug(block.serialize())
         # 先添加块再更新最新哈希， 避免添加区块时出现问题更新数据库
         # self.insert_block(block)
