@@ -204,6 +204,7 @@ class Server(object):
         remote_height = data.get("latest_height", 0)
         remote_address = data.get("address")
         node_id = data.get("id")
+        vote_height = data.get("vote_height", 0)
 
         bc = BlockChain()
         block, prev_hash = bc.get_latest_block()
@@ -273,7 +274,7 @@ class Server(object):
 
         if bool(vote_data):
             logging.debug("Vote information is not synced, sync remote vote list.")
-            VoteCenter().vote_sync(vote_data)
+            VoteCenter().vote_sync(vote_data, vote_height)
             logging.debug("Vote information append to queue finished.")
 
         try:
