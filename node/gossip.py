@@ -14,6 +14,8 @@ from utils.locks import package_cond, package_lock
 from utils.singleton import Singleton
 from utils.validator import json_validator
 
+from utils import constant
+
 
 class Gossip(Singleton):
     def __init__(self):
@@ -36,28 +38,36 @@ class Gossip(Singleton):
         s.bind(addr)
 
         while True:
+            if not constant.NODE_RUNNING:
+                logging.debug("Receive stop signal, stop thread.")
+                break
 
+            # 如果当前有线程在打包区块， 让出CPU资源
             with package_cond:
                 while package_lock.locked():
                     logging.debug("Wait block package finished.")
                     package_cond.wait()
 
-            data, addr = s.recvfrom(20480)  # 15kb
+            # 接收最大15kb的数据
+            data, addr = s.recvfrom(65535)  # 64kb
             logging.debug("Receive transaction from {}.".format(addr))
             try:
+                # 检查是否能够经过json序列化
                 data = json.loads(data.decode())
             except json.JSONDecodeError:
                 logging.error("Receive wrong data.")
                 continue
 
+            # 使用交易的json格式进行验证
             if not json_validator("./schemas/transaction.json", data):
                 logging.error("Receive transaction invalid.")
                 continue
 
             tx = Transaction.deserialize(data)
+            # 添加交易到交易池和Client的队列
             self.append(tx)
             time.sleep(1)
-            # 等待1s， gossip发送交易太快了占用cpu较多
+            # 等待1s， 避免gossip发送交易太快了占用cpu较多
 
     def append(self, tx: Transaction):
         if TxMemPool().add(tx):
@@ -70,13 +80,20 @@ class Gossip(Singleton):
         logging.debug("UDP Client start")
         local_ip = Config().get('node.listen_ip')
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
         while True:
+            if not constant.NODE_RUNNING:
+                logging.debug("Receive stop signal, stop thread.")
+                break
+
+            # 如果有区块正在打包， 等待打包完成
             with package_cond:
                 while package_lock.locked():
                     logging.debug("Wait block package finished.")
                     package_cond.wait()
 
             with self.__cond:
+                # 条件锁，等待唤醒
                 while self.__queue.empty() or len(Peer().nodes) == 0:
                     logging.debug("Client wait insert new transaction.")
                     self.__cond.wait()
@@ -88,6 +105,7 @@ class Gossip(Singleton):
                 data = json.dumps(tx.serialize())
                 length = len(Peer().nodes)
 
+                # 选取50%的邻居节点发送交易
                 nodes = random.choices(Peer().nodes, k=length // 2)
                 logging.info("Send tx to gossip network.")
                 for node in nodes:
@@ -99,5 +117,13 @@ class Gossip(Singleton):
 
                     addr = (ip, int(port))
                     # UDPConnect.send_msg(s, addr, data)
-                    s.sendto(data.encode(), addr)
+                    try:
+                        s.sendto(data.encode(), addr)
+                    except OSError:
+                        logging.error("Message too long.")
+                        break
                 time.sleep(1)
+
+    @property
+    def queue_size(self):
+        return self.__queue.qsize()

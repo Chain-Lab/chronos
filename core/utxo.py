@@ -1,10 +1,15 @@
+import copy
 import logging
 
+import pycouchdb.exceptions
+from lru import LRU
 from couchdb import ResourceConflict, ResourceNotFound
 
+from core.transaction import Transaction
 from core.config import Config
 from utils.dbutil import DBUtil
 from utils.singleton import Singleton
+from utils.funcs import pub_to_address
 
 
 class UTXOSet(Singleton):
@@ -12,6 +17,7 @@ class UTXOSet(Singleton):
 
     def __init__(self):
         self.db = DBUtil(Config().get('database.url'))
+        self.__cache = LRU(5000)
 
     def reindex(self, bc):
         """
@@ -20,6 +26,7 @@ class UTXOSet(Singleton):
         """
         key = self.FLAG + 'latest'
         latest_block, prev_hash = bc.get_latest_block()
+        insert_list = []
 
         if key not in self.db:
             # 通过blockchain查询到未使用的交易
@@ -34,12 +41,20 @@ class UTXOSet(Singleton):
                     vout = index_vout[1]
 
                     vout_dict = vout.serialize()
-                    vout_dict.update({'index': index})
                     tmp_key = key + '-' + str(index)
-                    try:
-                        self.db.create(tmp_key, vout_dict)
-                    except ResourceConflict as e:
-                        logging.error("Database resource conflict while create utxo.")
+                    vout_dict.update({
+                        '_id': tmp_key,
+                        'index': index
+                    })
+                    insert_list.append(vout_dict)
+                    # try:
+                    #     self.db.create(tmp_key, vout_dict)
+                    # except ResourceConflict as e:
+                    #     logging.error("Database resource conflict while create utxo.")
+            try:
+                self.db.batch_save(insert_list)
+            except pycouchdb.exceptions.Conflict as e:
+                logging.error(e)
             self.set_latest_height(latest_block.block_header.height)
         else:
             latest_utxo_height = self.get_latest_height()
@@ -73,55 +88,92 @@ class UTXOSet(Singleton):
         更新数据库中的UTXO， 添加新的UTXO， 并且删除已被使用的UTXO
         """
         logging.debug("Update UTXO set.")
+        insert_list = []
+        delete_list = []
         for tx in block.transactions:
             tx_hash = tx.tx_hash
             key = self.FLAG + tx_hash
 
             for idx, outputs in enumerate(tx.outputs):
                 output_dict = outputs.serialize()
-                output_dict.update({'index': idx})
+                output_dict["index"] = idx
                 tmp_key = key + '-' + str(idx)
-                try:
-                    self.db.create(tmp_key, output_dict)
-                except ResourceConflict as e:
-                    logging.error("Database resource conflict while create utxo.")
+                address = outputs.pub_key_hash
+                tx_hash_index_str = tmp_key.replace(self.FLAG, '')
+                # self.db.create(tmp_key, output_dict)
+                if address not in self.__cache:
+                    self.find_utxo(address)
+                self.__cache[address][tx_hash_index_str] = {
+                    "tx_hash": tx_hash,
+                    "output": output_dict,
+                    "index": idx
+                }
+                output_dict["_id"] = tmp_key
+                insert_list.append(copy.deepcopy(output_dict))
 
             for _input in tx.inputs:
                 input_tx_hash = _input.tx_hash
                 key = self.FLAG + input_tx_hash + '-' + str(_input.index)
+                tx_hash_index_str = key.replace(self.FLAG, '')
                 doc = self.db.get(key)
+                input_address = pub_to_address(_input.pub_key)
 
                 if not doc:
                     continue
-                try:
-                    self.db.delete(doc)
-                    logging.debug("utxo {} cleaned.".format(key))
-                except ResourceConflict as e:
-                    logging.error("Database utxo clear resource conflict.")
+
+                # self.db.delete(doc)
+                delete_list.append(doc)
+                self.__cache[input_address].pop(tx_hash_index_str)
+                logging.debug("utxo {} cleaned.".format(key))
+
+        try:
+            self.db.batch_save(insert_list)
+        except pycouchdb.exceptions.Conflict as e:
+            logging.error(e)
+
+        try:
+            self.db.batch_delete(delete_list)
+        except pycouchdb.exceptions.Conflict as e:
+            logging.error(e)
+
         self.set_latest_height(block.block_header.height)
 
     def roll_back(self, block):
         """
         UTXO集合回滚逻辑， 遍历当前最高区块的交易进行回滚
         """
+        insert_list = []
+        delete_list = []
+        transaction: Transaction
         for transaction in block.transactions:
             tx_hash = transaction.tx_hash
             key = self.FLAG + tx_hash
 
             for idx, output in enumerate(transaction.outputs):
                 tmp_key = key + '-' + str(idx)
+                tx_hash_index_str = tmp_key.replace(self.FLAG, '')
                 doc = self.db.get(tmp_key)
+                address = doc["pub_key_hash"]
                 if not doc:
                     continue
-                try:
-                    self.db.delete(doc)
-                except ResourceNotFound as e:
-                    logging.error(e)
+
+                # self.db.delete(doc)
+                delete_list.append(doc)
+                if address not in self.__cache:
+                    self.find_utxo(address)
+                self.__cache[address].pop(tx_hash_index_str)
+
+            if transaction.is_coinbase():
+                continue
 
             for _input in transaction.inputs:
                 input_tx_hash = _input.tx_hash
                 output_index = _input.index
-                key = self.FLAG + input_tx_hash + '-' + str(output_index)
+
+                input_address = pub_to_address(_input.pub_key)
+
+                tmp_key = self.FLAG + input_tx_hash + '-' + str(output_index)
+                # 查询tx_hash对应的utxo
                 query = {
                     "selector": {
                         "transactions": {
@@ -149,12 +201,28 @@ class UTXOSet(Singleton):
                         output = outputs[output_index]
                         output_dict = output.serialize()
                         output_dict.update({'index': output_index})
-                        tmp_key = key + '-' + str(output_index)
+                        address = output_dict["pub_key_hash"]
+                        tx_hash_index_str = tmp_key.replace(self.FLAG, '')
 
-                        try:
-                            self.db.create(tmp_key, output_dict)
-                        except ResourceConflict as e:
-                            logging.error("Utxo set rollback error: resource conflict")
+                        if address not in self.__cache:
+                            self.find_utxo(address)
+                        self.__cache[address][tx_hash_index_str] = {
+                            "tx_hash": tx_hash,
+                            "output": output_dict,
+                            "index": output_index
+                        }
+                        output_dict.update({"_id": tmp_key})
+                        insert_list.append(copy.deepcopy(output_dict))
+        try:
+            self.db.batch_save(insert_list)
+        except pycouchdb.exceptions.Conflict as e:
+            logging.error(e)
+
+        try:
+            self.db.batch_delete(delete_list)
+        except pycouchdb.exceptions.Conflict as e:
+            logging.error(e)
+
         self.set_latest_height(block.block_header.height - 1)
 
     def find_utxo(self, address):
@@ -163,30 +231,34 @@ class UTXOSet(Singleton):
         :param address: 需要查询的地址
         :return: 对应地址的utxo
         """
-        query = {
-            "selector": {
-                "_id": {
-                    "$regex": "^UTXO"
-                },
-                "pub_key_hash": address
+        if address in self.__cache:
+            return self.__cache[address]
+        else:
+            query = {
+                "selector": {
+                    "_id": {
+                        "$regex": "^UTXO"
+                    },
+                    "pub_key_hash": address
+                }
             }
-        }
-        docs = self.db.find(query)
-        utxos = []
-        for doc in docs:
-            index = doc.get('index', None)
-            if index is None:
-                continue
-            doc_id = doc.id
-            tx_hash_index_str = doc_id.replace(self.FLAG, '')
-            _flag_index = tx_hash_index_str.find('-')
-            tx_hash = tx_hash_index_str[:_flag_index]
-            utxos.append({
-                "tx_hash": tx_hash,
-                "output": doc,
-                "index": index
-            })
-        return utxos
+            docs = self.db.find(query)
+            utxos = {}
+            for doc in docs:
+                index = doc.get('index', None)
+                if index is None:
+                    continue
+                doc_id = doc.id
+                tx_hash_index_str = doc_id.replace(self.FLAG, '')
+                _flag_index = tx_hash_index_str.find('-')
+                tx_hash = tx_hash_index_str[:_flag_index]
+                utxos[tx_hash_index_str] = {
+                    "tx_hash": tx_hash,
+                    "output": doc,
+                    "index": index
+                }
+            self.__cache[address] = utxos
+            return utxos
 
     @staticmethod
     def clear_transactions(transactions):

@@ -4,6 +4,8 @@ import time
 from functools import lru_cache
 
 import couchdb
+from lru import LRU
+import pycouchdb.exceptions
 from couchdb import ResourceNotFound
 
 from core.block import Block
@@ -20,7 +22,7 @@ class BlockChain(Singleton):
     def __init__(self):
         db_url = Config().get('database.url')
         self.db = DBUtil(db_url)
-        self.__cache = {}
+        self.__cache = LRU(30000)
 
     def __getitem__(self, index):
         """
@@ -47,7 +49,8 @@ class BlockChain(Singleton):
         :param delay_params:
         :return:
         """
-        latest_block, prev_hash = self.get_latest_block()
+        latest_block, block_hash = self.get_latest_block()
+        prev_height = latest_block.block_header.height
         height = latest_block.block_header.height + 1
 
         logging.debug("Vote info: {}".format(vote))
@@ -59,21 +62,30 @@ class BlockChain(Singleton):
         for tx in transactions:
             data.append(json.dumps(tx.serialize()))
         merkle_tree = MerkleTree(data)
-        block_header = BlockHeader(merkle_tree.root_hash, height, prev_hash)
+        block_header = BlockHeader(merkle_tree.root_hash, height)
 
         # coinbase 钱包和节点耦合， 可以考虑将挖矿、钱包、全节点服务解耦
         # upd: 节点和挖矿耦合， 但是可以在配置中设置是否为共识节点
         txs = UTXOSet().clear_transactions(transactions)
         block = Block(block_header, txs)
 
-        logging.debug("Start verify block.")
-        if not self.verify_block(block):
-            logging.error("Block verify failed. Block struct: {}".format(block))
-            return None
+        # upd:区块验证的逻辑放到Insert里面， 这里创建区块时不再进行区块的验证， 交易的验证在打包时即可完成
+        # logging.debug("Start verify block.")
+        # if not self.verify_block(block):
+        #     logging.error("Block verify failed. Block struct: {}".format(block))
+        #     return None
 
         # todo: 区块头的哈希是根据merkle树的根哈希值来进行哈希的， 和交易存在关系
         #  那么是否可以在区块中仅仅存入交易的哈希列表，交易的具体信息存在其他的表中以提高查询效率，区块不存储区块具体的信息？
-        block.set_header_hash()
+        logging.debug("Get block#{} from database.".format(prev_height))
+        prev_block = self.get_block_by_height(prev_height)
+
+        if not prev_block:
+            logging.debug("Prev block has been rolled back.")
+            return None
+
+        logging.debug("Set block hash with previous block.".format(prev_block.block_header.hash))
+        block.set_header_hash(prev_block.block_header.hash)
         logging.debug(block.serialize())
         # 先添加块再更新最新哈希， 避免添加区块时出现问题更新数据库
         # self.insert_block(block)
@@ -92,11 +104,7 @@ class BlockChain(Singleton):
 
             logging.info("Create genesis block : {}".format(genesis_block))
 
-            # 更新顺序应该先创建区块再创建索引， 否则会出现获取为空的问题
-            self.db.create(genesis_block.block_header.hash, genesis_block.serialize())
-            self.set_latest_hash(genesis_block.block_header.hash)
-
-            UTXOSet().update(genesis_block)
+            self.insert_block(genesis_block)
 
     def get_latest_block(self):
         """
@@ -151,10 +159,13 @@ class BlockChain(Singleton):
 
     # 缓存100个区块数据
     @lru_cache(maxsize=100)
-    def get_block_by_hash(self, hash):
-        data = self.db.get(hash)
+    def get_block_by_hash(self, block_hash):
+        if not block_hash or block_hash == "":
+            return None
 
-        if hash == "" or not data:
+        data = self.db.get(block_hash)
+
+        if not data:
             return None
 
         block = Block.deserialize(data)
@@ -169,22 +180,20 @@ class BlockChain(Singleton):
         :param tx_hash: 需要检索的交易id
         :return: 检索到交易返回交易， 否则返回None
         """
-        latest_block, block_hash = self.get_latest_block()
-        block = latest_block
-
         if tx_hash in self.__cache:
             logging.debug("Hit cache, return result directly.")
             return self.__cache[tx_hash]
 
-        while block:
-            for tx in block.transactions:
-                if tx.tx_hash == tx_hash:
-                    self.__cache[tx_hash] = tx
-                    return tx
-            prev_hash = block.block_header.prev_block_hash
-            logging.debug("Search tx in prev block#{}".format(prev_hash))
-            block = self.get_block_by_hash(prev_hash)
-        return None
+        logging.debug("Search tx#{} in db".format(tx_hash))
+        db_tx_key = "tx-" + tx_hash
+        data = self.db.get(db_tx_key)
+
+        try:
+            tx = Transaction.deserialize(data)
+            self.__cache[tx_hash] = tx
+            return tx
+        except:
+            return None
 
     def roll_back(self):
         """
@@ -197,10 +206,34 @@ class BlockChain(Singleton):
         # 先修改索引， 再删除数据， 尽量避免拿到空数据
         block = self.get_block_by_height(latest_height - 1)
         self.set_latest_hash(block.block_header.hash)
+        delete_list = []
+
+        for tx in latest_block.transactions:
+            tx_hash = tx.tx_hash
+            db_tx_key = "tx-" + tx_hash
+            doc = self.db.get(db_tx_key)
+            delete_list.append(doc)
+            if tx_hash in self.__cache:
+                self.__cache.pop(tx_hash)
+            # try:
+            #     self.db.delete(doc)
+            # except ResourceNotFound as e:
+            #     logging.error(e)
+            # # 数据库中没有对应的交易信息
+            # except TypeError as e:
+            #     logging.error(e)
+
         doc = self.db.get(latest_block.block_header.hash)
         try:
             self.db.delete(doc)
         except ResourceNotFound as e:
+            logging.error(e)
+
+        try:
+            self.db.batch_delete(delete_list)
+        except pycouchdb.exceptions.Conflict as e:
+            logging.error(e)
+        except pycouchdb.exceptions.NotFound as e:
             logging.error(e)
 
     def find_utxo(self):
@@ -296,5 +329,20 @@ class BlockChain(Singleton):
             self.db.create(block_hash, block.serialize())
         except couchdb.http.ResourceConflict:
             return
+
         self.set_latest_hash(block_hash)
         UTXOSet().update(block)
+        insert_list = []
+
+        for tx in block.transactions:
+            tx_hash = tx.tx_hash
+            db_tx_key = "tx-" + tx_hash
+            tx_dict = tx.serialize()
+            tx_dict.update({"_id": db_tx_key})
+            self.__cache[tx_hash] = tx
+            insert_list.append(tx_dict)
+
+        try:
+            self.db.batch_save(insert_list)
+        except pycouchdb.exceptions.Conflict as e:
+            logging.error(e)

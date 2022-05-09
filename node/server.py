@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import socket
@@ -18,6 +19,8 @@ from threads.vote_center import VoteCenter
 from utils.locks import package_lock, package_cond
 from utils.network import TCPConnect
 
+from utils import constant
+
 
 class Server(object):
     def __init__(self, ip: str = None, port: int = None):
@@ -26,15 +29,17 @@ class Server(object):
         :param ip: ip地址，一般为localhost
         :param port: 端口
         """
-        self.vote_lock = threading.Lock()
         if ip is None and port is None:
             ip = Config().get('node.listen_ip')
             port = int(Config().get('node.listen_port'))
         self.sock = socket.socket()
         self.ip = ip
         self.port = port
-        self.txs = []
+        # 本地未发送的交易， 逻辑已经移动到Gossip协议
+        # self.txs = []
         self.tx_pool = TxMemPool()
+
+        # 单独线程的内存空间， 各线程独立
         self.thread_local = threading.local()
 
     def listen(self):
@@ -51,6 +56,8 @@ class Server(object):
         :return: None
         """
         while True:
+            # todo： conn后的逻辑分到另外一个类， 这里应该是一个sock池管理的地方
+            #  可以便于每个实例之间的变量独立， 这样就可以不再使用threading.local()来处理不同线程的参数
             conn, address = self.sock.accept()
             thread = threading.Thread(target=self.handle_loop, args=(conn, address))
             thread.start()
@@ -89,6 +96,10 @@ class Server(object):
         self.thread_local.height = -1
 
         while True:
+            if not constant.NODE_RUNNING:
+                logging.debug("Receive stop signal, stop thread.")
+                break
+
             with package_cond:
                 while package_lock.locked():
                     logging.debug("Wait block package finished.")
@@ -201,9 +212,16 @@ class Server(object):
         logging.debug("Server receive handshake message.")
         data = message.get("data", {})
         vote_data = data.get("vote", {})
-        remote_height = data.get("latest_height", 0)
+        remote_height = data.get("latest_height", -1)
         remote_address = data.get("address")
         node_id = data.get("id")
+        vote_height = data.get("vote_height", 0)
+
+        if remote_height != -1:
+            remote_block_data = data.get("latest_block", "")
+            if remote_block_data != "":
+                remote_block = Block.deserialize(remote_block_data)
+                MergeThread().append_block(remote_block)
 
         bc = BlockChain()
         block, prev_hash = bc.get_latest_block()
@@ -263,7 +281,12 @@ class Server(object):
             # x[1]取后面的列表
             try:
                 address = a[0][0]
-                result = Message(STATUS.SYNC_MSG, "{}#{}".format(address, VoteCenter().height))
+                data = {
+                    "result": address,
+                    "height": VoteCenter().height,
+                    "vote_info": copy.deepcopy(VoteCenter().vote)
+                }
+                result = Message(STATUS.SYNC_MSG, data)
                 logging.debug("Send vote result {}#{} to client.".format(address, VoteCenter().height))
                 time.sleep(1)
                 return result
@@ -271,21 +294,14 @@ class Server(object):
                 # 如果本地没有投票信息直接略过
                 logging.info("Local node has none vote information.")
 
-        # if bool(vote_data):
-        #     logging.debug("Vote information is not synced, sync remote vote list.")
-        #     VoteCenter().vote_sync(vote_data)
-        #     logging.debug("Vote information append to queue finished.")
+        if bool(vote_data):
+            logging.debug("Vote information is not synced, sync remote vote list.")
+            VoteCenter().vote_sync(vote_data, vote_height)
+            logging.debug("Vote information append to queue finished.")
 
-        try:
-            genesis_block = bc[0]
-        except IndexError:
-            logging.error("Get genesis block error: IndexError, return empty message.")
-            result = Message.empty_message()
-            return result
-        # 逻辑走到这里说明不需要进行其他的操作， 直接返回握手的信息
         result_data = {
             "last_height": -1,
-            "genesis_block": "",
+            "latest_block": "",
             "address": Config().get('node.address'),
             "time": time.time(),
             "id": int(Config().get('node.id')),
@@ -293,17 +309,19 @@ class Server(object):
             "vote_height": VoteCenter().height,
         }
 
-        if genesis_block:
-            logging.debug("Send data with genesis block data.")
-            result_data = {
-                "latest_height": local_height,
-                "genesis_block": genesis_block.serialize(),
-                "address": Config().get('node.address'),
-                "time": time.time(),
-                "id": int(Config().get('node.id')),
-                "vote": VoteCenter().vote,
-                "vote_height": VoteCenter().height,
-            }
+        if not block:
+            block, _ = bc.get_latest_block()
+
+        try:
+            result_data['latest_height'] = block.block_header.height
+            result_data['latest_block'] = block.serialize()
+        except AttributeError:
+            result_data['latest_height'] = -1
+            result_data['latest_block'] = ""
+
+        if not block:
+            return Message.empty_message()
+
         result = Message(STATUS.HAND_SHAKE_MSG, result_data)
         logging.debug("Return handshake data.")
         return result

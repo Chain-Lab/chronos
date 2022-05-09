@@ -7,6 +7,8 @@ from utils import number_theory
 from utils.b58code import Base58Code
 from utils.singleton import Singleton
 
+from utils import constant
+
 
 class Calculator(Singleton):
     def __init__(self):
@@ -112,6 +114,10 @@ class Calculator(Singleton):
         todo： 这里存在问题，应该在下一个区块出来之前等待，如果更新了新的VDF参数再开始进行计算，否则存在一致性问题
         """
         while True:
+            if not constant.NODE_RUNNING:
+                logging.debug("Receive stop signal, stop thread.")
+                break
+
             with self.__cond:
                 # 没有创世区块无法初始化的时候
                 while not self.__has_inited or self.__finished:
@@ -199,7 +205,7 @@ class Calculator(Singleton):
         address_number = int.from_bytes(Base58Code.decode_check(address), byteorder='big')
         node_hash = self.seed * address_number % 2 ** 256
 
-        if node_hash / 2 ** 256 > 0.95:
+        if node_hash / 2 ** 256 > 0.5:
             logging.debug("{} is not consensus node.".format(address))
             return False
 

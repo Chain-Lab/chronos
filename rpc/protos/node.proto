@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+service Node {
+  rpc get_node_status(StatusRequest) returns (StatusRespond);
+  rpc stop_node(StopNodeRequest) returns (StopNodeRespond);
+}
+
+message StatusRequest {
+
+}
+
+message StatusRespond {
+  optional int32 height = 1;
+  optional int32 vote_center_height = 2;
+  optional int32 pool_height = 3;
+  optional int32 pool_counts = 4;
+  optional int32 gossip_queue = 5;
+  optional int32 valid_txs = 6;
+}
+
+message StopNodeRequest {
+
+}
+
+message StopNodeRespond {
+
+}

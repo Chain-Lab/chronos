@@ -16,8 +16,8 @@ class Block(object):
     def mine(self):
         pass
 
-    def set_header_hash(self):
-        self._block_header.set_hash()
+    def set_header_hash(self, prev_block_hash=None):
+        self._block_header.set_hash(prev_block_hash)
 
     def set_transaction(self, txs):
         self._transactions = txs
