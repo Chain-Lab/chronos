@@ -176,15 +176,16 @@ class BlockChain(Singleton):
             logging.debug("Hit cache, return result directly.")
             return self.__cache[tx_hash]
 
-        while block:
-            for tx in block.transactions:
-                if tx.tx_hash == tx_hash:
-                    self.__cache[tx_hash] = tx
-                    return tx
-            prev_hash = block.block_header.prev_block_hash
-            logging.debug("Search tx in prev block#{}".format(prev_hash))
-            block = self.get_block_by_hash(prev_hash)
-        return None
+        logging.debug("Search tx#{} in db".format(tx_hash))
+        db_tx_key = "tx-" + tx_hash
+        data = self.db.get(db_tx_key)
+
+        try:
+            tx = Transaction.deserialize(data)
+            self.__cache[tx_hash] = tx
+            return tx
+        except:
+            return None
 
     def roll_back(self):
         """
@@ -197,6 +198,16 @@ class BlockChain(Singleton):
         # 先修改索引， 再删除数据， 尽量避免拿到空数据
         block = self.get_block_by_height(latest_height - 1)
         self.set_latest_hash(block.block_header.hash)
+
+        for tx in latest_block.transactions:
+            tx_hash = tx.tx_hash
+            db_tx_key = "tx-" + tx_hash
+            doc = self.db.get(db_tx_key)
+            try:
+                self.db.delete(doc)
+            except ResourceNotFound as e:
+                logging.error(e)
+
         doc = self.db.get(latest_block.block_header.hash)
         try:
             self.db.delete(doc)
@@ -298,3 +309,11 @@ class BlockChain(Singleton):
             return
         self.set_latest_hash(block_hash)
         UTXOSet().update(block)
+
+        for tx in block.transactions:
+            tx_hash = tx.tx_hash
+            db_tx_key = "tx-" + tx_hash
+            try:
+                self.db.create(db_tx_key, tx.serialize())
+            except couchdb.http.ResourceConflict:
+                continue
