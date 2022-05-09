@@ -11,6 +11,7 @@ from threads.counter import Counter
 from threads.vote_center import VoteCenter
 from utils import funcs
 from utils.singleton import Singleton
+from queue import Queue
 
 
 class MergeThread(Singleton):
@@ -36,7 +37,7 @@ class MergeThread(Singleton):
         """
         self.cache = {}
 
-        self.__queue = []
+        self.__queue = Queue()
         self.__cond = threading.Condition()
         self.__lock = threading.Lock()
         self.thread = threading.Thread(target=self.__task, args=(), name="Merge Thread")
@@ -78,7 +79,7 @@ class MergeThread(Singleton):
                 return MergeThread.STATUS_APPEND
         with self.__cond:
             logging.info("Append Block#{} height {} to queue.".format(block_hash, block_height))
-            self.__queue.append(block)
+            self.__queue.put(block)
             self.cache[block_hash] = False
             self.__cond.notify_all()
         self.__lock.release()
@@ -113,9 +114,9 @@ class MergeThread(Singleton):
 
         while True:
             with self.__cond:
-                while not len(self.__queue):
+                while self.__queue.empty():
                     self.__cond.wait()
-                block = self.__queue.pop(0)
+                block = self.__queue.get()
 
                 block_height = block.block_header.height
                 block_hash = block.block_header.hash
@@ -181,12 +182,12 @@ class MergeThread(Singleton):
                         # 最前面的区块没有被处理过， 将区块返回到队列中等待
                         if block_prev_hash in self.cache.keys() and not self.cache[block_prev_hash]:
                             logging.debug("Block#{} push back to queue.".format(block_hash))
-                            self.__queue.append(block)
+                            self.__queue.put(block)
                             self.cache[block_hash] = False
                 else:
                     # 如果区块的高度高于目前区块一个区块以上， 返回到队列中等待处理
                     logging.debug("Block#{} push back to queue.".format(block_hash))
-                    self.__queue.append(block)
+                    self.__queue.put(block)
                     self.cache[block_hash] = False
 
     def __clear_task(self):

@@ -215,6 +215,10 @@ class BlockChain(Singleton):
                 self.db.delete(doc)
             except ResourceNotFound as e:
                 logging.error(e)
+            # 数据库中没有对应的交易信息
+            except TypeError as e:
+                logging.error(e)
+
 
         doc = self.db.get(latest_block.block_header.hash)
         try:
