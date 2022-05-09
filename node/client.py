@@ -322,14 +322,14 @@ class Client(object):
                     with package_cond:
                         package_cond.notify_all()
                     logging.debug("Local address is not package node.")
-                    logging.debug("Local vote list#{}: {}".format(VoteCenter().height, VoteCenter().vote))
+                    logging.debug("Local vote list#{}: {}".format(VoteCenter().height, a))
                     return
             except IndexError:
                 package_lock.release()
                 with package_cond:
                     package_cond.notify_all()
                 logging.debug("Local address is not package node.")
-                logging.debug("Local vote list#{}: {}".format(VoteCenter().height, VoteCenter().vote))
+                logging.debug("Local vote list#{}: {}".format(VoteCenter().height, a))
                 return
 
             start_time = time.time()
