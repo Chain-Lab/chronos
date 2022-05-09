@@ -47,7 +47,7 @@ class BlockChain(Singleton):
         :param delay_params:
         :return:
         """
-        latest_block, prev_hash = self.get_latest_block()
+        latest_block, block_hash = self.get_latest_block()
         height = latest_block.block_header.height + 1
 
         logging.debug("Vote info: {}".format(vote))
@@ -59,7 +59,7 @@ class BlockChain(Singleton):
         for tx in transactions:
             data.append(json.dumps(tx.serialize()))
         merkle_tree = MerkleTree(data)
-        block_header = BlockHeader(merkle_tree.root_hash, height, prev_hash)
+        block_header = BlockHeader(merkle_tree.root_hash, height)
 
         # coinbase 钱包和节点耦合， 可以考虑将挖矿、钱包、全节点服务解耦
         # upd: 节点和挖矿耦合， 但是可以在配置中设置是否为共识节点
@@ -73,7 +73,9 @@ class BlockChain(Singleton):
 
         # todo: 区块头的哈希是根据merkle树的根哈希值来进行哈希的， 和交易存在关系
         #  那么是否可以在区块中仅仅存入交易的哈希列表，交易的具体信息存在其他的表中以提高查询效率，区块不存储区块具体的信息？
-        block.set_header_hash()
+        latest_block, block_hash = self.get_latest_block()
+
+        block.set_header_hash(block_hash)
         logging.debug(block.serialize())
         # 先添加块再更新最新哈希， 避免添加区块时出现问题更新数据库
         # self.insert_block(block)

@@ -13,7 +13,9 @@ class BlockHeader(object):
         self.height = height
         self.nonce = None
 
-    def set_hash(self):
+    def set_hash(self, prev_block_hash=None):
+        if not prev_block_hash:
+            self.prev_block_hash = prev_block_hash
         data_list = [str(self.timestamp),
                      str(self.prev_block_hash),
                      str(self.hash_merkle_root),
