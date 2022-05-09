@@ -149,10 +149,13 @@ class BlockChain(Singleton):
 
     # 缓存100个区块数据
     @lru_cache(maxsize=100)
-    def get_block_by_hash(self, hash):
-        data = self.db.get(hash)
+    def get_block_by_hash(self, block_hash):
+        if not block_hash or block_hash == "":
+            return None
 
-        if not hash or hash == "" or not data:
+        data = self.db.get(block_hash)
+
+        if not data:
             return None
 
         block = Block.deserialize(data)
