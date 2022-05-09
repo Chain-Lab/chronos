@@ -152,7 +152,7 @@ class BlockChain(Singleton):
     def get_block_by_hash(self, hash):
         data = self.db.get(hash)
 
-        if hash == "" or not data:
+        if not hash or hash == "" or not data:
             return None
 
         block = Block.deserialize(data)
