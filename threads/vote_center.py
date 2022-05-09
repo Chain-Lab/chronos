@@ -124,6 +124,10 @@ class VoteCenter(Singleton):
     def height(self):
         return self.__height
 
+    @property
+    def rolled_back(self):
+        return self.__rolled_back
+
 
 if __name__ == "__main__":
     q = Queue()
