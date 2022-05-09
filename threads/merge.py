@@ -168,7 +168,7 @@ class MergeThread(Singleton):
                         bc.roll_back()
                     self.__update(block, True)
                     bc.insert_block(block)
-                    TxMemPool().rollback_height(block.height - 1)
+                    TxMemPool().rollback_height(block.height)
                     continue
                 elif block_height == latest_height + 1:
                     # 取得区块的前一个区块哈希

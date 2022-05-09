@@ -68,6 +68,7 @@ class TxMemPool(Singleton):
         # logging.debug("Package pool, pool status:")
         # logging.debug(self.tx_hashes)
         if height <= self.__height or self.__read_lock.locked():
+            logging.debug("Mempool height #{}, package height #{}.".format(self.__height, height))
             return None
 
         with self.__read_lock:
@@ -114,6 +115,7 @@ class TxMemPool(Singleton):
         return result
 
     def rollback_height(self, height):
+        logging.debug("Txmempool roll back to height #{}.".format(height))
         self.__height = height
 
     def remove(self, tx_hash):
@@ -127,8 +129,3 @@ class TxMemPool(Singleton):
             self.txs.pop(tx_hash)
             logging.debug("Remove tx#{} from memory pool.".format(tx_hash))
         self.pool_lock.release()
-
-
-if __name__ == "__main__":
-    dict = {"test": 1}
-    print(1 in dict)
