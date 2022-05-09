@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+service Node {
+  rpc get_node_status(StatusRequest) returns (StatusRespond);
+}
+
+message StatusRequest {
+
+}
+
+message StatusRespond {
+  optional int32 height = 1;
+  optional int32 vote_center_height = 2;
+  optional int32 pool_height = 3;
+  optional int32 pool_counts = 4;
+}

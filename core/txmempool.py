@@ -129,3 +129,11 @@ class TxMemPool(Singleton):
             self.txs.pop(tx_hash)
             logging.debug("Remove tx#{} from memory pool.".format(tx_hash))
         self.pool_lock.release()
+
+    @property
+    def height(self):
+        return self.__height
+
+    @property
+    def counts(self):
+        return self.tx_hashes.qsize()
