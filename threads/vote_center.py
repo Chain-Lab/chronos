@@ -67,8 +67,10 @@ class VoteCenter(Singleton):
                 self.vote_update(vote_data[final_address][i], final_address, height)
 
     def refresh(self, height, rolled_back=False):
+        # 刷新高度的条件：本次刷新是在回退后刷新 或 高度高于目前高度
+
         logging.debug("Trying refresh vote center height #{} to new height #{}".format(self.__height, height))
-        if (not rolled_back and height <= self.__height) or not self.__has_voted or not self.__rolled_back:
+        if (not rolled_back and height <= self.__height) or (not self.__has_voted and not self.__rolled_back):
             logging.debug("Local vote status: {}".format(self.__has_voted))
             logging.debug("Vote lock status: {}".format("Locked" if self.__vote_lock.locked() else "Unlocked"))
             return
