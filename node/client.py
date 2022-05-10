@@ -302,18 +302,22 @@ class Client(object):
         :return: None
         """
         # 一轮共识结束的第二个标志：本地被投票为打包区块的节点，产生新区块
-        data = message.get('data', '0#0')
+        data = message.get('data', {})
         address = Config().get('node.address')
-        logging.debug("Client receive package address: {}".format(data))
-        items = data.split("#")
-        dst_address = items[0]
-        vote_height = int(items[1])
+        dst_address = data.get("result", "0")
+        vote_height = data.get("height", 0)
+        logging.debug("Client receive package address: {} height {}".format(address, vote_height))
 
         latest_block, _ = BlockChain().get_latest_block()
 
         if latest_block.height != vote_height:
             logging.info("Vote height is not equal local height.")
             return
+
+        vote_data = data.get("vote_info", {})
+
+        if bool(vote_data):
+            VoteCenter().vote_sync(vote_data, vote_height)
 
         if address == dst_address:
             if package_lock.locked():
@@ -322,22 +326,22 @@ class Client(object):
             package_lock.acquire()
 
             # 用于验证本地是否打包节点的逻辑
-            # a = sorted(VoteCenter().vote.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
-            # try:
-            #     if a[0][0] != address:
-            #         package_lock.release()
-            #         with package_cond:
-            #             package_cond.notify_all()
-            #         logging.debug("Local address is not package node.")
-            #         logging.debug("Local vote list#{}: {}".format(VoteCenter().height, a))
-            #         return
-            # except IndexError:
-            #     package_lock.release()
-            #     with package_cond:
-            #         package_cond.notify_all()
-            #     logging.debug("Local address is not package node.")
-            #     logging.debug("Local vote list#{}: {}".format(VoteCenter().height, a))
-            #     return
+            a = sorted(VoteCenter().vote.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
+            try:
+                if a[0][0] != address:
+                    package_lock.release()
+                    with package_cond:
+                        package_cond.notify_all()
+                    logging.debug("Local address is not package node.")
+                    logging.debug("Local vote list#{}: {}".format(VoteCenter().height, a))
+                    return
+            except IndexError:
+                package_lock.release()
+                with package_cond:
+                    package_cond.notify_all()
+                logging.debug("Local address is not package node.")
+                logging.debug("Local vote list#{}: {}".format(VoteCenter().height, a))
+                return
 
             start_time = time.time()
             vote_data = copy.deepcopy(VoteCenter().vote)

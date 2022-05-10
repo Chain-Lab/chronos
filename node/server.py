@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import socket
@@ -264,7 +265,12 @@ class Server(object):
             # x[1]取后面的列表
             try:
                 address = a[0][0]
-                result = Message(STATUS.SYNC_MSG, "{}#{}".format(address, VoteCenter().height))
+                data = {
+                    "result": address,
+                    "height": VoteCenter().height,
+                    "vote_info": copy.deepcopy(VoteCenter().vote)
+                }
+                result = Message(STATUS.SYNC_MSG, data)
                 logging.debug("Send vote result {}#{} to client.".format(address, VoteCenter().height))
                 time.sleep(1)
                 return result
