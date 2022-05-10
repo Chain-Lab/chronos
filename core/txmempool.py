@@ -15,6 +15,7 @@ class TxMemPool(Singleton):
     def __init__(self):
         self.txs = {}
         self.tx_queue = Queue()
+        self.prev_queue = Queue()
         self.bc = BlockChain()
         # todo: 存在潜在的类型转换错误，如果config文件配置错误可能抛出错误
         self.SIZE = int(Config().get("node.mem_pool_size"))
@@ -55,7 +56,6 @@ class TxMemPool(Singleton):
     def clear(self):
         self.pool_lock.acquire()
         self.txs.clear()
-        # self.tx_hashes.clear()
         self.pool_lock.release()
 
     def package(self, height):
@@ -65,8 +65,6 @@ class TxMemPool(Singleton):
         """
         result = []
         bc = BlockChain()
-        # logging.debug("Package pool, pool status:")
-        # logging.debug(self.tx_hashes)
         if height <= self.__height or self.__read_lock.locked():
             logging.debug("Mempool height #{}, package height #{}.".format(self.__height, height))
             return None
@@ -88,7 +86,26 @@ class TxMemPool(Singleton):
                 self.__height = height
                 pool_size = int(Config().get("node.mem_pool_size"))
                 count = 0
-                tx_hashes = Queue()
+
+                while count < pool_size and not self.prev_queue.empty():
+                    logging.debug("Pop transaction from prev queue.")
+
+                    if self.tx_queue.empty():
+                        logging.debug("Memory pool cleaned.")
+                        break
+                    tx_hash = self.prev_queue.get()
+
+                    if tx_hash not in self.txs:
+                        continue
+
+                    transaction = self.txs.pop(tx_hash)
+                    db_tx = bc.get_transaction_by_tx_hash(tx_hash)
+
+                    if db_tx or not bc.verify_transaction(transaction):
+                        continue
+
+                    result.append(transaction)
+                    count += 1
 
                 while count < pool_size and not self.tx_queue.empty():
                     logging.debug("Pop transaction from pool.")
@@ -105,18 +122,12 @@ class TxMemPool(Singleton):
                     transaction = self.txs.pop(tx_hash)
                     db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
-                    if db_tx is not None:
+                    if db_tx or not bc.verify_transaction(transaction):
                         continue
 
-                    if not bc.verify_transaction(transaction):
-                        continue
-
-                    tx_hashes.put(tx_hash)
+                    self.prev_queue.put(tx_hash)
                     result.append(transaction)
                     count += 1
-
-                while not tx_hashes.empty():
-                    self.tx_queue.put(tx_hashes.get())
 
                 with self.__cond:
                     self.__cond.notify_all()
