@@ -14,7 +14,7 @@ class TxMemPool(Singleton):
 
     def __init__(self):
         self.txs = {}
-        self.tx_hashes = Queue()
+        self.tx_queue = Queue()
         self.bc = BlockChain()
         # todo: 存在潜在的类型转换错误，如果config文件配置错误可能抛出错误
         self.SIZE = int(Config().get("node.mem_pool_size"))
@@ -45,7 +45,7 @@ class TxMemPool(Singleton):
             if tx_hash not in self.txs:
                 self.txs[tx_hash] = tx
                 # self.tx_hashes.append(tx_hash)
-                self.tx_hashes.put(tx_hash)
+                self.tx_queue.put(tx_hash)
                 logging.debug("Add tx#{} in memory pool.".format(tx_hash))
                 self.__status = TxMemPool.STATUS_NONE
                 return True
@@ -88,18 +88,21 @@ class TxMemPool(Singleton):
                 self.__height = height
                 pool_size = int(Config().get("node.mem_pool_size"))
                 count = 0
+                tx_hashes = Queue()
 
-                while count < pool_size and not self.tx_hashes.empty():
+                while count < pool_size and not self.tx_queue.empty():
                     logging.debug("Pop transaction from pool.")
 
-                    if self.tx_hashes.empty():
+                    if self.tx_queue.empty():
                         logging.debug("Memory pool cleaned.")
                         break
 
-                    tx_hash = self.tx_hashes.get()
+                    tx_hash = self.tx_queue.get()
 
                     if tx_hash not in self.txs:
                         continue
+
+                    tx_hashes.put(tx_hash)
                     transaction = self.txs.pop(tx_hash)
                     db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
@@ -109,9 +112,13 @@ class TxMemPool(Singleton):
                     result.append(transaction)
                     count += 1
 
+                while not tx_hashes.empty():
+                    self.tx_queue.put(tx_hashes.get())
+
                 with self.__cond:
                     self.__cond.notify_all()
         self.__status = TxMemPool.STATUS_NONE
+
         return result
 
     def rollback_height(self, height):
@@ -136,4 +143,4 @@ class TxMemPool(Singleton):
 
     @property
     def counts(self):
-        return self.tx_hashes.qsize()
+        return self.tx_queue.qsize()
