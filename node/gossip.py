@@ -44,7 +44,7 @@ class Gossip(Singleton):
                     package_cond.wait()
 
             # 接收最大15kb的数据
-            data, addr = s.recvfrom(20480)  # 15kb
+            data, addr = s.recvfrom(65535)  # 64kb
             logging.debug("Receive transaction from {}.".format(addr))
             try:
                 # 检查是否能够经过json序列化
