@@ -67,10 +67,11 @@ class BlockChain(Singleton):
         txs = UTXOSet().clear_transactions(transactions)
         block = Block(block_header, txs)
 
-        logging.debug("Start verify block.")
-        if not self.verify_block(block):
-            logging.error("Block verify failed. Block struct: {}".format(block))
-            return None
+        # upd:区块验证的逻辑放到Insert里面， 这里创建区块时不再进行区块的验证， 交易的验证在打包时即可完成
+        # logging.debug("Start verify block.")
+        # if not self.verify_block(block):
+        #     logging.error("Block verify failed. Block struct: {}".format(block))
+        #     return None
 
         # todo: 区块头的哈希是根据merkle树的根哈希值来进行哈希的， 和交易存在关系
         #  那么是否可以在区块中仅仅存入交易的哈希列表，交易的具体信息存在其他的表中以提高查询效率，区块不存储区块具体的信息？
