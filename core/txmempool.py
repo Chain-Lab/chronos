@@ -109,6 +109,9 @@ class TxMemPool(Singleton):
                     if db_tx is not None:
                         continue
 
+                    if not bc.verify_transaction(transaction):
+                        continue
+
                     result.append(transaction)
                     count += 1
 

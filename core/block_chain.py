@@ -219,7 +219,6 @@ class BlockChain(Singleton):
             except TypeError as e:
                 logging.error(e)
 
-
         doc = self.db.get(latest_block.block_header.hash)
         try:
             self.db.delete(doc)
