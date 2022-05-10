@@ -2,6 +2,7 @@ import json
 import logging
 
 from core.txmempool import TxMemPool
+from node.gossip import Gossip
 from rpc.grpcs import node_pb2_grpc
 from rpc.grpcs import node_pb2
 from core.block_chain import BlockChain
@@ -19,6 +20,8 @@ class NodeService(node_pb2_grpc.NodeServicer):
             height=latest_block.height,
             vote_center_height=vote_center.height,
             pool_height=pool.height,
-            pool_counts=pool.counts
+            pool_counts=pool.counts,
+            gossip_queue=Gossip().queue_size,
+            valid_txs=pool.valid_txs
         )
 

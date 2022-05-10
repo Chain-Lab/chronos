@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nnode.proto\"\x0f\n\rStatusRequest\"\xbb\x01\n\rStatusRespond\x12\x13\n\x06height\x18\x01 \x01(\x05H\x00\x88\x01\x01\x12\x1f\n\x12vote_center_height\x18\x02 \x01(\x05H\x01\x88\x01\x01\x12\x18\n\x0bpool_height\x18\x03 \x01(\x05H\x02\x88\x01\x01\x12\x18\n\x0bpool_counts\x18\x04 \x01(\x05H\x03\x88\x01\x01\x42\t\n\x07_heightB\x15\n\x13_vote_center_heightB\x0e\n\x0c_pool_heightB\x0e\n\x0c_pool_counts29\n\x04Node\x12\x31\n\x0fget_node_status\x12\x0e.StatusRequest\x1a\x0e.StatusRespondb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nnode.proto\"\x0f\n\rStatusRequest\"\x8d\x02\n\rStatusRespond\x12\x13\n\x06height\x18\x01 \x01(\x05H\x00\x88\x01\x01\x12\x1f\n\x12vote_center_height\x18\x02 \x01(\x05H\x01\x88\x01\x01\x12\x18\n\x0bpool_height\x18\x03 \x01(\x05H\x02\x88\x01\x01\x12\x18\n\x0bpool_counts\x18\x04 \x01(\x05H\x03\x88\x01\x01\x12\x19\n\x0cgossip_queue\x18\x05 \x01(\x05H\x04\x88\x01\x01\x12\x16\n\tvalid_txs\x18\x06 \x01(\x05H\x05\x88\x01\x01\x42\t\n\x07_heightB\x15\n\x13_vote_center_heightB\x0e\n\x0c_pool_heightB\x0e\n\x0c_pool_countsB\x0f\n\r_gossip_queueB\x0c\n\n_valid_txs29\n\x04Node\x12\x31\n\x0fget_node_status\x12\x0e.StatusRequest\x1a\x0e.StatusRespondb\x06proto3')
 
 
 
@@ -41,7 +41,7 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _STATUSREQUEST._serialized_start=14
   _STATUSREQUEST._serialized_end=29
   _STATUSRESPOND._serialized_start=32
-  _STATUSRESPOND._serialized_end=219
-  _NODE._serialized_start=221
-  _NODE._serialized_end=278
+  _STATUSRESPOND._serialized_end=301
+  _NODE._serialized_start=303
+  _NODE._serialized_end=360
 # @@protoc_insertion_point(module_scope)

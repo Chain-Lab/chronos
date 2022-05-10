@@ -110,3 +110,7 @@ class Gossip(Singleton):
                     # UDPConnect.send_msg(s, addr, data)
                     s.sendto(data.encode(), addr)
                 time.sleep(0.1)
+
+    @property
+    def queue_size(self):
+        return self.__queue.qsize()
