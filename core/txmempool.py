@@ -19,6 +19,8 @@ class TxMemPool(Singleton):
         self.bc = BlockChain()
         # todo: 存在潜在的类型转换错误，如果config文件配置错误可能抛出错误
         self.SIZE = int(Config().get("node.mem_pool_size"))
+
+        self.__queue_set = set()
         self.__height = -1
         self.__status = TxMemPool.STATUS_NONE
         self.pool_lock = threading.Lock()
@@ -43,7 +45,9 @@ class TxMemPool(Singleton):
                 logging.debug("Transaction #{} existed.".format(tx_hash))
                 self.__status = TxMemPool.STATUS_NONE
                 return False
-            if tx_hash not in self.txs:
+
+            if tx_hash not in self.__queue_set and tx_hash not in self.txs:
+                self.__queue_set.add(tx_hash)
                 self.txs[tx_hash] = tx
                 # self.tx_hashes.append(tx_hash)
                 self.tx_queue.put(tx_hash)
@@ -90,10 +94,11 @@ class TxMemPool(Singleton):
                 while count < pool_size and not self.prev_queue.empty():
                     logging.debug("Pop transaction from prev queue.")
 
-                    if self.tx_queue.empty():
+                    if self.prev_queue.empty():
                         logging.debug("Memory pool cleaned.")
                         break
                     tx_hash = self.prev_queue.get()
+                    self.__queue_set.remove(tx_hash)
 
                     if tx_hash not in self.txs:
                         continue
