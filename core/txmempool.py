@@ -118,6 +118,7 @@ class TxMemPool(Singleton):
                 with self.__cond:
                     self.__cond.notify_all()
         self.__status = TxMemPool.STATUS_NONE
+        logging.debug("Package {} transactions.".format(len(result)))
 
         return result
 
