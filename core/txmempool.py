@@ -98,7 +98,7 @@ class TxMemPool(Singleton):
                     if tx_hash not in self.txs:
                         continue
 
-                    transaction = self.txs.pop(tx_hash)
+                    transaction = self.txs[tx_hash]
                     db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
                     if db_tx or not bc.verify_transaction(transaction):
@@ -119,7 +119,7 @@ class TxMemPool(Singleton):
                     if tx_hash not in self.txs:
                         continue
 
-                    transaction = self.txs.pop(tx_hash)
+                    transaction = self.txs[tx_hash]
                     db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
                     if db_tx or not bc.verify_transaction(transaction):
