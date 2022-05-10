@@ -73,7 +73,7 @@ class MergeThread(Singleton):
         if block_hash in self.cache.keys():
             logging.info("Block#{} already in cache.".format(block_hash))
             self.__lock.release()
-            if not self.cache[block_hash]:
+            if not self.cache[block_hash] and not prev_block:
                 return MergeThread.STATUS_EXISTS
             else:
                 return MergeThread.STATUS_APPEND

@@ -258,7 +258,7 @@ class Client(object):
             logging.debug("Local height >= remote height.")
             return
 
-        # 发送邻居节点没有的区块
+        # 请求本地没有的区块
         start_height = 0 if local_height == -1 else local_height
         for i in range(start_height, remote_height + 1):
             logging.debug("Client pull block#{}.".format(i))
