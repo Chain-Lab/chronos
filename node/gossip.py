@@ -108,7 +108,11 @@ class Gossip(Singleton):
 
                     addr = (ip, int(port))
                     # UDPConnect.send_msg(s, addr, data)
-                    s.sendto(data.encode(), addr)
+                    try:
+                        s.sendto(data.encode(), addr)
+                    except OSError:
+                        logging.error("Message too long.")
+                        break
                 time.sleep(0.1)
 
     @property
