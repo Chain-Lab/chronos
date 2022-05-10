@@ -309,6 +309,12 @@ class Client(object):
         dst_address = items[0]
         vote_height = int(items[1])
 
+        latest_block, _ = BlockChain().get_latest_block()
+
+        if latest_block.height != vote_height:
+            logging.info("Vote height is not equal local height.")
+            return
+
         if address == dst_address:
             if package_lock.locked():
                 logging.debug("Package locked.")
