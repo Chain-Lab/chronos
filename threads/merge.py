@@ -100,6 +100,7 @@ class MergeThread(Singleton):
         Calculator().update(seed, pi)
 
         tx_mem_pool = TxMemPool()
+        tx_mem_pool.set_height(height)
         for tx in block.transactions:
             tx_hash = tx.tx_hash
             tx_mem_pool.remove(tx_hash)
@@ -169,7 +170,7 @@ class MergeThread(Singleton):
                         bc.roll_back()
                     self.__update(block, True)
                     bc.insert_block(block)
-                    TxMemPool().rollback_height(block.height)
+                    TxMemPool().set_height(block.height)
                     continue
                 elif block_height == latest_height + 1:
                     # 取得区块的前一个区块哈希

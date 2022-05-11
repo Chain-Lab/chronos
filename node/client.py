@@ -368,7 +368,7 @@ class Client(object):
 
             # 如果区块打包失败， 则将交易池回退到上一个高度
             if not self.new_block:
-                self.tx_pool.rollback_height(vote_height)
+                self.tx_pool.set_height(vote_height)
             package_lock.release()
 
             with package_cond:
