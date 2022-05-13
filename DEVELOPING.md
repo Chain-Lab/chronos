@@ -35,10 +35,12 @@
 * 交易广播方式改为使用UDP线程来进行处理
 ### 版本todo
 
-#### v1.1.2
+#### v1.1.3
 
 * 交易数据迁移，保证在发送区块时发送交易，但是存储时将区块和交易分开（可能存在耗费I/O的问题）
 * 完善rpc接口，添加地址交易查询及区块信息查询，完善explorer
+* 验证了Kademlia对于KV数据存储的可行性， 改造C/S结构使用KV存储的方法来进行交易、区块的广播 (https://github.com/bmuller/kademlia/blob/master/examples/node.py)
+
 
 ## 2022/3/4
 
