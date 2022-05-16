@@ -202,10 +202,16 @@ class Server(object):
         logging.debug("Server receive handshake message.")
         data = message.get("data", {})
         vote_data = data.get("vote", {})
-        remote_height = data.get("latest_height", 0)
+        remote_height = data.get("latest_height", -1)
         remote_address = data.get("address")
         node_id = data.get("id")
         vote_height = data.get("vote_height", 0)
+
+        if remote_height != -1:
+            remote_block_data = data.get("latest_block", "")
+            if remote_block_data != "":
+                remote_block = Block.deserialize(remote_block_data)
+                MergeThread().append_block(remote_block)
 
         bc = BlockChain()
         block, prev_hash = bc.get_latest_block()
@@ -283,16 +289,9 @@ class Server(object):
             VoteCenter().vote_sync(vote_data, vote_height)
             logging.debug("Vote information append to queue finished.")
 
-        try:
-            genesis_block = bc[0]
-        except IndexError:
-            logging.error("Get genesis block error: IndexError, return empty message.")
-            result = Message.empty_message()
-            return result
-        # 逻辑走到这里说明不需要进行其他的操作， 直接返回握手的信息
         result_data = {
             "last_height": -1,
-            "genesis_block": "",
+            "latest_block": "",
             "address": Config().get('node.address'),
             "time": time.time(),
             "id": int(Config().get('node.id')),
@@ -300,17 +299,19 @@ class Server(object):
             "vote_height": VoteCenter().height,
         }
 
-        if genesis_block:
-            logging.debug("Send data with genesis block data.")
-            result_data = {
-                "latest_height": local_height,
-                "genesis_block": genesis_block.serialize(),
-                "address": Config().get('node.address'),
-                "time": time.time(),
-                "id": int(Config().get('node.id')),
-                "vote": VoteCenter().vote,
-                "vote_height": VoteCenter().height,
-            }
+        if not block:
+            block, _ = bc.get_latest_block()
+
+        try:
+            result_data['latest_height'] = block.block_header.height
+            result_data['latest_block'] = block.serialize()
+        except AttributeError:
+            result_data['latest_height'] = -1
+            result_data['latest_block'] = ""
+
+        if not block:
+            return Message.empty_message()
+
         result = Message(STATUS.HAND_SHAKE_MSG, result_data)
         logging.debug("Return handshake data.")
         return result

@@ -174,17 +174,10 @@ class Client(object):
                     # 不论是否进行过数据的发送，都设置为True
                     self.send_vote = True
 
-            try:
-                genesis_block = bc.get_block_by_height(0)
-            except IndexError as e:
-                genesis_block = None
-            except TypeError:
-                genesis_block = None
-
             logging.debug("Send vote list to server.")
             data = {
                 "latest_height": -1,
-                "genesis_block": "",
+                "latest_block": "",
                 "address": Config().get('node.address'),
                 "time": time.time(),
                 "id": int(Config().get('node.id')),
@@ -192,20 +185,15 @@ class Client(object):
                 "vote_height": VoteCenter().height
             }
 
-            if genesis_block:
-                # 如果存在创世区块， 发送创世区块
-                # 考虑一下创世区块的用处
+            if not latest_block:
+                latest_block, _ = bc.get_latest_block()
 
-                # 如果存在创世区块， 那么最新区块必然是存在的， 为了避免创建创世区块的时候刚好到达
-                # 这里的逻辑，所以需要再获取一次
-                if not latest_block:
-                    latest_block, prev_hash = bc.get_latest_block()
-                try:
-                    data['latest_height'] = latest_block.block_header.height
-                except AttributeError:
-                    data['latest_height'] = -1
-                data['genesis_block'] = genesis_block.serialize()
-                logging.debug("Send latest height #{} to server.".format(data['latest_height']))
+            try:
+                data['latest_height'] = latest_block.block_header.height
+                data['latest_block'] = latest_block.serialize()
+            except AttributeError:
+                data['latest_height'] = -1
+                data['latest_block'] = ""
 
             send_message = Message(STATUS.HAND_SHAKE_MSG, data)
             # logging.debug("Send message: {}".format(data))
@@ -239,9 +227,18 @@ class Client(object):
         """
         logging.debug("Receive handshake status code.")
         data = message.get('data', {})
-        remote_height = data.get('latest_height', 0)
+        remote_height = data.get('latest_height', -1)
         vote_height = data.get('vote_height', 0)
         vote_data = data['vote']
+        remote_address = data.get("address")
+
+        logging.debug("Remote address {} height #{}.".format(remote_address, remote_height))
+
+        if remote_height != -1:
+            remote_block_data = data.get("latest_block", "")
+            if remote_block_data != "":
+                remote_block = Block.deserialize(remote_block_data)
+                MergeThread().append_block(remote_block)
 
         if bool(vote_data):
             VoteCenter().vote_sync(vote_data, vote_height)
