@@ -6,6 +6,7 @@ from node.gossip import Gossip
 from rpc.grpcs import transaction_pb2
 from rpc.grpcs import transaction_pb2_grpc
 from utils.validator import json_validator
+from utils.locks import package_lock
 
 
 class TransactionService(transaction_pb2_grpc.TransactionServicer):
@@ -23,6 +24,9 @@ class TransactionService(transaction_pb2_grpc.TransactionServicer):
 
         # peer = Peer()
         # peer.broadcast(transaction)
+        if package_lock.locked():
+            return transaction_pb2.SubmitTransactionRespond(status=0)
+
         Gossip().append(transaction)
 
         return transaction_pb2.SubmitTransactionRespond(status=0)
