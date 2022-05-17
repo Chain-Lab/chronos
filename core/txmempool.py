@@ -141,8 +141,11 @@ class TxMemPool(Singleton):
 
         return result
 
-    def set_height(self, height):
-        logging.debug("Txmempool roll back to height #{}.".format(height))
+    def set_height(self, height, is_rollback=False):
+        if not is_rollback and height <= self.__height:
+            return
+
+        logging.debug("Set memory pool height to #{}.".format(height))
         self.__height = height
 
     def remove(self, tx_hash):
