@@ -85,10 +85,13 @@ class MergeThread(Singleton):
         self.__lock.release()
         return MergeThread.STATUS_APPEND
 
-    def __update(self, block, rolled_back=False):
+    @staticmethod
+    def __update(block, rolled_back=False):
         height = block.block_header.height
+        logging.debug("Update votecenter, calculator, mempool with height # rollback: {}".format(height, rolled_back))
 
-        VoteCenter().refresh(height, rolled_back)
+        if not VoteCenter().refresh(height, rolled_back):
+            return False
         Counter().refresh(height, rolled_back)
         Timer().refresh()
 
@@ -100,7 +103,7 @@ class MergeThread(Singleton):
         Calculator().update(seed, pi)
 
         tx_mem_pool = TxMemPool()
-        tx_mem_pool.set_height(height)
+        tx_mem_pool.set_height(height, rolled_back)
         for tx in block.transactions:
             tx_hash = tx.tx_hash
             tx_mem_pool.remove(tx_hash)
@@ -170,7 +173,6 @@ class MergeThread(Singleton):
                         bc.roll_back()
                     self.__update(block, True)
                     bc.insert_block(block)
-                    TxMemPool().set_height(block.height)
                     continue
                 elif block_height == latest_height + 1:
                     # 取得区块的前一个区块哈希
@@ -187,9 +189,10 @@ class MergeThread(Singleton):
                             self.cache[block_hash] = False
                 else:
                     # 如果区块的高度高于目前区块一个区块以上， 返回到队列中等待处理
-                    logging.debug("Block#{} push back to queue.".format(block_hash))
-                    self.__queue.put(block)
-                    self.cache[block_hash] = False
+                    if block_prev_hash in self.cache.keys() and not self.cache[block_prev_hash]:
+                        logging.debug("Block#{} push back to queue.".format(block_hash))
+                        self.__queue.put(block)
+                        self.cache[block_hash] = False
 
     def __clear_task(self):
         while True:
