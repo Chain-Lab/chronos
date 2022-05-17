@@ -90,8 +90,7 @@ class MergeThread(Singleton):
         height = block.block_header.height
         logging.debug("Update votecenter, calculator, mempool with height # rollback: {}".format(height, rolled_back))
 
-        if not VoteCenter().refresh(height, rolled_back):
-            return False
+        VoteCenter().refresh(height, rolled_back)
         Counter().refresh(height, rolled_back)
         Timer().refresh()
 
