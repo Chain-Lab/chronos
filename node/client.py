@@ -368,14 +368,14 @@ class Client(object):
                 self.tx_pool.set_height(vote_height)
             package_lock.release()
 
+            with package_cond:
+                logging.debug("Notify all thread.")
+                package_cond.notify_all()
+
             if self.new_block:
                 logging.debug("Append new block to merge thread.")
                 MergeThread().append_block(self.new_block)
             logging.debug("Package new block.")
-
-            with package_cond:
-                logging.debug("Notify all thread.")
-                package_cond.notify_all()
 
     def handle_update(self, message: dict):
         """

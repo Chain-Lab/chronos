@@ -73,13 +73,9 @@ class VoteCenter(Singleton):
         if (not rolled_back and height <= self.__height) or (not self.__has_voted and not self.__rolled_back):
             logging.debug("Local vote status: {}".format(self.__has_voted))
             logging.debug("Vote lock status: {}".format("Locked" if self.__vote_lock.locked() else "Unlocked"))
-            return
+            return False
 
         self.__vote_lock.acquire()
-        # 避免另外一个线程拿到锁后进行多余的操作
-        if (self.__rolled_back and height <= self.__height) or (not rolled_back and height < self.__height):
-            self.__vote_lock.release()
-            return
 
         self.__rolled_back = rolled_back
 
@@ -93,6 +89,8 @@ class VoteCenter(Singleton):
         self.__vote.clear()
         self.__has_voted = False
         self.__vote_lock.release()
+
+        return True
 
     def local_vote(self, height):
         self.__vote_lock.acquire()
