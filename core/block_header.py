@@ -1,19 +1,24 @@
+import logging
 import time
 
 from utils import funcs
 
 
 class BlockHeader(object):
-    def __init__(self, hash_merkle_root='', height=0, pre_block_hash=''):
+    def __init__(self, hash_merkle_root='', height=0, prev_block_hash=''):
         # fixed: 转换为整数毫秒级时间戳
         self.timestamp = str(int(time.time() * 1000))
-        self.prev_block_hash = pre_block_hash
+        self.prev_block_hash = prev_block_hash
         self.hash = None
         self.hash_merkle_root = hash_merkle_root
         self.height = height
         self.nonce = None
 
-    def set_hash(self):
+    def set_hash(self, prev_block_hash=None):
+        logging.debug("Set new block hash with prev block#{}".format(prev_block_hash))
+
+        if prev_block_hash:
+            self.prev_block_hash = prev_block_hash
         data_list = [str(self.timestamp),
                      str(self.prev_block_hash),
                      str(self.hash_merkle_root),
