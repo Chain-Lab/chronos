@@ -174,37 +174,26 @@ class Client(object):
                     # 不论是否进行过数据的发送，都设置为True
                     self.send_vote = True
 
-            try:
-                genesis_block = bc.get_block_by_height(0)
-            except IndexError as e:
-                genesis_block = None
-            except TypeError:
-                genesis_block = None
-
             logging.debug("Send vote list to server.")
             data = {
                 "latest_height": -1,
-                "genesis_block": "",
+                "latest_block": "",
                 "address": Config().get('node.address'),
                 "time": time.time(),
                 "id": int(Config().get('node.id')),
-                "vote": VoteCenter().vote
+                "vote": VoteCenter().vote,
+                "vote_height": VoteCenter().height
             }
 
-            if genesis_block:
-                # 如果存在创世区块， 发送创世区块
-                # 考虑一下创世区块的用处
+            if not latest_block:
+                latest_block, _ = bc.get_latest_block()
 
-                # 如果存在创世区块， 那么最新区块必然是存在的， 为了避免创建创世区块的时候刚好到达
-                # 这里的逻辑，所以需要再获取一次
-                if not latest_block:
-                    latest_block, prev_hash = bc.get_latest_block()
-                try:
-                    data['latest_height'] = latest_block.block_header.height
-                except AttributeError:
-                    data['latest_height'] = -1
-                data['genesis_block'] = genesis_block.serialize()
-                logging.debug("Send latest height #{} to server.".format(data['latest_height']))
+            try:
+                data['latest_height'] = latest_block.block_header.height
+                data['latest_block'] = latest_block.serialize()
+            except AttributeError:
+                data['latest_height'] = -1
+                data['latest_block'] = ""
 
             send_message = Message(STATUS.HAND_SHAKE_MSG, data)
             # logging.debug("Send message: {}".format(data))
@@ -238,9 +227,18 @@ class Client(object):
         """
         logging.debug("Receive handshake status code.")
         data = message.get('data', {})
-        remote_height = data.get('latest_height', 0)
+        remote_height = data.get('latest_height', -1)
         vote_height = data.get('vote_height', 0)
         vote_data = data['vote']
+        remote_address = data.get("address")
+
+        logging.debug("Remote address {} height #{}.".format(remote_address, remote_height))
+
+        if remote_height != -1:
+            remote_block_data = data.get("latest_block", "")
+            if remote_block_data != "":
+                remote_block = Block.deserialize(remote_block_data)
+                MergeThread().append_block(remote_block)
 
         if bool(vote_data):
             VoteCenter().vote_sync(vote_data, vote_height)
@@ -257,7 +255,7 @@ class Client(object):
             logging.debug("Local height >= remote height.")
             return
 
-        # 发送邻居节点没有的区块
+        # 请求本地没有的区块
         start_height = 0 if local_height == -1 else local_height
         for i in range(start_height, remote_height + 1):
             logging.debug("Client pull block#{}.".format(i))
@@ -301,36 +299,49 @@ class Client(object):
         :return: None
         """
         # 一轮共识结束的第二个标志：本地被投票为打包区块的节点，产生新区块
-        data = message.get('data', '0#0')
+        data = message.get('data', {})
         address = Config().get('node.address')
-        logging.debug("Client receive package address: {}".format(data))
-        items = data.split("#")
-        dst_address = items[0]
-        vote_height = int(items[1])
+        dst_address = data.get("result", "0")
+        vote_height = data.get("height", 0)
+        logging.debug("Client receive package address: {} height {}".format(address, vote_height))
+
+        latest_block, _ = BlockChain().get_latest_block()
+
+        if latest_block.height != vote_height:
+            logging.info("Vote height is not equal local height.")
+            return
+
+        vote_data = data.get("vote_info", {})
+
+        if bool(vote_data):
+            VoteCenter().vote_sync(vote_data, vote_height)
 
         if address == dst_address:
             if package_lock.locked():
                 logging.debug("Package locked.")
                 return
             package_lock.acquire()
+            vote_data = copy.deepcopy(VoteCenter().vote)
 
-            a = sorted(VoteCenter().vote.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
+            # 用于验证本地是否打包节点的逻辑
+            a = sorted(vote_data.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
             try:
                 if a[0][0] != address:
                     package_lock.release()
                     with package_cond:
                         package_cond.notify_all()
                     logging.debug("Local address is not package node.")
+                    logging.debug("Local vote list#{}: {}".format(VoteCenter().height, a))
                     return
             except IndexError:
                 package_lock.release()
                 with package_cond:
                     package_cond.notify_all()
                 logging.debug("Local address is not package node.")
+                logging.debug("Local vote list#{}: {}".format(VoteCenter().height, a))
                 return
 
             start_time = time.time()
-            vote_data = copy.deepcopy(VoteCenter().vote)
 
             logging.debug("Lock package lock. Start package memory pool.")
             transactions = self.tx_pool.package(vote_height + 1)
@@ -350,11 +361,11 @@ class Client(object):
             self.new_block = bc.package_new_block(transactions, vote_data, Calculator().delay_params)
 
             end_time = time.time()
-            logging.debug("Package block use {}s".format(end_time - start_time))
+            logging.debug("Package block use {}s include count {}".format(end_time - start_time, len(transactions)))
 
             # 如果区块打包失败， 则将交易池回退到上一个高度
             if not self.new_block:
-                self.tx_pool.rollback_height(vote_height)
+                self.tx_pool.set_height(vote_height)
             package_lock.release()
 
             with package_cond:
@@ -392,7 +403,7 @@ class Client(object):
             MergeThread().append_block(block)
 
         local_height = latest_block.block_header.height
-        start_height = max(0, height - 5)
+        start_height = height + 1
         for i in range(start_height, local_height + 1):
             logging.debug("Client send block #{}.".format(i))
             block = bc.get_block_by_height(i)

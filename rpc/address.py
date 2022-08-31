@@ -23,3 +23,5 @@ class AddressService(address_pb2_grpc.AddressServicer):
             utxo["output"].pop("_rev")
 
         return address_pb2.UtxoRespond(utxos=json.dumps(result))
+
+
