@@ -21,17 +21,27 @@ from utils.dbutil import DBUtil
 from utils.locks import package_lock, package_cond
 from utils.network import TCPConnect
 
+from utils import constant
 
 class Client(object):
+    # Client线程类， 多个client之间相互独立， 不共享变量
     def __init__(self, ip, port):
         self.txs = []
         self.sock = socket.socket()
 
         self.sock.connect((ip, port))
         logging.info("Connect to server ip: {} port: {}".format(ip, port))
+
+        # 交易池， 单例
         self.tx_pool = TxMemPool()
+
+        # 自身线程是否发送过投票信息
         self.send_vote = False
+
+        # 目前client的处理高度
         self.height = -1
+
+        # 最新区块的数据
         self.new_block = None
 
     def add_transaction(self, transaction):
@@ -47,8 +57,11 @@ class Client(object):
         发送信息给邻居节点， 在出现Broke异常的情况下说明连接断开
         :param message: 待发送信息
         """
+        # 解析得到接收的消息的数据
         rec_message = None
         data = json.dumps(message.__dict__)
+
+        # 尝试发送数据，如果数据发送出现错误则说明链接存在问题，关闭链接
         try:
             # self.sock.sendall(data.encode())
             TCPConnect.send_msg(self.sock, data)
@@ -57,6 +70,7 @@ class Client(object):
             return True
 
         try:
+            # 接收server的数据
             # rec_data = self.sock.recv(4096 * 2)
             rec_data = TCPConnect.recv_msg(self.sock)
             if rec_data is None:
@@ -107,11 +121,19 @@ class Client(object):
         握手循环， 如果存在交易的情况下就发送交易
         :return:
         """
+        # 设置线程名， 便于输出日志debug
         thread_obj = threading.current_thread()
         thread_obj.name = "Client Thread - " + thread_obj.getName().split("-")[-1]
+
         bc = BlockChain()
+
+        # 是否打包了区块
         packaged = False
         while True:
+            if not constant.NODE_RUNNING:
+                logging.debug("Receive stop signal, stop thread.")
+                break
+
             # 在本地进行打包区块时让出cpu资源
             with package_cond:
                 while package_lock.locked():
@@ -125,14 +147,17 @@ class Client(object):
             except TypeError:
                 continue
 
+            # 如果打包了区块， 发送新的区块给对端
             if packaged:
                 try:
+                    # 本次对话的一个出口， 发送当前的区块
                     send_message = Message(STATUS.UPDATE_MSG, self.new_block.serialize())
                     self.send(send_message)
                 except AttributeError:
                     pass
                 packaged = False
 
+            # 获取本地最新区块的高度
             try:
                 height = latest_block.block_header.height
             except AttributeError:
@@ -148,11 +173,13 @@ class Client(object):
             logging.debug("Consensus data send status: {}".format(self.send_vote))
             logging.debug("Vote center vote status: {}".format(VoteCenter().has_vote))
 
+            # 开始时间共识投票的开始： 交易池满并且投票信息为空 或 本地已经投票但是没有发送投票信息 或 到达投票时间点并且没有发送投票信息
             if (self.tx_pool.is_full() and not bool(VoteCenter().vote)) or (
                     VoteCenter().has_vote and not self.send_vote) or (
                     Timer().reach() and not self.send_vote):
                 logging.debug("Start consensus.")
                 address = Config().get('node.address')
+                # 本地进行一次投票， 如果已经投票过了会直接返回地址
                 final_address = VoteCenter().local_vote(height)
                 if final_address is None:
                     final_address = address
@@ -168,6 +195,7 @@ class Client(object):
                         'id': int(Config().get('node.id')),
                         'height': self.height
                     }
+                    # 发送投票信息给对端的server进行处理
                     send_message = Message(STATUS.POT, message_data)
                     logging.debug("Send consensus address to server.")
                     self.send(send_message)
@@ -234,6 +262,7 @@ class Client(object):
 
         logging.debug("Remote address {} height #{}.".format(remote_address, remote_height))
 
+        # 如果对端的高度不是-1， 将区块放入到Merge线程进行处理
         if remote_height != -1:
             remote_block_data = data.get("latest_block", "")
             if remote_block_data != "":

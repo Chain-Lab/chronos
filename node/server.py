@@ -19,6 +19,8 @@ from threads.vote_center import VoteCenter
 from utils.locks import package_lock, package_cond
 from utils.network import TCPConnect
 
+from utils import constant
+
 
 class Server(object):
     def __init__(self, ip: str = None, port: int = None):
@@ -27,15 +29,17 @@ class Server(object):
         :param ip: ip地址，一般为localhost
         :param port: 端口
         """
-        self.vote_lock = threading.Lock()
         if ip is None and port is None:
             ip = Config().get('node.listen_ip')
             port = int(Config().get('node.listen_port'))
         self.sock = socket.socket()
         self.ip = ip
         self.port = port
-        self.txs = []
+        # 本地未发送的交易， 逻辑已经移动到Gossip协议
+        # self.txs = []
         self.tx_pool = TxMemPool()
+
+        # 单独线程的内存空间， 各线程独立
         self.thread_local = threading.local()
 
     def listen(self):
@@ -52,6 +56,8 @@ class Server(object):
         :return: None
         """
         while True:
+            # todo： conn后的逻辑分到另外一个类， 这里应该是一个sock池管理的地方
+            #  可以便于每个实例之间的变量独立， 这样就可以不再使用threading.local()来处理不同线程的参数
             conn, address = self.sock.accept()
             thread = threading.Thread(target=self.handle_loop, args=(conn, address))
             thread.start()
@@ -90,6 +96,10 @@ class Server(object):
         self.thread_local.height = -1
 
         while True:
+            if not constant.NODE_RUNNING:
+                logging.debug("Receive stop signal, stop thread.")
+                break
+
             with package_cond:
                 while package_lock.locked():
                     logging.debug("Wait block package finished.")

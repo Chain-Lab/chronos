@@ -14,6 +14,8 @@ from utils.locks import package_cond, package_lock
 from utils.singleton import Singleton
 from utils.validator import json_validator
 
+from utils import constant
+
 
 class Gossip(Singleton):
     def __init__(self):
@@ -36,6 +38,9 @@ class Gossip(Singleton):
         s.bind(addr)
 
         while True:
+            if not constant.NODE_RUNNING:
+                logging.debug("Receive stop signal, stop thread.")
+                break
 
             # 如果当前有线程在打包区块， 让出CPU资源
             with package_cond:
@@ -77,6 +82,10 @@ class Gossip(Singleton):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         while True:
+            if not constant.NODE_RUNNING:
+                logging.debug("Receive stop signal, stop thread.")
+                break
+
             # 如果有区块正在打包， 等待打包完成
             with package_cond:
                 while package_lock.locked():

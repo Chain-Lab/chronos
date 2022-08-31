@@ -5,6 +5,7 @@ import time
 from core.config import Config
 from node.client import Client
 from utils.singleton import Singleton
+from utils import constant
 
 
 class Peer(Singleton):
@@ -20,6 +21,10 @@ class Peer(Singleton):
         logging.debug("Local ip address is: {}".format(local_ip))
 
         while True:
+            if not constant.NODE_RUNNING:
+                logging.debug("Receive stop signal, stop thread.")
+                break
+
             nodes = p2p_server.get_nodes()
             for node in nodes:
                 if node not in self.nodes:

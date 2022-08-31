@@ -4,6 +4,7 @@ import os
 import socket
 import random
 
+import yappi
 import couchdb
 import fire
 import yaml
@@ -45,6 +46,9 @@ def setup_logger(default_path="logging.yml", default_level=logging.DEBUG, env_ke
 def run():
     setup_logger()
 
+    yappi.set_clock_type("cpu")
+    yappi.start()
+
     bc = BlockChain()
     utxo_set = UTXOSet()
     utxo_set.reindex(bc)
@@ -66,6 +70,9 @@ def run():
     server = Peer()
     server.run(p2p)
     p2p.run()
+
+    yappi.get_func_stats().save("./stats.ys")
+    yappi.get_thread_stats().print_all()
 
 
 def genesis():

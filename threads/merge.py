@@ -15,6 +15,8 @@ from utils import funcs
 from utils.singleton import Singleton
 from queue import Queue
 
+from utils import constant
+
 
 class MergeThread(Singleton):
     """
@@ -39,15 +41,16 @@ class MergeThread(Singleton):
         }
         """
         # todo: 放入到配置中
-        self.cache = LRU(500)
+        # self.cache = LRU(500)
+        self.cache = {}
 
         self.__queue = Queue()
         self.__cond = threading.Condition()
         self.__lock = threading.Lock()
         self.thread = threading.Thread(target=self.__task, args=(), name="Merge Thread")
         self.thread.start()
-        self.__cleaner = threading.Thread(target=self.__clear_task, args=(), name="Cleaner Thread")
-        self.__cleaner.start()
+        # self.__cleaner = threading.Thread(target=self.__clear_task, args=(), name="Cleaner Thread")
+        # self.__cleaner.start()
 
     def append_block(self, block):
         """
@@ -132,6 +135,10 @@ class MergeThread(Singleton):
         bc = BlockChain()
 
         while True:
+            if not constant.NODE_RUNNING:
+                logging.debug("Receive stop signal, stop thread.")
+                break
+
             with self.__cond:
                 while self.__queue.empty():
                     self.__cond.wait()
@@ -143,6 +150,7 @@ class MergeThread(Singleton):
                 logging.debug("Pop block#{} from queue.".format(block_hash))
                 latest_block, latest_hash = bc.get_latest_block()
 
+                # 最新区块不存在， 直接添加到数据库
                 if not latest_block:
                     # 如果不存在最新区块， 直接insert
                     logging.info("Insert genesis block to database.")
@@ -162,14 +170,14 @@ class MergeThread(Singleton):
                     block_count = block.vote_count
                     block_timestamp = block.block_header.timestamp
 
-                    # 获取到本地存储的对等高度的区块
+                    # 获取到本地存储的对等高度的区块, 以及用于比较的信息
                     equal_block = bc.get_block_by_height(block_height)
                     equal_count = equal_block.vote_count
                     equal_hash = equal_block.block_header.hash
                     equal_timestamp = equal_block.block_header.timestamp
                     equal_prev_hash = equal_block.block_header.prev_block_hash
-                    # 比较的大前提是两个区块的前一个区块一致（分叉点）， 并且区块哈希值不一样
 
+                    # 比较的大前提是两个区块的前一个区块一致（分叉点）， 并且区块哈希值不一样
                     logging.debug(
                         "Block vote count is {}. Equal block vote count is {}.".format(block_count, equal_count))
                     logging.debug(
@@ -187,6 +195,8 @@ class MergeThread(Singleton):
                         logging.info("Rollback block#{}.".format(latest_block.block_header.hash))
                         UTXOSet().roll_back(latest_block)
                         bc.roll_back()
+
+                    # 回退然后更新, 回退后需要保证投票中心的更新
                     self.__update(block, True)
                     bc.insert_block(block)
                     continue
