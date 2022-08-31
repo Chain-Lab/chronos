@@ -39,15 +39,16 @@ class MergeThread(Singleton):
         }
         """
         # todo: 放入到配置中
-        self.cache = LRU(500)
+        # self.cache = LRU(500)
+        self.cache = {}
 
         self.__queue = Queue()
         self.__cond = threading.Condition()
         self.__lock = threading.Lock()
         self.thread = threading.Thread(target=self.__task, args=(), name="Merge Thread")
         self.thread.start()
-        self.__cleaner = threading.Thread(target=self.__clear_task, args=(), name="Cleaner Thread")
-        self.__cleaner.start()
+        # self.__cleaner = threading.Thread(target=self.__clear_task, args=(), name="Cleaner Thread")
+        # self.__cleaner.start()
 
     def append_block(self, block):
         """

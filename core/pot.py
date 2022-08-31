@@ -23,7 +23,7 @@ class ProofOfTime(object):
         address_number = int.from_bytes(Base58Code.decode_check(local_address), byteorder='big')
         node_hash = seed * address_number % 2 ** 256
         # 实验测试使用， 在每段时间内有一半的节点会被选为共识节点
-        if node_hash / 2 ** 256 > 0.95:
+        if node_hash / 2 ** 256 > 1.0:
             logging.debug("Local is not consensus node.")
             return None
 
