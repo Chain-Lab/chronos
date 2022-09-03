@@ -1,5 +1,6 @@
 import logging
 
+from lru import LRU
 from couchdb import ResourceConflict, ResourceNotFound
 
 from core.config import Config
@@ -12,6 +13,7 @@ class UTXOSet(Singleton):
 
     def __init__(self):
         self.db = DBUtil(Config().get('database.url'))
+        self.__cache = LRU(1000)
 
     def reindex(self, bc):
         """
@@ -110,11 +112,14 @@ class UTXOSet(Singleton):
 
             for idx, output in enumerate(transaction.outputs):
                 tmp_key = key + '-' + str(idx)
+                tx_hash_index_str = tmp_key.replace(self.FLAG, '')
                 doc = self.db.get(tmp_key)
+                address = doc["pub_key_hash"]
                 if not doc:
                     continue
                 try:
                     self.db.delete(doc)
+                    self.__cache[address].pop(tx_hash_index_str)
                 except ResourceNotFound as e:
                     logging.error(e)
 
@@ -148,11 +153,14 @@ class UTXOSet(Singleton):
 
                         output = outputs[output_index]
                         output_dict = output.serialize()
+                        address = output_dict["pub_key_hash"]
                         output_dict.update({'index': output_index})
                         tmp_key = key + '-' + str(output_index)
+                        tx_hash_index_str = tmp_key.replace(self.FLAG, '')
 
                         try:
                             self.db.create(tmp_key, output_dict)
+                            self.__cache[address].pop(tx_hash_index_str)
                         except ResourceConflict as e:
                             logging.error("Utxo set rollback error: resource conflict")
         self.set_latest_height(block.block_header.height - 1)
@@ -163,30 +171,34 @@ class UTXOSet(Singleton):
         :param address: 需要查询的地址
         :return: 对应地址的utxo
         """
-        query = {
-            "selector": {
-                "_id": {
-                    "$regex": "^UTXO"
-                },
-                "pub_key_hash": address
+        if address in self.__cache:
+            return self.__cache[address]
+        else:
+            query = {
+                "selector": {
+                    "_id": {
+                        "$regex": "^UTXO"
+                    },
+                    "pub_key_hash": address
+                }
             }
-        }
-        docs = self.db.find(query)
-        utxos = []
-        for doc in docs:
-            index = doc.get('index', None)
-            if index is None:
-                continue
-            doc_id = doc.id
-            tx_hash_index_str = doc_id.replace(self.FLAG, '')
-            _flag_index = tx_hash_index_str.find('-')
-            tx_hash = tx_hash_index_str[:_flag_index]
-            utxos.append({
-                "tx_hash": tx_hash,
-                "output": doc,
-                "index": index
-            })
-        return utxos
+            docs = self.db.find(query)
+            utxos = {}
+            for doc in docs:
+                index = doc.get('index', None)
+                if index is None:
+                    continue
+                doc_id = doc.id
+                tx_hash_index_str = doc_id.replace(self.FLAG, '')
+                _flag_index = tx_hash_index_str.find('-')
+                tx_hash = tx_hash_index_str[:_flag_index]
+                utxos[tx_hash_index_str] = {
+                    "tx_hash": tx_hash,
+                    "output": doc,
+                    "index": index
+                }
+            self.__cache[address] = utxos
+            return utxos
 
     @staticmethod
     def clear_transactions(transactions):
