@@ -41,6 +41,7 @@ class TxMemPool(Singleton):
         # 在添加交易到交易池前先检查交易是否存在，如果存在说明已经被打包了
         with self.pool_lock:
             self.__status = TxMemPool.STATUS_APPEND
+            # 在 add之前已经检查过不在数据库中了， 后面不用再重复检查
             if self.bc.get_transaction_by_tx_hash(tx_hash) is not None:
                 logging.debug("Transaction #{} existed.".format(tx_hash))
                 self.__status = TxMemPool.STATUS_NONE
@@ -104,9 +105,9 @@ class TxMemPool(Singleton):
                         continue
 
                     transaction = self.txs[tx_hash]
-                    db_tx = bc.get_transaction_by_tx_hash(tx_hash)
+                    # db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
-                    if db_tx or not bc.verify_transaction(transaction):
+                    if not bc.verify_transaction(transaction):
                         continue
 
                     result.append(transaction)
@@ -125,9 +126,9 @@ class TxMemPool(Singleton):
                         continue
 
                     transaction = self.txs[tx_hash]
-                    db_tx = bc.get_transaction_by_tx_hash(tx_hash)
+                    # db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
-                    if db_tx or not bc.verify_transaction(transaction):
+                    if not bc.verify_transaction(transaction):
                         continue
 
                     self.prev_queue.put(tx_hash)
@@ -145,7 +146,7 @@ class TxMemPool(Singleton):
         if not is_rollback and height <= self.__height:
             return
 
-        logging.debug("Set memory pool height to #{}.".format(height))
+        logging.debug("Rollback, set pool height to #{}.".format(height))
         self.__height = height
 
     def remove(self, tx_hash):

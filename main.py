@@ -10,10 +10,17 @@ import fire
 import yaml
 from ecdsa import SigningKey, SECP256k1
 
+import core
+import node
+import utils
+import threads
+import rpc as rrpc
+
 from core.block_chain import BlockChain
 from core.config import Config
 from core.transaction import Transaction
 from core.utxo import UTXOSet
+from node import client
 from node.gossip import Gossip
 from node.peer import Peer
 from node.peer_to_peer import P2p
@@ -45,35 +52,43 @@ def setup_logger(default_path="logging.yml", default_level=logging.DEBUG, env_ke
 
 def run():
     setup_logger()
+    try:
+        yappi.set_clock_type("wall")
+        yappi.start()
 
-    yappi.set_clock_type("cpu")
-    yappi.start()
+        bc = BlockChain()
+        utxo_set = UTXOSet()
+        utxo_set.reindex(bc)
+        logging.info("UTXO set reindex finish")
 
-    bc = BlockChain()
-    utxo_set = UTXOSet()
-    utxo_set.reindex(bc)
-    logging.info("UTXO set reindex finish")
+        gossip = Gossip()
+        gossip.run()
 
-    gossip = Gossip()
-    gossip.run()
+        tcpserver = Server()
+        tcpserver.listen()
+        tcpserver.run()
+        logging.info("TCP Server start running")
 
-    tcpserver = Server()
-    tcpserver.listen()
-    tcpserver.run()
-    logging.info("TCP Server start running")
+        rpc = RPCServer()
+        rpc.start()
+        logging.info("RPC server start")
 
-    rpc = RPCServer()
-    rpc.start()
-    logging.info("RPC server start")
-
-    p2p = P2p()
-    server = Peer()
-    server.run(p2p)
-    p2p.run()
-
-    yappi.get_func_stats().save("./stats.ys")
-    yappi.get_thread_stats().print_all()
-
+        p2p = P2p()
+        server = Peer()
+        server.run(p2p)
+        p2p.run()
+    except KeyboardInterrupt:
+        with open("./func_stats.ya", "w") as f:
+            yappi.get_func_stats(filter_callback=lambda x: yappi.module_matches(x, [
+                core.block_chain, core.utxo, core.transaction, core.pot, core.txmempool,
+                node.server, node.client, node.gossip,
+                threads.merge, threads.calculator, threads.vote_center,
+                utils.dbutil, utils.network,
+                rrpc.node, rrpc.block, rrpc.address, rrpc.transaction
+            ])).sort("ttot", "desc").print_all(f)
+            # yappi.get_func_stats().sort("ttot", "desc").print_all(f)
+        with open("./thread_stats.ya", "w") as f:
+            yappi.get_thread_stats().print_all(f)
 
 def genesis():
     p = number_theory.get_prime(512)

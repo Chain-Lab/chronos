@@ -18,9 +18,11 @@ class AddressService(address_pb2_grpc.AddressServicer):
         result = utxo_set.find_utxo(address)
         utxo: dict
 
-        for utxo in result:
-            utxo["output"].pop("_id")
-            utxo["output"].pop("_rev")
+        for key in result:
+            if "_id" in result[key]["output"]:
+                result[key]["output"].pop("_id")
+            if "_rev" in result[key]["output"]:
+                result[key]["output"].pop("_rev")
 
         return address_pb2.UtxoRespond(utxos=json.dumps(result))
 
