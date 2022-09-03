@@ -80,17 +80,17 @@ class UTXOSet(Singleton):
         for tx in block.transactions:
             tx_hash = tx.tx_hash
             key = self.FLAG + tx_hash
-            address = tx.outputs[0].pub_key_hash
-            if address not in self.__cache:
-                self.find_utxo(address)
 
             for idx, outputs in enumerate(tx.outputs):
                 output_dict = outputs.serialize()
                 output_dict.update({'index': idx})
                 tmp_key = key + '-' + str(idx)
+                address = outputs.pub_key_hash
                 tx_hash_index_str = tmp_key.replace(self.FLAG, '')
                 try:
                     self.db.create(tmp_key, output_dict)
+                    if address not in self.__cache:
+                        self.find_utxo(address)
                     self.__cache[address][tx_hash_index_str] = {
                         "tx_hash": tx_hash,
                         "output": output_dict,

@@ -58,4 +58,4 @@ def pub_to_address(s: str):
     :param s: 公钥字符串
     :return:
     '''
-    return b58code.Base58Code.encode_check(b'\0' + hash_public_key(bytes.fromhex(s)))
+    return b58code.Base58Code.encode_check(b'\0' + hash_public_key(bytes.fromhex(s))).decode()
