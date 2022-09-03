@@ -7,6 +7,8 @@ from core.pot import ProofOfTime
 from threads.calculator import Calculator
 from utils.singleton import Singleton
 
+from utils import constant
+
 
 class VoteCenter(Singleton):
     def __init__(self):
@@ -52,6 +54,10 @@ class VoteCenter(Singleton):
         @return:
         '''
         while True:
+            if not constant.NODE_RUNNING:
+                logging.debug("Receive stop signal, stop thread.")
+                break
+
             with self.__cond:
                 while self.__queue.empty():
                     self.__cond.wait()

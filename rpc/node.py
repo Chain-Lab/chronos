@@ -8,6 +8,8 @@ from rpc.grpcs import node_pb2
 from core.block_chain import BlockChain
 from threads.vote_center import VoteCenter
 
+from utils import constant
+
 
 class NodeService(node_pb2_grpc.NodeServicer):
     def get_node_status(self, request, context):
@@ -24,4 +26,8 @@ class NodeService(node_pb2_grpc.NodeServicer):
             gossip_queue=Gossip().queue_size,
             valid_txs=pool.valid_txs
         )
+
+    def stop_node(self, request, context):
+        constant.NODE_RUNNING = False
+        return node_pb2.StopNodeRespond()
 
