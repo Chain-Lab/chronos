@@ -50,3 +50,12 @@ def hex2int(s: str):
     if s is None:
         return 0
     return int.from_bytes(bytes.fromhex(s), byteorder='big')
+
+
+def pub_to_address(s: str):
+    '''
+    公钥转地址
+    :param s: 公钥字符串
+    :return:
+    '''
+    return b58code.Base58Code.encode_check(b'\0' + hash_public_key(bytes.fromhex(s)))

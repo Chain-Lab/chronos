@@ -150,6 +150,7 @@ class Transaction(object):
                           Config().get('node.address'))
         tx = cls([_input], [output])
         tx.set_id(is_coinbase=True)
+        logging.debug("Set coinbase tx hash: {}".format(tx.tx_hash))
         return tx
 
     def __repr__(self):
