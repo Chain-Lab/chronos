@@ -16,7 +16,7 @@ class UTXOSet(Singleton):
 
     def __init__(self):
         self.db = DBUtil(Config().get('database.url'))
-        self.__cache = LRU(1000)
+        self.__cache = LRU(5000)
 
     def reindex(self, bc):
         """

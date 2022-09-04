@@ -4,6 +4,7 @@ import time
 from functools import lru_cache
 
 import couchdb
+from lru import LRU
 import pycouchdb.exceptions
 from couchdb import ResourceNotFound
 
@@ -21,7 +22,7 @@ class BlockChain(Singleton):
     def __init__(self):
         db_url = Config().get('database.url')
         self.db = DBUtil(db_url)
-        self.__cache = {}
+        self.__cache = LRU(30000)
 
     def __getitem__(self, index):
         """
@@ -179,9 +180,6 @@ class BlockChain(Singleton):
         :param tx_hash: 需要检索的交易id
         :return: 检索到交易返回交易， 否则返回None
         """
-        latest_block, block_hash = self.get_latest_block()
-        block = latest_block
-
         if tx_hash in self.__cache:
             logging.debug("Hit cache, return result directly.")
             return self.__cache[tx_hash]
@@ -208,23 +206,34 @@ class BlockChain(Singleton):
         # 先修改索引， 再删除数据， 尽量避免拿到空数据
         block = self.get_block_by_height(latest_height - 1)
         self.set_latest_hash(block.block_header.hash)
+        delete_list = []
 
         for tx in latest_block.transactions:
             tx_hash = tx.tx_hash
             db_tx_key = "tx-" + tx_hash
             doc = self.db.get(db_tx_key)
-            try:
-                self.db.delete(doc)
-            except ResourceNotFound as e:
-                logging.error(e)
-            # 数据库中没有对应的交易信息
-            except TypeError as e:
-                logging.error(e)
+            delete_list.append(doc)
+            if tx_hash in self.__cache:
+                self.__cache.pop(tx_hash)
+            # try:
+            #     self.db.delete(doc)
+            # except ResourceNotFound as e:
+            #     logging.error(e)
+            # # 数据库中没有对应的交易信息
+            # except TypeError as e:
+            #     logging.error(e)
 
         doc = self.db.get(latest_block.block_header.hash)
         try:
             self.db.delete(doc)
         except ResourceNotFound as e:
+            logging.error(e)
+
+        try:
+            self.db.batch_delete(delete_list)
+        except pycouchdb.exceptions.Conflict as e:
+            logging.error(e)
+        except pycouchdb.exceptions.NotFound as e:
             logging.error(e)
 
     def find_utxo(self):
@@ -330,6 +339,7 @@ class BlockChain(Singleton):
             db_tx_key = "tx-" + tx_hash
             tx_dict = tx.serialize()
             tx_dict.update({"_id": db_tx_key})
+            self.__cache[tx_hash] = tx
             insert_list.append(tx_dict)
 
         try:
