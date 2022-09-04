@@ -1,7 +1,7 @@
 import logging
 
 from lru import LRU
-from pycouchdb.exceptions import Conflict, NotFound
+from couchdb import ResourceConflict, ResourceNotFound
 
 from core.transaction import Transaction
 from core.config import Config
@@ -42,7 +42,7 @@ class UTXOSet(Singleton):
                     tmp_key = key + '-' + str(index)
                     try:
                         self.db.create(tmp_key, vout_dict)
-                    except Conflict as e:
+                    except ResourceConflict as e:
                         logging.error("Database resource conflict while create utxo.")
             self.set_latest_height(latest_block.block_header.height)
         else:
@@ -96,7 +96,7 @@ class UTXOSet(Singleton):
                         "output": output_dict,
                         "index": idx
                     }
-                except Conflict as e:
+                except ResourceConflict as e:
                     logging.error("Database resource conflict while create utxo.")
 
             for _input in tx.inputs:
@@ -112,7 +112,7 @@ class UTXOSet(Singleton):
                     self.db.delete(doc)
                     self.__cache[input_address].pop(tx_hash_index_str)
                     logging.debug("utxo {} cleaned.".format(key))
-                except Conflict as e:
+                except ResourceConflict as e:
                     logging.error("Database utxo clear resource conflict.")
         self.set_latest_height(block.block_header.height)
 
@@ -137,7 +137,7 @@ class UTXOSet(Singleton):
                     if address not in self.__cache:
                         self.find_utxo(address)
                     self.__cache[address].pop(tx_hash_index_str)
-                except NotFound as e:
+                except ResourceNotFound as e:
                     logging.error(e)
 
             if transaction.is_coinbase():
@@ -190,7 +190,7 @@ class UTXOSet(Singleton):
                                 "output": output_dict,
                                 "index": output_index
                             }
-                        except Conflict as e:
+                        except ResourceConflict as e:
                             logging.error("Utxo set rollback error: resource conflict")
         self.set_latest_height(block.block_header.height - 1)
 
