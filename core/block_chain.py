@@ -4,6 +4,7 @@ import time
 from functools import lru_cache
 
 import couchdb
+import pycouchdb.exceptions
 from couchdb import ResourceNotFound
 
 from core.block import Block
@@ -319,13 +320,19 @@ class BlockChain(Singleton):
             self.db.create(block_hash, block.serialize())
         except couchdb.http.ResourceConflict:
             return
+
         self.set_latest_hash(block_hash)
         UTXOSet().update(block)
+        insert_list = []
 
         for tx in block.transactions:
             tx_hash = tx.tx_hash
             db_tx_key = "tx-" + tx_hash
-            try:
-                self.db.create(db_tx_key, tx.serialize())
-            except couchdb.http.ResourceConflict:
-                continue
+            tx_dict = tx.serialize()
+            tx_dict.update({"_id": db_tx_key})
+            insert_list.append(tx_dict)
+
+        try:
+            self.db.batch_save(insert_list)
+        except pycouchdb.exceptions.Conflict as e:
+            logging.error(e)
