@@ -1,4 +1,5 @@
-import couchdb
+import pycouchdb
+from pycouchdb.exceptions import NotFound
 
 from utils.singleton import Singleton
 
@@ -6,7 +7,7 @@ from utils.singleton import Singleton
 class DBUtil(Singleton):
     def __init__(self, db_server, db_name='block_chain1'):
         self._db_server = db_server
-        self._server = couchdb.Server(self._db_server)
+        self._server = pycouchdb.Server(self._db_server)
         self._db_name = db_name
         self._db = None
 
@@ -14,8 +15,8 @@ class DBUtil(Singleton):
     def db(self):
         if not self._db:
             try:
-                self._db = self._server[self._db_name]
-            except couchdb.ResourceNotFound:
+                self._db = self._server.database(self._db_name)
+            except NotFound:
                 self._db = self._server.create(self._db_name)
         return self._db
 

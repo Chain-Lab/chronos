@@ -3,8 +3,8 @@ import logging
 import time
 from functools import lru_cache
 
-import couchdb
-from couchdb import ResourceNotFound
+from lru import LRU
+from pycouchdb.exceptions import Conflict
 
 from core.block import Block
 from core.block_header import BlockHeader
@@ -20,7 +20,7 @@ class BlockChain(Singleton):
     def __init__(self):
         db_url = Config().get('database.url')
         self.db = DBUtil(db_url)
-        self.__cache = {}
+        self.__cache = LRU(50000)
 
     def __getitem__(self, index):
         """
@@ -210,11 +210,15 @@ class BlockChain(Singleton):
 
         for tx in latest_block.transactions:
             tx_hash = tx.tx_hash
+            try:
+                self.__cache.pop(tx_hash)
+            except KeyError:
+                logging.error("Transaction is not exist in cache.")
             db_tx_key = "tx-" + tx_hash
             doc = self.db.get(db_tx_key)
             try:
                 self.db.delete(doc)
-            except ResourceNotFound as e:
+            except Conflict as e:
                 logging.error(e)
             # 数据库中没有对应的交易信息
             except TypeError as e:
@@ -223,7 +227,7 @@ class BlockChain(Singleton):
         doc = self.db.get(latest_block.block_header.hash)
         try:
             self.db.delete(doc)
-        except ResourceNotFound as e:
+        except Conflict as e:
             logging.error(e)
 
     def find_utxo(self):
@@ -317,7 +321,8 @@ class BlockChain(Singleton):
         logging.info("Insert new block#{} height {}".format(block_hash, block.block_header.height))
         try:
             self.db.create(block_hash, block.serialize())
-        except couchdb.http.ResourceConflict:
+        except Conflict as e:
+            logging.error(e)
             return
         self.set_latest_hash(block_hash)
         UTXOSet().update(block)
@@ -325,7 +330,9 @@ class BlockChain(Singleton):
         for tx in block.transactions:
             tx_hash = tx.tx_hash
             db_tx_key = "tx-" + tx_hash
+            self.__cache[tx_hash] = tx
             try:
                 self.db.create(db_tx_key, tx.serialize())
-            except couchdb.http.ResourceConflict:
+            except Conflict as e:
+                logging.error(e)
                 continue

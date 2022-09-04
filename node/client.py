@@ -5,7 +5,7 @@ import socket
 import threading
 import time
 
-import couchdb
+from pycouchdb.exceptions import Conflict
 
 from core.block import Block
 from core.block_chain import BlockChain
@@ -90,7 +90,7 @@ class Client(object):
                         logging.info('Remote node wallet is not created in database, create new record.')
                         try:
                             db.create('wallets', {})
-                        except couchdb.ResourceConflict:
+                        except Conflict:
                             logging.error("Database wallet: resource conflict")
                         old_wallets = db.get('wallets')
                     old_wallets.update({
