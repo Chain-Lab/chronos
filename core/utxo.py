@@ -1,3 +1,4 @@
+import copy
 import logging
 
 import pycouchdb.exceptions
@@ -95,7 +96,7 @@ class UTXOSet(Singleton):
 
             for idx, outputs in enumerate(tx.outputs):
                 output_dict = outputs.serialize()
-                output_dict.update({'index': idx})
+                output_dict["index"] = idx
                 tmp_key = key + '-' + str(idx)
                 address = outputs.pub_key_hash
                 tx_hash_index_str = tmp_key.replace(self.FLAG, '')
@@ -107,8 +108,8 @@ class UTXOSet(Singleton):
                     "output": output_dict,
                     "index": idx
                 }
-                output_dict.update({"_id": tmp_key})
-                insert_list.append(output_dict)
+                output_dict["_id"] = tmp_key
+                insert_list.append(copy.deepcopy(output_dict))
 
             for _input in tx.inputs:
                 input_tx_hash = _input.tx_hash
@@ -211,7 +212,7 @@ class UTXOSet(Singleton):
                             "index": output_index
                         }
                         output_dict.update({"_id": tmp_key})
-                        insert_list.append(output_dict)
+                        insert_list.append(copy.deepcopy(output_dict))
         try:
             self.db.batch_save(insert_list)
         except pycouchdb.exceptions.Conflict as e:
