@@ -16,6 +16,7 @@ message StatusRespond {
   optional int32 pool_counts = 4;
   optional int32 gossip_queue = 5;
   optional int32 valid_txs = 6;
+  optional string vote_info = 7;
 }
 
 message StopNodeRequest {
