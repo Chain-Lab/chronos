@@ -4,3 +4,4 @@ venv/
 ogsource/
 experiment/
 test.py
+test/wallets.json
