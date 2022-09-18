@@ -35,7 +35,7 @@ class VoteCenter(Singleton):
         @param height: 该次投票高度
         @return:
         '''
-        logging.debug("Trying append task {} vote {} height {}".format(address, final_address, height))
+        # logging.debug("Trying append task {} vote {} height {}".format(address, final_address, height))
 
         # 先检查是否在字典中， 字典key查找操作o(1)
         if height < self.__height or address in self.__vote_dict.keys() or self.__vote_lock.locked():

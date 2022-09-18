@@ -29,12 +29,8 @@ class P2p(object):
         loop.run_forever()
 
     def get_nodes(self):
-        nodes = []
-
-        # 处理一下桶是空的情况，在服务器刚开始启动的时候没有属性，会出现报错
         try:
-            for bucket in self.server.protocol.router.buckets:
-                nodes.extend(bucket.get_nodes())
+            self_node = self.server.protocol.source_node
+            return self.server.protocol.router.find_neighbors(self_node)
         except AttributeError:
-            logging.error("Router is NoneType.")
-        return nodes
+            logging.error("Route table is not initialization.")

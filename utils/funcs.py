@@ -59,3 +59,17 @@ def pub_to_address(s: str):
     :return:
     '''
     return b58code.Base58Code.encode_check(b'\0' + hash_public_key(bytes.fromhex(s))).decode()
+
+
+def shared_prefix(a: bytes, b:bytes):
+    a = int(a.hex(), 16)
+    b = int(b.hex(), 16)
+    result = 160
+    a ^= b
+
+    while a > 0:
+        result -= 1
+        a >>= 1
+
+    return result
+
