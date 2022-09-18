@@ -25,7 +25,7 @@ class Peer(Singleton):
                 logging.debug("Receive stop signal, stop thread.")
                 break
 
-            nodes = p2p_server.get_nodes()
+            nodes = p2p_server
             for node in nodes:
                 if node not in self.nodes:
                     ip = node.ip
