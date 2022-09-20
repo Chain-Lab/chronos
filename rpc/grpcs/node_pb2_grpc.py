@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from rpc.grpcs import node_pb2 as node__pb2
+from rpc.grpcs import node_pb2 as protos_dot_node__pb2
 
 
 class NodeStub(object):
@@ -16,13 +16,13 @@ class NodeStub(object):
         """
         self.get_node_status = channel.unary_unary(
                 '/Node/get_node_status',
-                request_serializer=node__pb2.StatusRequest.SerializeToString,
-                response_deserializer=node__pb2.StatusRespond.FromString,
+                request_serializer=protos_dot_node__pb2.StatusRequest.SerializeToString,
+                response_deserializer=protos_dot_node__pb2.StatusRespond.FromString,
                 )
         self.stop_node = channel.unary_unary(
                 '/Node/stop_node',
-                request_serializer=node__pb2.StopNodeRequest.SerializeToString,
-                response_deserializer=node__pb2.StopNodeRespond.FromString,
+                request_serializer=protos_dot_node__pb2.StopNodeRequest.SerializeToString,
+                response_deserializer=protos_dot_node__pb2.StopNodeRespond.FromString,
                 )
 
 
@@ -46,13 +46,13 @@ def add_NodeServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'get_node_status': grpc.unary_unary_rpc_method_handler(
                     servicer.get_node_status,
-                    request_deserializer=node__pb2.StatusRequest.FromString,
-                    response_serializer=node__pb2.StatusRespond.SerializeToString,
+                    request_deserializer=protos_dot_node__pb2.StatusRequest.FromString,
+                    response_serializer=protos_dot_node__pb2.StatusRespond.SerializeToString,
             ),
             'stop_node': grpc.unary_unary_rpc_method_handler(
                     servicer.stop_node,
-                    request_deserializer=node__pb2.StopNodeRequest.FromString,
-                    response_serializer=node__pb2.StopNodeRespond.SerializeToString,
+                    request_deserializer=protos_dot_node__pb2.StopNodeRequest.FromString,
+                    response_serializer=protos_dot_node__pb2.StopNodeRespond.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -76,8 +76,8 @@ class Node(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/Node/get_node_status',
-            node__pb2.StatusRequest.SerializeToString,
-            node__pb2.StatusRespond.FromString,
+            protos_dot_node__pb2.StatusRequest.SerializeToString,
+            protos_dot_node__pb2.StatusRespond.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -93,7 +93,7 @@ class Node(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/Node/stop_node',
-            node__pb2.StopNodeRequest.SerializeToString,
-            node__pb2.StopNodeRespond.FromString,
+            protos_dot_node__pb2.StopNodeRequest.SerializeToString,
+            protos_dot_node__pb2.StopNodeRespond.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

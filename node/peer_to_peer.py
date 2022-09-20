@@ -34,3 +34,4 @@ class P2p(object):
             return self.server.protocol.router.find_neighbors(self_node)
         except AttributeError:
             logging.error("Route table is not initialization.")
+            return []
