@@ -23,6 +23,7 @@ from utils.network import TCPConnect
 
 from utils import constant
 
+
 class Client(object):
     # Client线程类， 多个client之间相互独立， 不共享变量
     def __init__(self, ip, port):
@@ -203,13 +204,14 @@ class Client(object):
                     self.send_vote = True
 
             logging.debug("Send vote list to server.")
+            local_vote = copy.deepcopy(VoteCenter().vote)
             data = {
                 "latest_height": -1,
                 "latest_block": "",
                 "address": Config().get('node.address'),
                 "time": time.time(),
                 "id": int(Config().get('node.id')),
-                "vote": VoteCenter().vote,
+                "vote": local_vote,
                 "vote_height": VoteCenter().height
             }
 
