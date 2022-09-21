@@ -65,6 +65,10 @@ class VoteCenter(Singleton):
                     self.__cond.wait()
                 current = self.__queue.get()
                 address = current
+
+                if address not in final_address:
+                    continue
+
                 final_address = self.__vote_dict[address]
                 logging.debug("Pop task {} vote {}".format(address, final_address))
 
@@ -116,6 +120,8 @@ class VoteCenter(Singleton):
 
         self.__vote_dict.clear()
         self.__vote.clear()
+        while not self.__queue.empty():
+            self.__queue.get()
         self.__has_voted = False
         self.__vote_lock.release()
 
