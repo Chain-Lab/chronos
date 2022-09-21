@@ -140,7 +140,8 @@ class BlockChain(Singleton):
             self.db.update([latest_block_hash_doc])
 
     def get_block_by_height(self, height):
-        if height in self.__block_cache:
+        if height in self.__block_cache and self.__block_cache[height]:
+            logging.debug("Hit height in cache, return block.")
             return self.__block_cache[height]
         """
         通过高度获取区块
@@ -163,7 +164,8 @@ class BlockChain(Singleton):
 
     # 缓存100个区块数据
     def get_block_by_hash(self, block_hash):
-        if block_hash in self.__block_cache:
+        if block_hash in self.__block_cache and self.__block_cache[block_hash]:
+            logging.debug("Hit block hash in cache, return block.")
             return self.__block_cache[block_hash]
 
         if not block_hash or block_hash == "":
