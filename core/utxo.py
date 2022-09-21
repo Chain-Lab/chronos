@@ -153,10 +153,10 @@ class UTXOSet(Singleton):
                 tmp_key = key + '-' + str(idx)
                 tx_hash_index_str = tmp_key.replace(self.FLAG, '')
                 doc = self.db.get(tmp_key)
-                address = doc["pub_key_hash"]
                 if not doc:
                     continue
 
+                address = doc["pub_key_hash"]
                 # self.db.delete(doc)
                 delete_list.append(doc)
                 if address not in self.__cache:
