@@ -123,7 +123,8 @@ class UTXOSet(Singleton):
 
                 # self.db.delete(doc)
                 delete_list.append(doc)
-                self.__cache[input_address].pop(tx_hash_index_str)
+                if input_address in self.__cache and tx_hash_index_str in self.__cache[input_address]:
+                    self.__cache[input_address].pop(tx_hash_index_str)
                 logging.debug("utxo {} cleaned.".format(key))
 
         try:
@@ -161,7 +162,9 @@ class UTXOSet(Singleton):
                 delete_list.append(doc)
                 if address not in self.__cache:
                     self.find_utxo(address)
-                self.__cache[address].pop(tx_hash_index_str)
+                # 避免异常pop
+                if address in self.__cache and tx_hash_index_str in self.__cache[address]:
+                    self.__cache[address].pop(tx_hash_index_str)
 
             if transaction.is_coinbase():
                 continue

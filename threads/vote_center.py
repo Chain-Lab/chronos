@@ -38,7 +38,9 @@ class VoteCenter(Singleton):
         # logging.debug("Trying append task {} vote {} height {}".format(address, final_address, height))
 
         # 先检查是否在字典中， 字典key查找操作o(1)
-        if height < self.__height or address in self.__vote_dict.keys() or self.__vote_lock.locked():
+        if height < self.__height or address in self.__vote_dict or self.__vote_lock.locked():
+            logging.debug("Address " + " in dict." if address in self.__vote_dict else " not in dict.")
+            logging.debug("Vote lock status: {}".format("Locked" if self.__vote_lock.locked() else "Unlocked"))
             return
 
         logging.debug("Insert task to queue successful.")
@@ -93,7 +95,8 @@ class VoteCenter(Singleton):
 
         # 刷新高度的条件：本次刷新是在回退后刷新 或 高度高于目前高度
         logging.debug("Trying refresh vote center height #{} to new height #{}".format(self.__height, height))
-        if (not rolled_back and height <= self.__height) or (not self.__has_voted and not self.__rolled_back):
+        if not rolled_back and height <= self.__height:
+            # or (not self.__has_voted and not self.__rolled_back):
             # 在下面的两种情况下进行投票
             # 如果非回退区块的情况下， 高度还小于等于目前高度
             # 本地没有进行过投票， 且非回退操作
