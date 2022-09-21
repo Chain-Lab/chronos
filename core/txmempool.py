@@ -146,7 +146,8 @@ class TxMemPool(Singleton):
         if not is_rollback and height <= self.__height:
             return
 
-        logging.debug("Rollback, set pool height to #{}.".format(height))
+        if is_rollback:
+            logging.debug("Rollback, set pool height to #{}.".format(height))
         self.__height = height
 
     def remove(self, tx_hash):
