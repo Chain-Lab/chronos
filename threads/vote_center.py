@@ -93,7 +93,8 @@ class VoteCenter(Singleton):
 
         # 刷新高度的条件：本次刷新是在回退后刷新 或 高度高于目前高度
         logging.debug("Trying refresh vote center height #{} to new height #{}".format(self.__height, height))
-        if (not rolled_back and height <= self.__height) or (not self.__has_voted and not self.__rolled_back):
+        if not rolled_back and height <= self.__height:
+            # or (not self.__has_voted and not self.__rolled_back):
             # 在下面的两种情况下进行投票
             # 如果非回退区块的情况下， 高度还小于等于目前高度
             # 本地没有进行过投票， 且非回退操作
