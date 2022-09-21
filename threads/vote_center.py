@@ -38,7 +38,9 @@ class VoteCenter(Singleton):
         # logging.debug("Trying append task {} vote {} height {}".format(address, final_address, height))
 
         # 先检查是否在字典中， 字典key查找操作o(1)
-        if height < self.__height or address in self.__vote_dict.keys() or self.__vote_lock.locked():
+        if height < self.__height or address in self.__vote_dict or self.__vote_lock.locked():
+            logging.debug("Address " + " in dict." if address in self.__vote_dict else " not in dict.")
+            logging.debug("Vote lock status: {}".format("Locked" if self.__vote_lock.locked() else "Unlocked"))
             return
 
         logging.debug("Insert task to queue successful.")
