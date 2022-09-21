@@ -176,18 +176,19 @@ class Server(object):
         :param vote_data:
         :return:
         """
-        if vote_data == {} or len(vote_data) != len(VoteCenter().vote) or not Counter().client_verify():
+        local_vote = VoteCenter().vote
+        if vote_data == {} or len(vote_data) != len(local_vote) or not Counter().client_verify():
             logging.debug("Vote data: {}".format(vote_data))
-            logging.debug("Vote data length: {} / {}".format(len(vote_data), len(VoteCenter().vote)))
+            logging.debug("Vote data length: {} / {}".format(len(vote_data), len(local_vote)))
             logging.debug("Check vote synced condition failed.")
             return False
         for address in vote_data:
             # 当前地址的键值不存在， 说明信息没有同步
-            if address not in VoteCenter().vote.keys():
+            if address not in local_vote.keys():
                 logging.debug("Address {} not in local vote key.".format(address))
                 return False
             # todo: 由于是浅拷贝，会不会影响到另外一个正在写的线程
-            a = VoteCenter().vote[address]
+            a = local_vote[address]
             b = vote_data[address]
             if len(a) == 0 or len(b) == 0 or len(a) != len(b):
                 logging.debug("Vote list length is not equal.")
@@ -273,9 +274,10 @@ class Server(object):
         # todo： 逻辑修改， 在到达时间点后直接进行处理
         # 这里的逻辑实际是存在问题的， server和每个client都有建立连接， 但是只和一个client判断信息同步完成， 并且每一次都要判断
         # logging.debug("Server vote result send status: {}".format(self.thread_local.server_send))
-
+        local_votes = copy.deepcopy(VoteCenter().vote)
         if Timer().finish() or self.check_vote_synced(vote_data):
-            a = sorted(VoteCenter().vote.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
+            height = VoteCenter().height
+            a = sorted(local_votes.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
             # 如果同步完成， 按照第一关键字为投票数，第二关键字为地址字典序来进行排序
             # x的结构： addr1: [addr2 , addr3, ..., count]
             # x[1]取后面的列表
@@ -283,8 +285,8 @@ class Server(object):
                 address = a[0][0]
                 data = {
                     "result": address,
-                    "height": VoteCenter().height,
-                    "vote_info": copy.deepcopy(VoteCenter().vote)
+                    "height": height,
+                    "vote_info": local_votes
                 }
                 result = Message(STATUS.SYNC_MSG, data)
                 logging.debug("Send vote result {}#{} to client.".format(address, VoteCenter().height))
@@ -305,7 +307,7 @@ class Server(object):
             "address": Config().get('node.address'),
             "time": time.time(),
             "id": int(Config().get('node.id')),
-            "vote": VoteCenter().vote,
+            "vote": local_votes,
             "vote_height": VoteCenter().height,
         }
 
