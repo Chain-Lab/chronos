@@ -23,6 +23,7 @@ class BlockChain(Singleton):
         db_url = Config().get('database.url')
         self.db = DBUtil(db_url)
         self.__cache = LRU(30000)
+        self.__block_cache = LRU(500)
 
     def __getitem__(self, index):
         """
@@ -139,6 +140,8 @@ class BlockChain(Singleton):
             self.db.update([latest_block_hash_doc])
 
     def get_block_by_height(self, height):
+        if height in self.__block_cache:
+            return self.__block_cache[height]
         """
         通过高度获取区块
         :param height: 所需要获取的区块的高度
@@ -155,11 +158,14 @@ class BlockChain(Singleton):
         for block_data in docs:
             # logging.debug("Get block data: {}".format(block_data))
             block = Block.deserialize(block_data)
+        self.__block_cache[height] = block
         return block
 
     # 缓存100个区块数据
-    @lru_cache(maxsize=100)
     def get_block_by_hash(self, block_hash):
+        if block_hash in self.__block_cache:
+            return self.__block_cache[block_hash]
+
         if not block_hash or block_hash == "":
             return None
 
@@ -169,6 +175,7 @@ class BlockChain(Singleton):
             return None
 
         block = Block.deserialize(data)
+        self.__block_cache[block_hash] = block
         return block
 
     def get_transaction_by_tx_hash(self, tx_hash):
@@ -202,10 +209,18 @@ class BlockChain(Singleton):
         """
         latest_block, prev_hash = self.get_latest_block()
         latest_height = latest_block.block_header.height
+        latest_hash = latest_block.block_header.hash
 
         # 先修改索引， 再删除数据， 尽量避免拿到空数据
         block = self.get_block_by_height(latest_height - 1)
         self.set_latest_hash(block.block_header.hash)
+
+        if latest_hash in self.__block_cache:
+            self.__block_cache.pop(latest_hash)
+
+        if latest_height in self.__block_cache:
+            self.__block_cache.pop(latest_height)
+
         delete_list = []
 
         for tx in latest_block.transactions:
@@ -319,6 +334,7 @@ class BlockChain(Singleton):
         @return:
         """
         block_hash = block.block_header.hash
+        height = block.block_header.height
         logging.info("Insert new block#{} height {}".format(block_hash, block.block_header.height))
         try:
             self.db.create(block_hash, block.serialize())
@@ -336,6 +352,9 @@ class BlockChain(Singleton):
             tx_dict.update({"_id": db_tx_key})
             self.__cache[tx_hash] = tx
             insert_list.append(tx_dict)
+
+        self.__block_cache[height] = block
+        self.__block_cache[block_hash] = block
 
         try:
             self.db.batch_save(insert_list)
