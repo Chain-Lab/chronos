@@ -277,7 +277,7 @@ class Server(object):
         local_votes = copy.deepcopy(VoteCenter().vote)
         if Timer().finish() or self.check_vote_synced(vote_data):
             height = VoteCenter().height
-            a = sorted(local_votes.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
+            a = sorted(local_votes.items(), key=lambda x: (len(x[1]), x[0]), reverse=True)
             # 如果同步完成， 按照第一关键字为投票数，第二关键字为地址字典序来进行排序
             # x的结构： addr1: [addr2 , addr3, ..., count]
             # x[1]取后面的列表
@@ -340,7 +340,7 @@ class Server(object):
         block = bc.get_block_by_height(height)
         try:
             result_data = block.serialize()
-            logging.debug("Return get block message: {}".format(result_data))
+            # logging.debug("Return get block message: {}".format(result_data))
         except AttributeError:
             result = Message.empty_message()
         else:

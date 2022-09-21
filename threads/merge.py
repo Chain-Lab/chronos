@@ -106,7 +106,7 @@ class MergeThread(Singleton):
     @staticmethod
     def __update(block, rolled_back=False):
         height = block.block_header.height
-        logging.debug("Update votecenter, calculator, mempool with height # rollback: {}".format(height, rolled_back))
+        logging.debug("Update votecenter, calculator, mempool with height #{} rollback: {}".format(height, rolled_back))
 
         # 注意更新顺序
         VoteCenter().refresh(height, rolled_back)

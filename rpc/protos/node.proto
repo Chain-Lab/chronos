@@ -3,6 +3,7 @@ syntax = "proto3";
 service Node {
   rpc get_node_status(StatusRequest) returns (StatusRespond);
   rpc stop_node(StopNodeRequest) returns (StopNodeRespond);
+  rpc get_cache_status(CacheStatusRequest) returns (CacheStatusRespond);
 }
 
 message StatusRequest {
@@ -17,6 +18,7 @@ message StatusRespond {
   optional int32 gossip_queue = 5;
   optional int32 valid_txs = 6;
   optional string vote_info = 7;
+  optional string voted = 8;
 }
 
 message StopNodeRequest {
@@ -25,4 +27,13 @@ message StopNodeRequest {
 
 message StopNodeRespond {
 
+}
+
+message CacheStatusRequest {
+
+}
+
+message CacheStatusRespond {
+  optional double transaction_hit_rate = 1;
+  optional double block_hit_rate = 2;
 }

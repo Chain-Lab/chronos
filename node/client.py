@@ -174,7 +174,7 @@ class Client(object):
             logging.debug("Consensus data send status: {}".format(self.send_vote))
             logging.debug("Vote center vote status: {}".format(VoteCenter().has_vote))
 
-            # 开始时间共识投票的开始： 交易池满并且投票信息为空 或 本地已经投票但是没有发送投票信息 或 到达投票时间点并且没有发送投票信息
+            # 时间共识投票的开始： 交易池满并且投票信息为空 或 本地已经投票但是没有发送投票信息 或 到达投票时间点并且没有发送投票信息
             if (self.tx_pool.is_full() and not bool(VoteCenter().vote)) or (
                     VoteCenter().has_vote and not self.send_vote) or (
                     Timer().reach() and not self.send_vote):
@@ -303,7 +303,7 @@ class Client(object):
         block = Block.deserialize(data)
         height = block.block_header.height
 
-        logging.debug("Receive server block data: {}".format(data))
+        # logging.debug("Receive server block data: {}".format(data))
         result = MergeThread().append_block(block)
         if result == MergeThread.STATUS_EXISTS:
             send_msg = Message(STATUS.BLOCK, height - 1)
@@ -331,6 +331,9 @@ class Client(object):
         """
         # 一轮共识结束的第二个标志：本地被投票为打包区块的节点，产生新区块
         data = message.get('data', {})
+
+        logging.debug("Remote data: {}".format(data))
+
         address = Config().get('node.address')
         dst_address = data.get("result", "0")
         vote_height = data.get("height", 0)
@@ -345,6 +348,7 @@ class Client(object):
         vote_data = data.get("vote_info", {})
 
         if bool(vote_data):
+            logging.debug("Syncing remote vote data.")
             VoteCenter().vote_sync(vote_data, vote_height)
 
         if address == dst_address:
@@ -355,7 +359,7 @@ class Client(object):
             vote_data = copy.deepcopy(VoteCenter().vote)
 
             # 用于验证本地是否打包节点的逻辑
-            a = sorted(vote_data.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
+            a = sorted(vote_data.items(), key=lambda x: (len(x[1]), x[0]), reverse=True)
             try:
                 if a[0][0] != address:
                     package_lock.release()
@@ -399,13 +403,14 @@ class Client(object):
                 self.tx_pool.set_height(vote_height)
             package_lock.release()
 
+            if self.new_block:
+                logging.debug("Append new block to merge thread.")
+                MergeThread().append_block(self.new_block)
+
             with package_cond:
                 logging.debug("Notify all thread.")
                 package_cond.notify_all()
 
-            if self.new_block:
-                logging.debug("Append new block to merge thread.")
-                MergeThread().append_block(self.new_block)
             logging.debug("Package new block.")
 
     def handle_update(self, message: dict):
@@ -436,7 +441,7 @@ class Client(object):
         local_height = latest_block.block_header.height
         start_height = height + 1
         for i in range(start_height, local_height + 1):
-            logging.debug("Client send block #{}.".format(i))
+            # logging.debug("Client send block #{}.".format(i))
             block = bc.get_block_by_height(i)
             data = block.serialize()
             data['address'] = address

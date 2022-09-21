@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11protos/node.proto\"\x0f\n\rStatusRequest\"\xb3\x02\n\rStatusRespond\x12\x13\n\x06height\x18\x01 \x01(\x05H\x00\x88\x01\x01\x12\x1f\n\x12vote_center_height\x18\x02 \x01(\x05H\x01\x88\x01\x01\x12\x18\n\x0bpool_height\x18\x03 \x01(\x05H\x02\x88\x01\x01\x12\x18\n\x0bpool_counts\x18\x04 \x01(\x05H\x03\x88\x01\x01\x12\x19\n\x0cgossip_queue\x18\x05 \x01(\x05H\x04\x88\x01\x01\x12\x16\n\tvalid_txs\x18\x06 \x01(\x05H\x05\x88\x01\x01\x12\x16\n\tvote_info\x18\x07 \x01(\tH\x06\x88\x01\x01\x42\t\n\x07_heightB\x15\n\x13_vote_center_heightB\x0e\n\x0c_pool_heightB\x0e\n\x0c_pool_countsB\x0f\n\r_gossip_queueB\x0c\n\n_valid_txsB\x0c\n\n_vote_info\"\x11\n\x0fStopNodeRequest\"\x11\n\x0fStopNodeRespond2j\n\x04Node\x12\x31\n\x0fget_node_status\x12\x0e.StatusRequest\x1a\x0e.StatusRespond\x12/\n\tstop_node\x12\x10.StopNodeRequest\x1a\x10.StopNodeRespondb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11protos/node.proto\"\x0f\n\rStatusRequest\"\xd1\x02\n\rStatusRespond\x12\x13\n\x06height\x18\x01 \x01(\x05H\x00\x88\x01\x01\x12\x1f\n\x12vote_center_height\x18\x02 \x01(\x05H\x01\x88\x01\x01\x12\x18\n\x0bpool_height\x18\x03 \x01(\x05H\x02\x88\x01\x01\x12\x18\n\x0bpool_counts\x18\x04 \x01(\x05H\x03\x88\x01\x01\x12\x19\n\x0cgossip_queue\x18\x05 \x01(\x05H\x04\x88\x01\x01\x12\x16\n\tvalid_txs\x18\x06 \x01(\x05H\x05\x88\x01\x01\x12\x16\n\tvote_info\x18\x07 \x01(\tH\x06\x88\x01\x01\x12\x12\n\x05voted\x18\x08 \x01(\tH\x07\x88\x01\x01\x42\t\n\x07_heightB\x15\n\x13_vote_center_heightB\x0e\n\x0c_pool_heightB\x0e\n\x0c_pool_countsB\x0f\n\r_gossip_queueB\x0c\n\n_valid_txsB\x0c\n\n_vote_infoB\x08\n\x06_voted\"\x11\n\x0fStopNodeRequest\"\x11\n\x0fStopNodeRespond\"\x14\n\x12\x43\x61\x63heStatusRequest\"\x80\x01\n\x12\x43\x61\x63heStatusRespond\x12!\n\x14transaction_hit_rate\x18\x01 \x01(\x01H\x00\x88\x01\x01\x12\x1b\n\x0e\x62lock_hit_rate\x18\x02 \x01(\x01H\x01\x88\x01\x01\x42\x17\n\x15_transaction_hit_rateB\x11\n\x0f_block_hit_rate2\xa8\x01\n\x04Node\x12\x31\n\x0fget_node_status\x12\x0e.StatusRequest\x1a\x0e.StatusRespond\x12/\n\tstop_node\x12\x10.StopNodeRequest\x1a\x10.StopNodeRespond\x12<\n\x10get_cache_status\x12\x13.CacheStatusRequest\x1a\x13.CacheStatusRespondb\x06proto3')
 
 
 
@@ -22,6 +22,8 @@ _STATUSREQUEST = DESCRIPTOR.message_types_by_name['StatusRequest']
 _STATUSRESPOND = DESCRIPTOR.message_types_by_name['StatusRespond']
 _STOPNODEREQUEST = DESCRIPTOR.message_types_by_name['StopNodeRequest']
 _STOPNODERESPOND = DESCRIPTOR.message_types_by_name['StopNodeRespond']
+_CACHESTATUSREQUEST = DESCRIPTOR.message_types_by_name['CacheStatusRequest']
+_CACHESTATUSRESPOND = DESCRIPTOR.message_types_by_name['CacheStatusRespond']
 StatusRequest = _reflection.GeneratedProtocolMessageType('StatusRequest', (_message.Message,), {
   'DESCRIPTOR' : _STATUSREQUEST,
   '__module__' : 'protos.node_pb2'
@@ -50,6 +52,20 @@ StopNodeRespond = _reflection.GeneratedProtocolMessageType('StopNodeRespond', (_
   })
 _sym_db.RegisterMessage(StopNodeRespond)
 
+CacheStatusRequest = _reflection.GeneratedProtocolMessageType('CacheStatusRequest', (_message.Message,), {
+  'DESCRIPTOR' : _CACHESTATUSREQUEST,
+  '__module__' : 'protos.node_pb2'
+  # @@protoc_insertion_point(class_scope:CacheStatusRequest)
+  })
+_sym_db.RegisterMessage(CacheStatusRequest)
+
+CacheStatusRespond = _reflection.GeneratedProtocolMessageType('CacheStatusRespond', (_message.Message,), {
+  'DESCRIPTOR' : _CACHESTATUSRESPOND,
+  '__module__' : 'protos.node_pb2'
+  # @@protoc_insertion_point(class_scope:CacheStatusRespond)
+  })
+_sym_db.RegisterMessage(CacheStatusRespond)
+
 _NODE = DESCRIPTOR.services_by_name['Node']
 if _descriptor._USE_C_DESCRIPTORS == False:
 
@@ -57,11 +73,15 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _STATUSREQUEST._serialized_start=21
   _STATUSREQUEST._serialized_end=36
   _STATUSRESPOND._serialized_start=39
-  _STATUSRESPOND._serialized_end=346
-  _STOPNODEREQUEST._serialized_start=348
-  _STOPNODEREQUEST._serialized_end=365
-  _STOPNODERESPOND._serialized_start=367
-  _STOPNODERESPOND._serialized_end=384
-  _NODE._serialized_start=386
-  _NODE._serialized_end=492
+  _STATUSRESPOND._serialized_end=376
+  _STOPNODEREQUEST._serialized_start=378
+  _STOPNODEREQUEST._serialized_end=395
+  _STOPNODERESPOND._serialized_start=397
+  _STOPNODERESPOND._serialized_end=414
+  _CACHESTATUSREQUEST._serialized_start=416
+  _CACHESTATUSREQUEST._serialized_end=436
+  _CACHESTATUSRESPOND._serialized_start=439
+  _CACHESTATUSRESPOND._serialized_end=567
+  _NODE._serialized_start=570
+  _NODE._serialized_end=738
 # @@protoc_insertion_point(module_scope)

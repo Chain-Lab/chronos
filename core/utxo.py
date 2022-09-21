@@ -118,12 +118,11 @@ class UTXOSet(Singleton):
                 doc = self.db.get(key)
                 input_address = pub_to_address(_input.pub_key)
 
-                if not doc:
-                    continue
+                if doc:
+                    delete_list.append(doc)
 
-                # self.db.delete(doc)
-                delete_list.append(doc)
-                self.__cache[input_address].pop(tx_hash_index_str)
+                if input_address in self.__cache and tx_hash_index_str in self.__cache[input_address]:
+                    self.__cache[input_address].pop(tx_hash_index_str)
                 logging.debug("utxo {} cleaned.".format(key))
 
         try:
@@ -153,15 +152,17 @@ class UTXOSet(Singleton):
                 tmp_key = key + '-' + str(idx)
                 tx_hash_index_str = tmp_key.replace(self.FLAG, '')
                 doc = self.db.get(tmp_key)
-                address = doc["pub_key_hash"]
                 if not doc:
                     continue
 
+                address = doc["pub_key_hash"]
                 # self.db.delete(doc)
                 delete_list.append(doc)
                 if address not in self.__cache:
                     self.find_utxo(address)
-                self.__cache[address].pop(tx_hash_index_str)
+                # 避免异常pop
+                if address in self.__cache and tx_hash_index_str in self.__cache[address]:
+                    self.__cache[address].pop(tx_hash_index_str)
 
             if transaction.is_coinbase():
                 continue

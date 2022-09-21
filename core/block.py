@@ -42,7 +42,7 @@ class Block(object):
         logging.debug("BLock#{} vote info data: {}".format(self.block_header.hash, vote_info))
         logging.debug("Block data: {}".format(self.serialize()))
         for item in vote_info.values():
-            result += item[-1]
+            result += len(item)
         return result
 
     def delay_params(self):

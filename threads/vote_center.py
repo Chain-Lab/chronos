@@ -1,5 +1,7 @@
 import logging
 import threading
+
+from lru import LRU
 from queue import Queue
 
 from core.config import Config
@@ -19,6 +21,7 @@ class VoteCenter(Singleton):
         self.__queue = Queue()
         self.__height = 0 # 限制投票高度
         self.__vote_height = 0
+        self.__vote_lru = LRU(100)
 
         self.__has_voted = False # 在本轮是否投票过
         self.__rolled_back = False # 本轮投票时是否回退过
@@ -38,10 +41,12 @@ class VoteCenter(Singleton):
         # logging.debug("Trying append task {} vote {} height {}".format(address, final_address, height))
 
         # 先检查是否在字典中， 字典key查找操作o(1)
-        if height < self.__height or address in self.__vote_dict.keys() or self.__vote_lock.locked():
+        if height < self.__height or address in self.__vote_dict or self.__vote_lock.locked():
+            logging.debug("Address " + address + (" in dict." if address in self.__vote_dict else " not in dict."))
+            logging.debug("Vote lock status: {}".format("Locked" if self.__vote_lock.locked() else "Unlocked"))
             return
 
-        logging.debug("Insert task to queue successful.")
+        logging.debug("Insert task {} vote {} to queue successful.".format(address, final_address))
         self.__vote_dict[address] = final_address
         with self.__cond:
             self.__queue.put(address)
@@ -63,6 +68,10 @@ class VoteCenter(Singleton):
                     self.__cond.wait()
                 current = self.__queue.get()
                 address = current
+
+                if address not in self.__vote_dict:
+                    continue
+
                 final_address = self.__vote_dict[address]
                 logging.debug("Pop task {} vote {}".format(address, final_address))
 
@@ -70,17 +79,16 @@ class VoteCenter(Singleton):
                     continue
 
                 if final_address not in self.__vote:
-                    self.__vote[final_address] = [address, 1]
+                    self.__vote[final_address] = [address]
                 else:
                     vote_list = self.__vote[final_address]
                     if address not in vote_list:
-                        self.__vote[final_address].insert(0, address)
-                        vote_list[-1] += 1
+                        self.__vote[final_address].append(address)
 
     def vote_sync(self, vote_data: dict, height: int):
         for final_address in vote_data.keys():
             length = len(vote_data[final_address])
-            for i in range(length - 1):
+            for i in range(length):
                 self.vote_update(vote_data[final_address][i], final_address, height)
 
     def refresh(self, height, rolled_back=False):
@@ -93,7 +101,8 @@ class VoteCenter(Singleton):
 
         # 刷新高度的条件：本次刷新是在回退后刷新 或 高度高于目前高度
         logging.debug("Trying refresh vote center height #{} to new height #{}".format(self.__height, height))
-        if (not rolled_back and height <= self.__height) or (not self.__has_voted and not self.__rolled_back):
+        if not rolled_back and height <= self.__height:
+            # or (not self.__has_voted and not self.__rolled_back):
             # 在下面的两种情况下进行投票
             # 如果非回退区块的情况下， 高度还小于等于目前高度
             # 本地没有进行过投票， 且非回退操作
@@ -104,6 +113,10 @@ class VoteCenter(Singleton):
         self.__vote_lock.acquire()
 
         self.__rolled_back = rolled_back
+        if rolled_back:
+            for h in range(self.__height, height, -1):
+                if self.__vote_lru.get(h, None):
+                    self.__vote_lru[self.__height] = None
 
         logging.debug("Synced height #{}, latest height #{}, clear information.".format(self.__height, height))
         self.__height = height
@@ -113,6 +126,8 @@ class VoteCenter(Singleton):
 
         self.__vote_dict.clear()
         self.__vote.clear()
+        while not self.__queue.empty():
+            self.__queue.get()
         self.__has_voted = False
         self.__vote_lock.release()
 
@@ -126,12 +141,15 @@ class VoteCenter(Singleton):
             # 返回值需要进行修改
             return -1
 
-        if not self.__has_voted:
+        if not self.__has_voted and not self.__vote_lru.get(self.__height, None):
             pot = ProofOfTime()
             final_address = pot.local_vote()
             self.__has_voted = True
             self.__final_address = final_address
+            self.__vote_lru[self.__height] = final_address
             logging.debug("Local address {} vote address {}.".format(Config().get("node.address"), final_address))
+        elif self.__vote_lru.get(self.__height, None):
+            self.__final_address = self.__vote_lru[self.__height]
         else:
             logging.debug("Return vote result directly.")
         result = self.__final_address
@@ -153,3 +171,7 @@ class VoteCenter(Singleton):
     @property
     def rolled_back(self):
         return self.__rolled_back
+
+    @property
+    def vote_address(self):
+        return self.__final_address

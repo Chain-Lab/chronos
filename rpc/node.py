@@ -29,10 +29,18 @@ class NodeService(node_pb2_grpc.NodeServicer):
             pool_counts=pool.counts,
             gossip_queue=Gossip().queue_size,
             valid_txs=pool.valid_txs,
-            vote_info=vote_str
+            vote_info=vote_str,
+            voted=vote_center.vote_address
         )
 
     def stop_node(self, request, context):
         constant.NODE_RUNNING = False
         return node_pb2.StopNodeRespond()
 
+    def get_cache_status(self, request, context):
+        bc = BlockChain()
+        tx_hit_rate, block_hit_rate = bc.get_cache_status()
+        return node_pb2.CacheStatusRespond(
+            transaction_hit_rate=tx_hit_rate,
+            block_hit_rate=block_hit_rate
+        )
