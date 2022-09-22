@@ -1,5 +1,6 @@
 import json
 import logging
+import threading
 import time
 from functools import lru_cache
 
@@ -24,6 +25,15 @@ class BlockChain(Singleton):
         self.db = DBUtil(db_url)
         self.__cache = LRU(30000)
         self.__block_cache = LRU(500)
+
+        # 统计使用的变量， 和整体逻辑关系不大
+        self.__cache_count_lock = threading.Lock()
+        self.__block_count_lock = threading.Lock()
+
+        self.__cache_used = 0
+        self.__cache_hit = 0
+        self.__block_used = 0
+        self.__block_hit = 0
 
     def __getitem__(self, index):
         """
@@ -87,7 +97,7 @@ class BlockChain(Singleton):
 
         logging.debug("Set block hash with previous block.".format(prev_block.block_header.hash))
         block.set_header_hash(prev_block.block_header.hash)
-        logging.debug(block.serialize())
+        # logging.debug(block.serialize())
         # 先添加块再更新最新哈希， 避免添加区块时出现问题更新数据库
         # self.insert_block(block)
         return block
@@ -142,6 +152,11 @@ class BlockChain(Singleton):
     def get_block_by_height(self, height):
         if height in self.__block_cache and self.__block_cache[height]:
             logging.debug("Hit height in cache, return block.")
+
+            with self.__block_count_lock:
+                self.__block_hit += 1
+                self.__block_used += 1
+
             return self.__block_cache[height]
         """
         通过高度获取区块
@@ -160,12 +175,21 @@ class BlockChain(Singleton):
             # logging.debug("Get block data: {}".format(block_data))
             block = Block.deserialize(block_data)
         self.__block_cache[height] = block
+
+        with self.__block_count_lock:
+            self.__block_used += 1
+
         return block
 
     # 缓存100个区块数据
     def get_block_by_hash(self, block_hash):
         if block_hash in self.__block_cache and self.__block_cache[block_hash]:
             logging.debug("Hit block hash in cache, return block.")
+
+            with self.__block_count_lock:
+                self.__block_hit += 1
+                self.__block_used += 1
+
             return self.__block_cache[block_hash]
 
         if not block_hash or block_hash == "":
@@ -178,6 +202,10 @@ class BlockChain(Singleton):
 
         block = Block.deserialize(data)
         self.__block_cache[block_hash] = block
+
+        with self.__block_count_lock:
+            self.__block_used += 1
+
         return block
 
     def get_transaction_by_tx_hash(self, tx_hash):
@@ -191,11 +219,19 @@ class BlockChain(Singleton):
         """
         if tx_hash in self.__cache:
             logging.debug("Hit cache, return result directly.")
+
+            with self.__cache_count_lock:
+                self.__cache_hit += 1
+                self.__cache_used += 1
+
             return self.__cache[tx_hash]
 
         logging.debug("Search tx#{} in db".format(tx_hash))
         db_tx_key = "tx-" + tx_hash
         data = self.db.get(db_tx_key)
+
+        with self.__cache_count_lock:
+            self.__cache_used += 1
 
         try:
             tx = Transaction.deserialize(data)
@@ -229,7 +265,10 @@ class BlockChain(Singleton):
             tx_hash = tx.tx_hash
             db_tx_key = "tx-" + tx_hash
             doc = self.db.get(db_tx_key)
-            delete_list.append(doc)
+
+            if doc:
+                delete_list.append(doc)
+
             if tx_hash in self.__cache:
                 self.__cache.pop(tx_hash)
             # try:
@@ -362,3 +401,18 @@ class BlockChain(Singleton):
             self.db.batch_save(insert_list)
         except pycouchdb.exceptions.Conflict as e:
             logging.error(e)
+
+    def get_cache_status(self):
+        with self.__cache_count_lock:
+            try:
+                tx_cache_rate = round(self.__cache_hit / self.__cache_used, 3)
+            except ZeroDivisionError:
+                tx_cache_rate = 0
+
+        with self.__block_count_lock:
+            try:
+                block_cache_rate = round(self.__block_hit / self.__block_used, 3)
+            except ZeroDivisionError:
+                block_cache_rate = 0
+
+        return tx_cache_rate, block_cache_rate
