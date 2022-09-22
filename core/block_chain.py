@@ -229,7 +229,10 @@ class BlockChain(Singleton):
             tx_hash = tx.tx_hash
             db_tx_key = "tx-" + tx_hash
             doc = self.db.get(db_tx_key)
-            delete_list.append(doc)
+
+            if doc:
+                delete_list.append(doc)
+
             if tx_hash in self.__cache:
                 self.__cache.pop(tx_hash)
             # try:

@@ -118,11 +118,9 @@ class UTXOSet(Singleton):
                 doc = self.db.get(key)
                 input_address = pub_to_address(_input.pub_key)
 
-                if not doc:
-                    continue
+                if doc:
+                    delete_list.append(doc)
 
-                # self.db.delete(doc)
-                delete_list.append(doc)
                 if input_address in self.__cache and tx_hash_index_str in self.__cache[input_address]:
                     self.__cache[input_address].pop(tx_hash_index_str)
                 logging.debug("utxo {} cleaned.".format(key))
