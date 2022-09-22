@@ -66,7 +66,7 @@ class VoteCenter(Singleton):
                 current = self.__queue.get()
                 address = current
 
-                if address not in final_address:
+                if address not in self.__vote_dict:
                     continue
 
                 final_address = self.__vote_dict[address]
