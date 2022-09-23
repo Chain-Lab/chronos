@@ -36,3 +36,10 @@ class NodeService(node_pb2_grpc.NodeServicer):
         constant.NODE_RUNNING = False
         return node_pb2.StopNodeRespond()
 
+    def get_cache_status(self, request, context):
+        bc = BlockChain()
+        tx_hit_rate, block_hit_rate = bc.get_cache_status()
+        return node_pb2.CacheStatusRespond(
+            transaction_hit_rate=tx_hit_rate,
+            block_hit_rate=block_hit_rate
+        )

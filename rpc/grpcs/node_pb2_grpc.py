@@ -24,6 +24,11 @@ class NodeStub(object):
                 request_serializer=protos_dot_node__pb2.StopNodeRequest.SerializeToString,
                 response_deserializer=protos_dot_node__pb2.StopNodeRespond.FromString,
                 )
+        self.get_cache_status = channel.unary_unary(
+                '/Node/get_cache_status',
+                request_serializer=protos_dot_node__pb2.CacheStatusRequest.SerializeToString,
+                response_deserializer=protos_dot_node__pb2.CacheStatusRespond.FromString,
+                )
 
 
 class NodeServicer(object):
@@ -41,6 +46,12 @@ class NodeServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def get_cache_status(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_NodeServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -53,6 +64,11 @@ def add_NodeServicer_to_server(servicer, server):
                     servicer.stop_node,
                     request_deserializer=protos_dot_node__pb2.StopNodeRequest.FromString,
                     response_serializer=protos_dot_node__pb2.StopNodeRespond.SerializeToString,
+            ),
+            'get_cache_status': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_cache_status,
+                    request_deserializer=protos_dot_node__pb2.CacheStatusRequest.FromString,
+                    response_serializer=protos_dot_node__pb2.CacheStatusRespond.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -95,5 +111,22 @@ class Node(object):
         return grpc.experimental.unary_unary(request, target, '/Node/stop_node',
             protos_dot_node__pb2.StopNodeRequest.SerializeToString,
             protos_dot_node__pb2.StopNodeRespond.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def get_cache_status(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Node/get_cache_status',
+            protos_dot_node__pb2.CacheStatusRequest.SerializeToString,
+            protos_dot_node__pb2.CacheStatusRespond.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
