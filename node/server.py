@@ -340,7 +340,7 @@ class Server(object):
         block = bc.get_block_by_height(height)
         try:
             result_data = block.serialize()
-            logging.debug("Return get block message: {}".format(result_data))
+            # logging.debug("Return get block message: {}".format(result_data))
         except AttributeError:
             result = Message.empty_message()
         else:

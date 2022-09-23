@@ -42,10 +42,11 @@ class TxMemPool(Singleton):
         with self.pool_lock:
             self.__status = TxMemPool.STATUS_APPEND
             # 在 add之前已经检查过不在数据库中了， 后面不用再重复检查
-            if self.bc.get_transaction_by_tx_hash(tx_hash) is not None:
-                logging.debug("Transaction #{} existed.".format(tx_hash))
-                self.__status = TxMemPool.STATUS_NONE
-                return False
+            # 不再检查交易是否在数据库中，如果交易存在或utxo已被使用，会无法通过验证而导致区块不会被打包
+            # if self.bc.get_transaction_by_tx_hash(tx_hash) is not None:
+            #     logging.debug("Transaction #{} existed.".format(tx_hash))
+            #     self.__status = TxMemPool.STATUS_NONE
+            #     return False
 
             if tx_hash not in self.__queue_set and tx_hash not in self.txs:
                 self.__queue_set.add(tx_hash)

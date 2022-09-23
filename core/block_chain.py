@@ -97,7 +97,7 @@ class BlockChain(Singleton):
 
         logging.debug("Set block hash with previous block.".format(prev_block.block_header.hash))
         block.set_header_hash(prev_block.block_header.hash)
-        logging.debug(block.serialize())
+        # logging.debug(block.serialize())
         # 先添加块再更新最新哈希， 避免添加区块时出现问题更新数据库
         # self.insert_block(block)
         return block
@@ -405,13 +405,13 @@ class BlockChain(Singleton):
     def get_cache_status(self):
         with self.__cache_count_lock:
             try:
-                tx_cache_rate = round(self.__cache_hit / self.__cache_used)
+                tx_cache_rate = round(self.__cache_hit / self.__cache_used, 3)
             except ZeroDivisionError:
                 tx_cache_rate = 0
 
         with self.__block_count_lock:
             try:
-                block_cache_rate = round(self.__block_hit / self.__block_used)
+                block_cache_rate = round(self.__block_hit / self.__block_used, 3)
             except ZeroDivisionError:
                 block_cache_rate = 0
 
