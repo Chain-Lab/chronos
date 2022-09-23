@@ -1,5 +1,7 @@
 import logging
 import threading
+
+from lru import LRU
 from queue import Queue
 
 from core.config import Config
@@ -19,6 +21,7 @@ class VoteCenter(Singleton):
         self.__queue = Queue()
         self.__height = 0 # 限制投票高度
         self.__vote_height = 0
+        self.__vote_lru = LRU(100)
 
         self.__has_voted = False # 在本轮是否投票过
         self.__rolled_back = False # 本轮投票时是否回退过
@@ -39,7 +42,7 @@ class VoteCenter(Singleton):
 
         # 先检查是否在字典中， 字典key查找操作o(1)
         if height < self.__height or address in self.__vote_dict or self.__vote_lock.locked():
-            logging.debug("Address " + address + " in dict." if address in self.__vote_dict else " not in dict.")
+            logging.debug("Address " + address + (" in dict." if address in self.__vote_dict else " not in dict."))
             logging.debug("Vote lock status: {}".format("Locked" if self.__vote_lock.locked() else "Unlocked"))
             return
 
@@ -110,6 +113,10 @@ class VoteCenter(Singleton):
         self.__vote_lock.acquire()
 
         self.__rolled_back = rolled_back
+        if rolled_back:
+            for h in range(self.__height, height, -1):
+                if not self.__vote_lru[h]:
+                    self.__vote_lru[self.__height] = None
 
         logging.debug("Synced height #{}, latest height #{}, clear information.".format(self.__height, height))
         self.__height = height
@@ -134,12 +141,15 @@ class VoteCenter(Singleton):
             # 返回值需要进行修改
             return -1
 
-        if not self.__has_voted:
+        if not self.__has_voted and not self.__vote_lru[self.__height]:
             pot = ProofOfTime()
             final_address = pot.local_vote()
             self.__has_voted = True
             self.__final_address = final_address
+            self.__vote_lru[self.__height] = final_address
             logging.debug("Local address {} vote address {}.".format(Config().get("node.address"), final_address))
+        elif self.__vote_lru[self.__height]:
+            self.__final_address = self.__vote_lru[self.__height]
         else:
             logging.debug("Return vote result directly.")
         result = self.__final_address
