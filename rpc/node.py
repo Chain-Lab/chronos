@@ -29,7 +29,8 @@ class NodeService(node_pb2_grpc.NodeServicer):
             pool_counts=pool.counts,
             gossip_queue=Gossip().queue_size,
             valid_txs=pool.valid_txs,
-            vote_info=vote_str
+            vote_info=vote_str,
+            voted=vote_center.vote_address
         )
 
     def stop_node(self, request, context):

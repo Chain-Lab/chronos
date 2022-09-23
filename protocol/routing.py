@@ -21,10 +21,12 @@ class KBucketV2(KBucket):
         return out
 
     def remove_node(self, node):
+        # 如果节点在备选节点列表中， 则直接删除
         if node.id in self.replacement_nodes:
             self.replacement_nodes.pop(node.id)
             return True
 
+        # 否则， 从节点列表中移除并且从备选节点中选择一个放入
         if node.id in self.nodes:
             self.nodes.pop(node.id)
 
@@ -105,6 +107,14 @@ class RoutingTableV2(RoutingTable):
         return False
 
     def find_neighbors(self, node, k=None, exclude=None):
+        '''
+        查找节点 node 的最近 k 个邻居
+        :param node: 需要查找的节点
+        :param k: 默认为 20
+        :param exclude:
+        :return:
+        '''
+        # 计算最长公共前缀长度
         common_prefix_length = shared_prefix(self.node.id, node.id)
 
         if common_prefix_length >= len(self.buckets):
@@ -113,16 +123,19 @@ class RoutingTableV2(RoutingTable):
         k = k or self.ksize
         nodes = []
 
+        # 从对应的 k 桶中选出节点
         bucket_nodes = self.buckets[common_prefix_length].get_nodes()
         for neighbor in bucket_nodes:
             heapq.heappush(nodes, (node.distance_to(neighbor), neighbor))
 
+        # 如果节点不足 k 个， 继续遍历
         if len(nodes) < k:
             for i in range(common_prefix_length + 1, len(self.buckets)):
                 bucket_nodes = self.buckets[i].get_nodes()
                 for neighbor in bucket_nodes:
                     heapq.heappush(nodes, (node.distance_to(neighbor), neighbor))
 
+        # 如果仍然不足， 往前遍历
         for i in range(common_prefix_length - 1, 0, -1):
             if len(nodes) >= k:
                 break
@@ -134,4 +147,5 @@ class RoutingTableV2(RoutingTable):
                 if len(nodes) >= k:
                     break
 
+        # 返回节点列表
         return list(map(operator.itemgetter(1), heapq.nsmallest(k, nodes)))
