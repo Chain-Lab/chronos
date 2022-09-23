@@ -359,7 +359,7 @@ class Client(object):
             vote_data = copy.deepcopy(VoteCenter().vote)
 
             # 用于验证本地是否打包节点的逻辑
-            a = sorted(vote_data.items(), key=lambda x: (x[1][-1], x[0]), reverse=True)
+            a = sorted(vote_data.items(), key=lambda x: (len(x[1]), x[0]), reverse=True)
             try:
                 if a[0][0] != address:
                     package_lock.release()

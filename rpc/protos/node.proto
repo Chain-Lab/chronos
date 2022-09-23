@@ -18,6 +18,7 @@ message StatusRespond {
   optional int32 gossip_queue = 5;
   optional int32 valid_txs = 6;
   optional string vote_info = 7;
+  optional string voted = 8;
 }
 
 message StopNodeRequest {

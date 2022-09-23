@@ -39,7 +39,7 @@ class VoteCenter(Singleton):
 
         # 先检查是否在字典中， 字典key查找操作o(1)
         if height < self.__height or address in self.__vote_dict or self.__vote_lock.locked():
-            logging.debug("Address " + " in dict." if address in self.__vote_dict else " not in dict.")
+            logging.debug("Address " + address + " in dict." if address in self.__vote_dict else " not in dict.")
             logging.debug("Vote lock status: {}".format("Locked" if self.__vote_lock.locked() else "Unlocked"))
             return
 
@@ -76,12 +76,11 @@ class VoteCenter(Singleton):
                     continue
 
                 if final_address not in self.__vote:
-                    self.__vote[final_address] = [address, 1]
+                    self.__vote[final_address] = [address]
                 else:
                     vote_list = self.__vote[final_address]
                     if address not in vote_list:
-                        self.__vote[final_address].insert(0, address)
-                        vote_list[-1] += 1
+                        self.__vote[final_address].append(address)
 
     def vote_sync(self, vote_data: dict, height: int):
         for final_address in vote_data.keys():
@@ -162,3 +161,7 @@ class VoteCenter(Singleton):
     @property
     def rolled_back(self):
         return self.__rolled_back
+
+    @property
+    def vote_address(self):
+        return self.__final_address
