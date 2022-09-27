@@ -115,7 +115,7 @@ class VoteCenter(Singleton):
         self.__rolled_back = rolled_back
         if rolled_back:
             for h in range(self.__height, height, -1):
-                if not self.__vote_lru[h]:
+                if self.__vote_lru.get(h, None):
                     self.__vote_lru[self.__height] = None
 
         logging.debug("Synced height #{}, latest height #{}, clear information.".format(self.__height, height))
@@ -141,14 +141,14 @@ class VoteCenter(Singleton):
             # 返回值需要进行修改
             return -1
 
-        if not self.__has_voted and not self.__vote_lru[self.__height]:
+        if not self.__has_voted and not self.__vote_lru.get(self.__height, None):
             pot = ProofOfTime()
             final_address = pot.local_vote()
             self.__has_voted = True
             self.__final_address = final_address
             self.__vote_lru[self.__height] = final_address
             logging.debug("Local address {} vote address {}.".format(Config().get("node.address"), final_address))
-        elif self.__vote_lru[self.__height]:
+        elif self.__vote_lru.get(self.__height, None):
             self.__final_address = self.__vote_lru[self.__height]
         else:
             logging.debug("Return vote result directly.")
