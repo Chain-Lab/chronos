@@ -14,6 +14,7 @@ from core.txmempool import TxMemPool
 from node.constants import STATUS
 from node.message import Message
 from node.timer import Timer
+from node.peer_to_peer import P2p
 from threads.calculator import Calculator
 from threads.merge import MergeThread
 from threads.vote_center import VoteCenter
@@ -190,16 +191,18 @@ class Client(object):
                     logging.debug("Send local vote information to server.")
 
                     message_data = {
-                        'vote': address + ' ' + final_address,
+                        'vote': final_address,
                         'address': address,
                         'time': time.time(),
                         'id': int(Config().get('node.id')),
                         'height': self.height
                     }
                     # 发送投票信息给对端的server进行处理
-                    send_message = Message(STATUS.POT, message_data)
+                    # send_message = Message(STATUS.POT, message_data)
+                    message_dict = Message(STATUS.POT, message_data).__dict__
+                    P2p().broadcast(message_dict)
                     logging.debug("Send consensus address to server.")
-                    self.send(send_message)
+                    # self.send(send_message)
                     # 不论是否进行过数据的发送，都设置为True
                     self.send_vote = True
 
