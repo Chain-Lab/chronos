@@ -1,12 +1,9 @@
-import json
 import logging
 import asyncio
 
 from kademlia.protocol import KademliaProtocol
 from kademlia.node import Node
 from protocol.routing import RoutingTableV2
-from node.message import Message
-from threads.vote_center import VoteCenter
 
 log = logging.getLogger(__name__)
 
@@ -22,17 +19,13 @@ class BroadcastableProtocol(KademliaProtocol):
         :param sender: 发送者
         :param nodeid: 节点 id
         :param cprefix_len: 广播到达该节点的公共前缀长度
-        :param message: 消息, 目前默认消息格式为 address#final_address
+        :param message: 消息
         :return:
         '''
         source = Node(nodeid, sender[0], sender[1])
 
         self.welcome_if_new(source)
 
-        msg_dict = json.loads(message)
-        data = msg_dict.get("data", {})
-        logging.debug("Receive broadcast message: {}".format(msg_dict))
-        VoteCenter().vote_update(msg_dict.get("address", ""),  msg_dict.get("final_address", ""), data.get("height", 0))
         # 从 cpl + 1 往下继续广播
         await self.broadcast_message(message, cprefix_len + 1)
         return True

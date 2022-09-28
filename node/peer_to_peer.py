@@ -1,15 +1,14 @@
 import asyncio
 import logging
 
-from protocol.network import ServerV2
+from kademlia.network import Server
 
 from core.config import Config
-from utils.singleton import Singleton
 
 
-class P2p(Singleton):
+class P2p(object):
     def __init__(self):
-        self.server = ServerV2()
+        self.server = Server()
         self.loop = None
 
     def run(self):
@@ -36,6 +35,3 @@ class P2p(Singleton):
         except AttributeError:
             logging.error("Route table is not initialization.")
             return []
-
-    def broadcast(self, message):
-        self.server.broadcast(message)
