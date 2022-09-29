@@ -128,7 +128,10 @@ class BlockChain(Singleton):
                 self.__block_hit += 1
                 self.__block_used += 1
 
-            return self.__block_cache["latest"]
+            block = self.__block_cache["latest"]
+            block_hash = block.block_header.hash
+
+            return block, block_hash
 
         latest_block_hash_doc = self.db.get('latest')
 
