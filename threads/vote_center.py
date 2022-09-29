@@ -46,7 +46,7 @@ class VoteCenter(Singleton):
             logging.debug("Vote lock status: {}".format("Locked" if self.__vote_lock.locked() else "Unlocked"))
             return
 
-        logging.debug("Insert task to queue successful.")
+        logging.debug("Insert task {} vote {} to queue successful.".format(address, final_address))
         self.__vote_dict[address] = final_address
         with self.__cond:
             self.__queue.put(address)
@@ -88,7 +88,7 @@ class VoteCenter(Singleton):
     def vote_sync(self, vote_data: dict, height: int):
         for final_address in vote_data.keys():
             length = len(vote_data[final_address])
-            for i in range(length - 1):
+            for i in range(length):
                 self.vote_update(vote_data[final_address][i], final_address, height)
 
     def refresh(self, height, rolled_back=False):
