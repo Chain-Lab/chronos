@@ -174,7 +174,7 @@ class Client(object):
             logging.debug("Consensus data send status: {}".format(self.send_vote))
             logging.debug("Vote center vote status: {}".format(VoteCenter().has_vote))
 
-            # 开始时间共识投票的开始： 交易池满并且投票信息为空 或 本地已经投票但是没有发送投票信息 或 到达投票时间点并且没有发送投票信息
+            # 时间共识投票的开始： 交易池满并且投票信息为空 或 本地已经投票但是没有发送投票信息 或 到达投票时间点并且没有发送投票信息
             if (self.tx_pool.is_full() and not bool(VoteCenter().vote)) or (
                     VoteCenter().has_vote and not self.send_vote) or (
                     Timer().reach() and not self.send_vote):
