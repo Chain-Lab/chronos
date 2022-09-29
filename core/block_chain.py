@@ -123,7 +123,6 @@ class BlockChain(Singleton):
         :return: 返回Block对象和对应的哈希值
         """
         if "latest" in self.__block_cache and self.__block_cache["latest"]:
-            logging.debug("Hit block hash in cache, return block.")
 
             with self.__block_count_lock:
                 self.__block_hit += 1
