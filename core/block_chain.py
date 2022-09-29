@@ -122,7 +122,16 @@ class BlockChain(Singleton):
         通过数据库中的记录latest来拉取得到区块
         :return: 返回Block对象和对应的哈希值
         """
+        if "latest" in self.__block_cache and self.__block_cache["latest"]:
+
+            with self.__block_count_lock:
+                self.__block_hit += 1
+                self.__block_used += 1
+
+            return self.__block_cache["latest"]
+
         latest_block_hash_doc = self.db.get('latest')
+
         if not latest_block_hash_doc:
             return None, None
 
@@ -130,6 +139,7 @@ class BlockChain(Singleton):
         block_data = self.db.get(latest_block_hash)
         # logging.debug(block_data)
         block = Block.deserialize(block_data)
+        self.__block_cache["latest"] = block
         return block, latest_block_hash
 
     def set_latest_hash(self, hash):
@@ -252,6 +262,7 @@ class BlockChain(Singleton):
         # 先修改索引， 再删除数据， 尽量避免拿到空数据
         block = self.get_block_by_height(latest_height - 1)
         self.set_latest_hash(block.block_header.hash)
+        self.__block_cache["latest"] = block
 
         if latest_hash in self.__block_cache:
             self.__block_cache.pop(latest_hash)
@@ -383,6 +394,7 @@ class BlockChain(Singleton):
             return
 
         self.set_latest_hash(block_hash)
+        self.__block_cache["latest"] = block
         UTXOSet().update(block)
         insert_list = []
 
