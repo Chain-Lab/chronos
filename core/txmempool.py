@@ -14,7 +14,9 @@ class TxMemPool(Singleton):
 
     def __init__(self):
         self.txs = {}
+        # 交易打包队列
         self.tx_queue = Queue()
+        #
         self.prev_queue = Queue()
         self.bc = BlockChain()
         # todo: 存在潜在的类型转换错误，如果config文件配置错误可能抛出错误
