@@ -137,7 +137,7 @@ class UTXOSet(Singleton):
 
         self.set_latest_height(block.block_header.height)
 
-    def roll_back(self, block):
+    def roll_back(self, block, bc):
         """
         UTXO集合回滚逻辑， 遍历当前最高区块的交易进行回滚
         """
@@ -174,46 +174,48 @@ class UTXOSet(Singleton):
                 input_address = pub_to_address(_input.pub_key)
 
                 tmp_key = self.FLAG + input_tx_hash + '-' + str(output_index)
-                # 查询tx_hash对应的utxo
-                query = {
-                    "selector": {
-                        "transactions": {
-                            "$elemMatch": {
-                                "tx_hash": input_tx_hash
-                            }
-                        }
-                    }
-                }
-
-                docs = self.db.find(query)
-                if not docs:
-                    doc = docs[0]
-                else:
-                    continue
-
-                transactions = doc.get("transactions", [])
+                # # 查询交易所在的区块， 然后得到utxo
+                # query = {
+                #     "selector": {
+                #         "transactions": {
+                #             "$elemMatch": {
+                #                 "tx_hash": input_tx_hash
+                #             }
+                #         }
+                #     }
+                # }
+                #
+                # docs = self.db.find(query)
+                # if not docs:
+                #     doc = docs[0]
+                # else:
+                #     continue
+                #
+                # transactions = doc.get("transactions", [])
                 # 外部循环使用了transaction作为变量名， 局部变量名使用tx
-                for tx in transactions:
-                    if tx.get('tx_hash', '') == tx_hash:
-                        outputs = tx.get('outputs', [])
-                        if len(outputs) <= output_index:
-                            continue
 
-                        output = outputs[output_index]
-                        output_dict = output.serialize()
-                        output_dict.update({'index': output_index})
-                        address = output_dict["pub_key_hash"]
-                        tx_hash_index_str = tmp_key.replace(self.FLAG, '')
+                transaction = bc.get_transaction_by_hash(tx_hash)
+                outputs = transaction.outputs
 
-                        if address not in self.__cache:
-                            self.find_utxo(address)
-                        self.__cache[address][tx_hash_index_str] = {
-                            "tx_hash": tx_hash,
-                            "output": output_dict,
-                            "index": output_index
-                        }
-                        output_dict.update({"_id": tmp_key})
-                        insert_list.append(copy.deepcopy(output_dict))
+                try:
+                    output = outputs[output_index]
+                except IndexError:
+                    logging.error("Get output with index {} in tx#{} failed.".format(tx_hash, output_index))
+                    continue
+                output_dict = output.serialize()
+                output_dict.update({'index': output_index})
+                address = output_dict["pub_key_hash"]
+                tx_hash_index_str = tmp_key.replace(self.FLAG, '')
+
+                if address not in self.__cache:
+                    self.find_utxo(address)
+                self.__cache[address][tx_hash_index_str] = {
+                    "tx_hash": tx_hash,
+                    "output": output_dict,
+                    "index": output_index
+                }
+                output_dict.update({"_id": tmp_key})
+                insert_list.append(copy.deepcopy(output_dict))
         try:
             self.db.batch_save(insert_list)
         except pycouchdb.exceptions.Conflict as e:
