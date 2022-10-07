@@ -44,6 +44,7 @@ class MergeThread(Singleton):
         # self.cache = LRU(500)
         self.cache = {}
 
+        # 区块合并队列
         self.__queue = Queue()
         self.__cond = threading.Condition()
         self.__lock = threading.Lock()

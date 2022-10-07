@@ -18,6 +18,7 @@ class VoteCenter(Singleton):
         self.__vote_dict = {}
         # 汇总的投票信息
         self.__vote = {}
+        # 投票信息处理队列
         self.__queue = Queue()
         self.__height = 0 # 限制投票高度
         self.__vote_height = 0
