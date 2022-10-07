@@ -31,7 +31,7 @@ def generate():
 if __name__ == "__main__":
     with open("wallets.json", 'w') as f:
         wallets = []
-        for _ in range(1000):
+        for _ in range(500):
             wallet = generate()
             wallets.append(wallet)
         f.write(json.dumps(wallets))
