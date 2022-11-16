@@ -15,14 +15,13 @@ from core.config import Config
 from core.merkle import MerkleTree
 from core.transaction import Transaction
 from core.utxo import UTXOSet
-from utils.dbutil import DBUtil
+from utils.leveldb import LevelDB
 from utils.singleton import Singleton
 
 
 class BlockChain(Singleton):
     def __init__(self):
-        db_url = Config().get('database.url')
-        self.db = DBUtil(db_url)
+        self.db = LevelDB()
         self.__cache = LRU(30000)
         self.__block_cache = LRU(500)
 
@@ -108,6 +107,7 @@ class BlockChain(Singleton):
         :param transaction: 创世区块包含的交易
         :return: None
         """
+        # todo: 检查是否在leveldb中适用
         if 'latest' not in self.db:
             transactions = [transaction]
             genesis_block = Block.new_genesis_block(transactions)
@@ -147,6 +147,7 @@ class BlockChain(Singleton):
 
     def set_latest_hash(self, hash):
         """
+        todo: 修改存储最新索引的信息
         设置最新区块的哈希值到数据库的latest记录中
         :param hash: 设置的哈希值
         :return: None
@@ -175,6 +176,7 @@ class BlockChain(Singleton):
         通过高度获取区块
         :param height: 所需要获取的区块的高度
         """
+        # todo： leveldb需要另外的索引方式
         query = {
             "selector": {
                 "block_header": {
