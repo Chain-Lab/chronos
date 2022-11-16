@@ -4,10 +4,7 @@ import threading
 import time
 from functools import lru_cache
 
-import couchdb
 from lru import LRU
-import pycouchdb.exceptions
-from couchdb import ResourceNotFound
 
 from core.block import Block
 from core.block_header import BlockHeader
@@ -15,16 +12,20 @@ from core.config import Config
 from core.merkle import MerkleTree
 from core.transaction import Transaction
 from core.utxo import UTXOSet
-from utils.dbutil import DBUtil
+from utils.leveldb import LevelDB
 from utils.singleton import Singleton
+from utils.convertor import blockhash_to_db_key
 
 
 class BlockChain(Singleton):
     def __init__(self):
-        db_url = Config().get('database.url')
-        self.db = DBUtil(db_url)
+        self.db = LevelDB()
         self.__cache = LRU(30000)
         self.__block_cache = LRU(500)
+
+        # todo: init
+        # 目前区块上的最新的区块， 只读
+        self.__latest = None
 
         # 统计使用的变量， 和整体逻辑关系不大
         self.__cache_count_lock = threading.Lock()
@@ -108,6 +109,7 @@ class BlockChain(Singleton):
         :param transaction: 创世区块包含的交易
         :return: None
         """
+        # todo: 检查是否在leveldb中适用
         if 'latest' not in self.db:
             transactions = [transaction]
             genesis_block = Block.new_genesis_block(transactions)
@@ -122,37 +124,31 @@ class BlockChain(Singleton):
         通过数据库中的记录latest来拉取得到区块
         :return: 返回Block对象和对应的哈希值
         """
-        if "latest" in self.__block_cache and self.__block_cache["latest"]:
+        if self.__latest:
+            block_hash = self.__latest.block_header.hash
+            return self.__latest, block_hash
 
-            with self.__block_count_lock:
-                self.__block_hit += 1
-                self.__block_used += 1
+        # todo：如果存储的是单字符串？
+        latest_block_hash_obj = self.db['latest']
 
-            block = self.__block_cache["latest"]
-            block_hash = block.block_header.hash
-
-            return block, block_hash
-
-        latest_block_hash_doc = self.db.get('latest')
-
-        if not latest_block_hash_doc:
+        if not latest_block_hash_obj:
             return None, None
 
-        latest_block_hash = latest_block_hash_doc.get('hash', '')
-        block_data = self.db.get(latest_block_hash)
-        # logging.debug(block_data)
+        latest_block_hash = latest_block_hash_obj.get('hash', '')
+        block_data = self.db[latest_block_hash]
         block = Block.deserialize(block_data)
-        self.__block_cache["latest"] = block
+        self.__latest = block
         return block, latest_block_hash
 
-    def set_latest_hash(self, hash):
+    def set_latest_hash(self, blockhash: str):
         """
+        todo: 修改存储最新索引的信息
         设置最新区块的哈希值到数据库的latest记录中
-        :param hash: 设置的哈希值
+        :param blockhash: 设置的哈希值
         :return: None
         """
         latest_hash = {
-            "hash": str(hash)
+            "hash": blockhash
         }
 
         if 'latest' not in self.db:
@@ -175,6 +171,7 @@ class BlockChain(Singleton):
         通过高度获取区块
         :param height: 所需要获取的区块的高度
         """
+        # todo： leveldb需要另外的索引方式
         query = {
             "selector": {
                 "block_header": {
@@ -294,6 +291,7 @@ class BlockChain(Singleton):
             #     logging.error(e)
 
         doc = self.db.get(latest_block.block_header.hash)
+        self.db.delete()
         try:
             self.db.delete(doc)
         except ResourceNotFound as e:
