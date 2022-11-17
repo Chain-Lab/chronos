@@ -13,6 +13,8 @@ class TransactionService(transaction_pb2_grpc.TransactionServicer):
     def submit_transaction(self, request, context):
         transaction = request.signedTransaction
         signed_dict = json.loads(transaction)
+
+        # 格式校验
         is_valid = json_validator("./schemas/transaction.json", signed_dict)
 
         assert is_valid is True
@@ -20,8 +22,8 @@ class TransactionService(transaction_pb2_grpc.TransactionServicer):
         transaction = Transaction.deserialize(signed_dict)
         bc = BlockChain()
 
-        if not bc.verify_transaction(transaction):
-            return transaction_pb2.SubmitTransactionRespond(status=-1)
+        # if not bc.verify_transaction(transaction):
+        #     return transaction_pb2.SubmitTransactionRespond(status=-1)
         # peer = Peer()
         # peer.broadcast(transaction)
         if package_lock.locked():
@@ -35,8 +37,8 @@ class TransactionService(transaction_pb2_grpc.TransactionServicer):
         tx_hash = request.hash
 
         bc = BlockChain()
-        transaction = bc.get_transaction_by_tx_hash(tx_hash)
+        is_in_cache = bc.is_transaction_in_cache(tx_hash)
+        if not is_in_cache:
+            return transaction_pb2.GetTransactionRespond(status=-1, transaction="")
 
-        tx_dict = transaction.serialize()
-
-        return transaction_pb2.GetTransactionRespond(status=0, transaction=json.dumps(tx_dict))
+        return transaction_pb2.GetTransactionRespond(status=0, transaction="")

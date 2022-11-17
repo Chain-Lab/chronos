@@ -20,7 +20,7 @@ from utils.convertor import blockhash_to_db_key, tx_hash_to_db_key, utxo_hash_to
 class BlockChain(Singleton):
     def __init__(self):
         self.db = LevelDB()
-        self.__cache = LRU(30000)
+        self.__tx_cache = LRU(30000)
         self.__block_cache = LRU(500)
 
         # map block_height => block_hash
@@ -39,11 +39,19 @@ class BlockChain(Singleton):
         self.__block_used = 0
         self.__block_hit = 0
 
-    def __getitem__(self, index):
-        """
-        重写内部方法， 即blockchain[index]这个逻辑
-        :param index:  需要取出的区块高度
-        :return: None
+    def __getitem__(self, index) -> Block:
+        """ 重写内部方法，通过索引获取区块
+
+        根据高度获取某个指定的区块
+
+        Args:
+            index: 区块的高度
+
+        Returns:
+            目前本地的区块链下对应高度的区块
+
+        Raises:
+            IndexError: 在对应高度的区块不存在时返回
         """
         latest_block, prev_hash = self.get_latest_block()
         height = -1
@@ -56,13 +64,27 @@ class BlockChain(Singleton):
             logging.warning("Index overflow while get block #{}".format(index))
             raise IndexError('Index overflow')
 
-    def package_new_block(self, transactions: list, vote: dict, delay_params: dict):
-        """
-        新区块的产生逻辑， 传入待打包的交易列表和投票信息
-        :param transactions:
-        :param vote:
-        :param delay_params:
-        :return:
+    def package_new_block(self,
+                          transactions: list,
+                          vote: dict,
+                          delay_params: dict):
+        """ 区块打包逻辑
+
+        传入交易、投票、参数来打包新的区块
+        获取上一个区块的信息后，生成新的区块头并包含传入的交易列表来生成新的区块
+
+        Args:
+            transactions: 交易列表
+            vote: 投票信息
+            delay_params: VDF参数
+            todo(Decision): vote 后面改成 VRF 参数用于验证是否共识节点
+
+        Returns:
+            打包得到的新区块
+            如果上一个区块不存在，会返回None给调用的函数进行判断
+
+        Raises:
+
         """
         latest_block, block_hash = self.get_latest_block()
         prev_height = latest_block.block_header.height
@@ -79,18 +101,10 @@ class BlockChain(Singleton):
         merkle_tree = MerkleTree(data)
         block_header = BlockHeader(merkle_tree.root_hash, height)
 
-        # coinbase 钱包和节点耦合， 可以考虑将挖矿、钱包、全节点服务解耦
-        # upd: 节点和挖矿耦合， 但是可以在配置中设置是否为共识节点
         txs = UTXOSet().clear_transactions(transactions)
         block = Block(block_header, txs)
 
-        # upd:区块验证的逻辑放到Insert里面， 这里创建区块时不再进行区块的验证， 交易的验证在打包时即可完成
-        # logging.debug("Start verify block.")
-        # if not self.verify_block(block):
-        #     logging.error("Block verify failed. Block struct: {}".format(block))
-        #     return None
-
-        # todo: 区块头的哈希是根据merkle树的根哈希值来进行哈希的， 和交易存在关系
+        # TODO(Decision): 区块头的哈希是根据merkle树的根哈希值来进行哈希的， 和交易存在关系
         #  那么是否可以在区块中仅仅存入交易的哈希列表，交易的具体信息存在其他的表中以提高查询效率，区块不存储区块具体的信息？
         logging.debug("Get block#{} from database.".format(prev_height))
         prev_block = self.get_block_by_height(prev_height)
@@ -101,18 +115,16 @@ class BlockChain(Singleton):
 
         logging.debug("Set block hash with previous block.".format(prev_block.block_header.hash))
         block.set_header_hash(prev_block.block_header.hash)
-        # logging.debug(block.serialize())
         # 先添加块再更新最新哈希， 避免添加区块时出现问题更新数据库
-        # self.insert_block(block)
         return block
 
-    def new_genesis_block(self, transaction):
-        """
-        传入交易信息产生创世区块
-        :param transaction: 创世区块包含的交易
-        :return: None
+    def new_genesis_block(self, transaction: Transaction) -> None:
+        """ 传入交易信息产生创世区块
+        Args:
+            transaction: 一般是第一笔coinbase交易
         """
         if self.db["latest"]:
+            # 如果已经存在信息说明不需要生成创世区块
             return
 
         transactions = [transaction]
@@ -124,9 +136,12 @@ class BlockChain(Singleton):
         self.insert_block(genesis_block)
 
     def get_latest_block(self) -> (Block, str):
-        """
-        通过数据库中的记录latest来拉取得到区块
-        :return: 返回Block对象和对应的哈希值
+        """ 获取最新区块
+
+        首先查询缓存的 __latest 变量是否存在区块，如果存在直接返回
+        否则从数据库中得到最新区块的哈希值后再查找区块，最后返回
+        Returns:
+            目前本地存储的最新区块，如果不存在则直接返回
         """
         if self.__latest:
             block_hash = self.__latest.block_header.hash
@@ -144,12 +159,10 @@ class BlockChain(Singleton):
         self.__latest = block
         return block, latest_block_hash
 
-    def set_latest_hash(self, blockhash: str):
-        """
-        todo: 修改存储最新索引的信息
-        设置最新区块的哈希值到数据库的latest记录中
-        :param blockhash: 设置的哈希值
-        :return: None
+    def set_latest_hash(self, blockhash: str) -> None:
+        """ 在数据库中设置最新区块的哈希值
+        Args:
+            blockhash: 对应的区块哈希值
         """
         latest_hash_dict = {
             "hash": blockhash
@@ -157,7 +170,21 @@ class BlockChain(Singleton):
 
         self.db["latest"] = latest_hash_dict
 
-    def get_block_by_height(self, height: int) -> Block:
+    def get_block_by_height(self, height: int):
+        """ 获取指定高度的区块
+
+        首先查询区块缓存中是否存在区块
+          - 如果存在区块，获取缓存中对应的哈希值后，继续根据哈希值获取到区块
+          - 如果区块不存在，从数据库中查询高度对应的区块的哈希值
+        最后根据区块的哈希值去检索区块
+
+        Args:
+            height: 需要获取的区块的高度
+
+        Returns:
+            如果区块存在，返回对应高度下的区块，否则返回None
+
+        """
         if self.__block_map.get(height, None):
             logging.debug("Hit height to hash cache, search block in cache...")
 
@@ -165,12 +192,29 @@ class BlockChain(Singleton):
         else:
             block_height_db_key = height_to_db_key(height)
             block_hash = self.db[block_height_db_key]
+
+            if not block_hash:
+                return None
+
             self.__block_map[height] = block_hash
 
         return self.get_block_by_hash(block_hash)
 
     # 缓存100个区块数据
-    def get_block_by_hash(self, block_hash):
+    def get_block_by_hash(self, block_hash: str):
+        """ 根据区块哈希值获取区块
+
+        首先根据哈希值检索缓存
+          - 缓存命中，直接返回区块
+          - 缓存不命中，根据区块哈希在数据库中检索区块数据
+        如果区块不存在，返回空
+
+        Args:
+            block_hash: 区块哈希值
+        Returns:
+            查询区块成功的情况下返回一个区块
+            如果区块不存在或哈希值字段不对则返回空
+        """
         block_db_key = blockhash_to_db_key(block_hash)
         if block_hash in self.__block_cache and self.__block_cache[block_hash]:
             # 如果命中区块缓存，直接返回
@@ -198,23 +242,33 @@ class BlockChain(Singleton):
 
         return block
 
-    def get_transaction_by_tx_hash(self, tx_hash):
+    def is_transaction_in_cache(self, tx_hash: str):
         """
-        通过交易的tx_hash来检索得到交易
-        但是这里遍历区块的方式较为暴力， 需要进行优化
-        todo： 将交易的信息另外存入一个表？ 交易本身需要存入区块，可以直接存入表中，数据库直接建立索引
-        在区块达到一定高度后可能存在一定的问题
-        :param tx_hash: 需要检索的交易id
-        :return: 检索到交易返回交易， 否则返回None
+        检查交易是否在 cache 中，用于 RPC 检查最近交易是否被打包
+        Args:
+            tx_hash: 交易的哈希
+        Returns:
+            bool 变量，如果存在则返回 True
         """
-        if tx_hash in self.__cache:
-            logging.debug("Hit cache, return result directly.")
+        return tx_hash in self.__tx_cache
+
+    def get_transaction_by_tx_hash(self, tx_hash: str):
+        """ 根据交易的哈希值获取交易
+        Args:
+            tx_hash: 需要获取的交易的哈希值
+        Returns:
+            和根据哈希值获取区块的逻辑类似
+            首先查询缓存，在命中缓存的情况下直接返回
+            如果检索失败直接返回空
+        """
+        if tx_hash in self.__tx_cache:
+            logging.debug("Hit cache, return tx#{} directly.".format(tx_hash))
 
             with self.__cache_count_lock:
                 self.__cache_hit += 1
                 self.__cache_used += 1
 
-            return self.__cache[tx_hash]
+            return self.__tx_cache[tx_hash]
 
         logging.debug("Search tx#{} in db".format(tx_hash))
         db_tx_key = tx_hash_to_db_key(tx_hash)
@@ -225,17 +279,20 @@ class BlockChain(Singleton):
 
         try:
             tx = Transaction.deserialize(data)
-            self.__cache[tx_hash] = tx
+            self.__tx_cache[tx_hash] = tx
             return tx
         except Exception as e:
-            logging.error(e)
             return None
 
-    def roll_back(self):
+    def roll_back(self) -> None:
+        """ 将区块链回滚一个高度
+
+        回滚需要将状态退回到上一个区块的状态
+          - 将所有当前最新区块的交易删除
+        对 UTxO 的操作由 UTxOSet 中的 Rollback 函数来实现
+        Returns: None
         """
-        回滚数据库中的latest记录， 将记录回滚到上一区块高度
-        :return: None
-        """
+        # 获取最新区块、最新高度和最新区块的哈希
         latest_block, prev_hash = self.get_latest_block()
         latest_height = latest_block.block_header.height
         latest_hash = latest_block.block_header.hash
@@ -244,7 +301,7 @@ class BlockChain(Singleton):
         block = self.get_block_by_height(latest_height - 1)
         self.__block_map.pop(latest_height)
         self.set_latest_hash(block.block_header.hash)
-        self.__block_cache["latest"] = block
+        self.__latest = block
 
         if latest_hash in self.__block_cache:
             self.__block_cache.pop(latest_hash)
@@ -259,17 +316,19 @@ class BlockChain(Singleton):
             tx_db_key = tx_hash_to_db_key(tx_hash)
             delete_list.append(tx_db_key)
 
-            if tx_hash in self.__cache:
-                self.__cache.pop(tx_hash)
+            if tx_hash in self.__tx_cache:
+                self.__tx_cache.pop(tx_hash)
 
         latest_block_hash = latest_block.block_header.hash
         latest_block_db_key = blockhash_to_db_key(latest_block_hash)
-        self.db.delete(latest_block_db_key)
+        self.db.remove(latest_block_db_key)
         self.db.batch_remove(delete_list)
 
     def find_utxo(self):
-        """
-        查找未被使用的utxo
+        """ 查找未被使用的utxo
+
+        目前该函数的作用是返回所有未被使用的 UTxO
+        但是好像没有被使用到，后面可以考虑删除
         """
         spent_txos = {}
         unspent_txs = {}
@@ -306,10 +365,14 @@ class BlockChain(Singleton):
         return unspent_txs
 
     def verify_block(self, block: Block):
-        """
-        校验区块， 主要校验包含的交易的签名信息是否正确
-        :param block: 待校验区块
-        :return: 是否校验通过
+        """ 校验区块
+
+        传入区块校验区块中的签名是否正确
+        依次对交易的签名进行校验
+        Args:
+            block: 待校验区块
+        Returns:
+            所有交易校验成功则返回 True
         """
         start_time = time.time()
         for tx in block.transactions:
@@ -322,32 +385,52 @@ class BlockChain(Singleton):
         return True
 
     def verify_transaction(self, transaction: Transaction):
+        """ 校验交易
+
+        在链上拉取到当前交易输入下的交易调用verify方法进行校验
+
+        Args:
+            transaction: 待校验的交易
+        Returns:
+            如果交易交易成功则返回 True
         """
-        校验交易， 在链上拉取到当前交易输入下的交易调用verify方法进行校验
-        :param transaction: 待校验的交易
-        :return: 是否校验通过
-        """
+        st = time.time()
+
         prev_txs = {}
         for _input in transaction.inputs:
             tx_hash = _input.tx_hash
             prev_tx = self.get_transaction_by_tx_hash(tx_hash)
 
             if not prev_tx:
+                ed = time.time()
+                logging.debug("Verify transaction use {} s.".format(ed - st))
                 return False
             prev_txs[prev_tx.tx_hash] = prev_tx
+
+        ed = time.time()
+        logging.debug("Verify transaction use {} s.".format(ed - st))
         return transaction.verify(prev_txs)
 
-    def get_latest_delay_params(self):
+    def get_latest_delay_params(self) -> dict:
+        """ 获取 VDF 的最新计算参数
+
+        首先拉取最新区块，然后获取到 VDF 的参数
+        Returns:
+            coinbase 交易中存在的 VDF 计算参数
+        """
         latest_block, _ = self.get_latest_block()
         coinbase_tx_input = latest_block.transactions[0].inputs[0]
         return coinbase_tx_input.delay_params
 
-    def insert_block(self, block: Block):
-        """
-        追加最新区块, 由单一的另外一个线程调用
-        先更新区块， 再更新索引信息， 避免返回空区块
-        @param block: 需要添加的区块
-        @return:
+    def insert_block(self, block: Block) -> None:
+        """ 更新区块
+
+        由 MergeThread 调用，将区块插入到数据库中，影响全局状态
+        Attentions:
+            注意先更新区块，再更新索引
+        Args:
+            block: 待插入的区块
+        Returns: None
         """
         block_hash = block.block_header.hash
         block_db_key = blockhash_to_db_key(block_hash)
@@ -357,6 +440,8 @@ class BlockChain(Singleton):
 
         self.set_latest_hash(block_hash)
         self.__latest = block
+        self.__block_map[height] = block_hash
+        self.__block_cache[block_hash] = block
         UTXOSet().update(block)
         insert_list = {block_db_key: block.serialize(), block_height_db_key: block_hash}
 
@@ -364,16 +449,16 @@ class BlockChain(Singleton):
             tx_hash = tx.tx_hash
             db_tx_key = tx_hash_to_db_key(tx_hash)
             tx_dict = tx.serialize()
-            tx_dict.update({"_id": db_tx_key})
-            self.__cache[tx_hash] = tx
+            self.__tx_cache[tx_hash] = tx
             insert_list[db_tx_key] = tx_dict
-
-        self.__block_map[height] = block_hash
-        self.__block_cache[block_hash] = block
 
         self.db.batch_insert(insert_list)
 
     def get_cache_status(self):
+        """ 获取缓存命中情况
+
+        由 RPC 调用，后续视情况删除
+        """
         with self.__cache_count_lock:
             try:
                 tx_cache_rate = round(self.__cache_hit / self.__cache_used, 3)

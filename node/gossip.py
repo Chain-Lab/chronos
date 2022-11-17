@@ -66,7 +66,7 @@ class Gossip(Singleton):
             tx = Transaction.deserialize(data)
             # 添加交易到交易池和Client的队列
             self.append(tx)
-            time.sleep(1)
+            # time.sleep(0.01)
             # 等待1s， 避免gossip发送交易太快了占用cpu较多
 
     def append(self, tx: Transaction):
@@ -107,7 +107,7 @@ class Gossip(Singleton):
 
                 # 选取50%的邻居节点发送交易
                 nodes = random.choices(Peer().nodes, k=length // 2)
-                logging.info("Send tx to gossip network.")
+                logging.debug("Send tx to gossip network.")
                 for node in nodes:
                     ip = node.ip
                     port = Config().get('node.gossip_port')
@@ -122,7 +122,7 @@ class Gossip(Singleton):
                     except OSError:
                         logging.error("Message too long.")
                         break
-                time.sleep(1)
+                # time.sleep(0.01)
 
     @property
     def queue_size(self):

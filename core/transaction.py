@@ -3,8 +3,8 @@ import copy
 import logging
 import time
 
+# from fastecdsa import keys
 import ecdsa
-
 from core.config import Config
 from utils import funcs
 
@@ -55,7 +55,6 @@ class Transaction(object):
         :param prev_txs: 当前交易的各个input对应哈希的交易
         :return: 验证是否通过
         """
-        st = time.time()
         if self.is_coinbase():
             logging.debug("Transaction is coinbase tx.")
             return True
@@ -66,9 +65,7 @@ class Transaction(object):
             prev_tx = prev_txs.get(_input.tx_hash, None)
             if not prev_tx:
                 # raise ValueError('Previous transaction error.')
-                ed = time.time()
                 logging.error("Previous transaction error")
-                logging.debug("Verify transaction use {} s.".format(ed - st))
                 return False
             tx_copy.inputs[idx].signature = None
             tx_copy.inputs[idx].pub_key = prev_tx.outputs[_input.index].pub_key_hash
@@ -80,16 +77,10 @@ class Transaction(object):
 
             try:
                 if not vk.verify(signature, tx_copy.tx_hash.encode()):
-                    ed = time.time()
-                    logging.debug("Verify transaction use {} s.".format(ed - st))
                     return False
             except ecdsa.keys.BadSignatureError:
-                ed = time.time()
-                logging.debug("Verify transaction use {} s.".format(ed - st))
                 return False
 
-        ed = time.time()
-        logging.debug("Verify transaction use {} s.".format(ed - st))
         return True
 
     def serialize(self):
@@ -107,7 +98,6 @@ class Transaction(object):
     def deserialize(cls, data: dict):
         """
         反序列化, 先按照原有的方法进行反序列化
-        todo: 后续测试是否可以使用__dict__.update来进行反序列化赋值
         :param data:
         :return:
         """
@@ -161,10 +151,12 @@ class Transaction(object):
 
 class TxInput(object):
     def __init__(self, tx_hash=None, index=None, pub_key=None):
-        """
-        :param tx_hash: input的交易hash
-        :param index: 对应交易的index
-        :param pub_key: input的签名公钥
+        """ 交易初始化
+
+        Args:
+            tx_hash: 交易的哈希值，默认为空
+            index: 默认为空，没有被使用
+            pub_key: 该笔交易的发布者的公钥
         """
         self.tx_hash = tx_hash
         self.index = index
@@ -173,7 +165,6 @@ class TxInput(object):
 
     def usr_key(self, pub_key_hash):
         """
-        todo: 检查该函数的用途
         :param pub_key_hash: 16进制字符串类型的公钥
         :return:
         """

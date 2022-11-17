@@ -5,13 +5,12 @@ from core.block_chain import BlockChain
 from core.config import Config
 from utils import funcs
 from utils.b58code import Base58Code
-from utils.dbutil import DBUtil
+from utils.leveldb import LevelDB
 
 
 class ProofOfTime(object):
     def __init__(self):
-        db_url = Config().get('database.url')
-        self.db = DBUtil(db_url)
+        self.db = LevelDB()
 
     def local_vote(self):
         local_address = Config().get('node.address')
@@ -23,7 +22,7 @@ class ProofOfTime(object):
         address_number = int.from_bytes(Base58Code.decode_check(local_address), byteorder='big')
         node_hash = seed * address_number % 2 ** 256
         # 实验测试使用， 理论上在每段时间内有一半的节点会被选为共识节点
-        if node_hash / 2 ** 256 > 0.99:
+        if node_hash / 2 ** 256 > 0.5:
             logging.debug("Local is not consensus node.")
             return None
 
@@ -33,7 +32,7 @@ class ProofOfTime(object):
         final_time = 0
         abs_time = 1000
 
-        wallets = self.db.get('wallets', '')
+        wallets = self.db.get('wallets', {})
 
         for item in wallets.items():
             if '_id' in item or '_rev' in item or "" in item:
@@ -46,7 +45,7 @@ class ProofOfTime(object):
             # 根据vdf的值和钱包地址来确定远端节点是否共识节点
             address_number = int.from_bytes(Base58Code.decode_check(item_address), byteorder='big')
             node_hash = seed * address_number % 2 ** 256
-            if node_hash / 2 ** 256 > 0.99:
+            if node_hash / 2 ** 256 > 0.5:
                 continue
 
             item_time = item[1].get('time')

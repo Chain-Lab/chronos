@@ -3,6 +3,8 @@ import unittest
 
 from core.transaction import Transaction
 from utils.leveldb import LevelDB
+from core.utxo import UTXOSet
+from core.txmempool import TxMemPool
 from core.block_chain import BlockChain
 from utils import number_theory
 from utils import funcs
@@ -65,3 +67,13 @@ class TestBlockchain(unittest.TestCase):
 
     def test_2_package_with_transaction(self):
         pass
+
+    def test_3_roll_back(self):
+        bc = BlockChain()
+        block, latest_hash = bc.get_latest_block()
+        height = block.height
+
+        UTXOSet().roll_back(block, bc)
+        bc.roll_back()
+        block, latest_hash = bc.get_latest_block()
+        self.assertEqual(height - 1, block.height)

@@ -7,35 +7,35 @@ class DBInterface(ABC):
     @abstractmethod
     def db(self):
         """
-        Get database util instance
+        获取数据库对象实例
         """
 
-    @staticmethod
+    @abstractmethod
     def get(self, key, default=None):
         """
-        Get data with key, and set default
+        获取 key 对应的 value
         """
 
     @abstractmethod
     def insert(self, _key: str, _value: dict) -> bool:
         """
-        Insert new data (_value) with (_key)
+        插入新的键值对
         """
 
     @abstractmethod
     def remove(self, _key: str) -> bool:
         """
-        Remove data with (key)
+        从数据库中移除键对应的数据
         """
 
     @abstractmethod
     def batch_insert(self, kv_data: dict):
         """
-        Batch insert data to database
+        批量插入数据
         """
 
     @abstractmethod
     def batch_remove(self, keys: list):
         """
-        Batch remove data from database
+        批量移除数据
         """

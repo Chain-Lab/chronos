@@ -52,7 +52,6 @@ class LevelDB(DBInterface, Singleton):
             return default
         return json.loads(bytes_data.decode())
 
-
     def batch_insert(self, kv_data: dict):
         """
         考虑后面挪到一个文档中说明
@@ -92,3 +91,7 @@ class LevelDB(DBInterface, Singleton):
 
     def __del__(self):
         self.db.close()
+
+    @staticmethod
+    def set_default(obj: set):
+        return list(obj)
