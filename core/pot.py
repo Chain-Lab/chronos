@@ -5,13 +5,13 @@ from core.block_chain import BlockChain
 from core.config import Config
 from utils import funcs
 from utils.b58code import Base58Code
-from utils.dbutil import DBUtil
+from utils.leveldb import LevelDB
 
 
 class ProofOfTime(object):
     def __init__(self):
         db_url = Config().get('database.url')
-        self.db = DBUtil(db_url)
+        self.db = LevelDB()
 
     def local_vote(self):
         local_address = Config().get('node.address')

@@ -17,7 +17,7 @@ from node.timer import Timer
 from threads.calculator import Calculator
 from threads.merge import MergeThread
 from threads.vote_center import VoteCenter
-from utils.dbutil import DBUtil
+from utils.leveldb import LevelDB
 from utils.locks import package_lock, package_cond
 from utils.network import TCPConnect
 
@@ -84,7 +84,7 @@ class Client(object):
             if isinstance(data, dict):
                 address = data.get('address', '')
                 if address != "":
-                    db = DBUtil(Config().get('database.url'))
+                    db = LevelDB()
                     old_wallets = db.get('wallets')
 
                     if old_wallets is None:
