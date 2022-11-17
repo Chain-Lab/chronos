@@ -12,7 +12,7 @@ from core.config import Config
 class LevelDB(DBInterface, Singleton):
     def __init__(self):
         self.__db = None
-        self.__leveldb = Config.get("leveldb.path")
+        self.__leveldb = Config().get("leveldb.path")
 
     @property
     def db(self):
@@ -82,6 +82,7 @@ class LevelDB(DBInterface, Singleton):
         return self.__db.__contains__(key)
 
     def __getitem__(self, key: str):
+        # todo: 在数据库没有对应数据的时候进行处理
         self.__db: plyvel.DB
         bytes_data: bytes
 
@@ -89,6 +90,7 @@ class LevelDB(DBInterface, Singleton):
         bytes_data = self.__db.get(bytes_key)
 
         return json.loads(bytes_data.decode())
+
 
     def __del__(self):
         self.__db.close()
