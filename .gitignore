@@ -5,3 +5,5 @@ ogsource/
 experiment/
 test.py
 test/wallets.json
+/test/leveldb
+/test/conf
