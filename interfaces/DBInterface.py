@@ -10,6 +10,12 @@ class DBInterface(ABC):
         Get database util instance
         """
 
+    @staticmethod
+    def get(self, key, default=None):
+        """
+        Get data with key, and set default
+        """
+
     @abstractmethod
     def insert(self, _key: str, _value: dict) -> bool:
         """

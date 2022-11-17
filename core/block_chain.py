@@ -14,7 +14,7 @@ from core.transaction import Transaction
 from core.utxo import UTXOSet
 from utils.leveldb import LevelDB
 from utils.singleton import Singleton
-from utils.convertor import blockhash_to_db_key
+from utils.convertor import blockhash_to_db_key, tx_hash_to_db_key, utxo_hash_to_db_key, height_to_db_key
 
 
 class BlockChain(Singleton):
@@ -22,6 +22,9 @@ class BlockChain(Singleton):
         self.db = LevelDB()
         self.__cache = LRU(30000)
         self.__block_cache = LRU(500)
+
+        # map block_height => block_hash
+        self.__block_map = LRU(2000)
 
         # todo: init
         # 目前区块上的最新的区块， 只读
@@ -109,17 +112,18 @@ class BlockChain(Singleton):
         :param transaction: 创世区块包含的交易
         :return: None
         """
-        # todo: 检查是否在leveldb中适用
-        if 'latest' not in self.db:
-            transactions = [transaction]
-            genesis_block = Block.new_genesis_block(transactions)
-            genesis_block.set_header_hash()
+        if self.db["latest"]:
+            return
 
-            logging.info("Create genesis block : {}".format(genesis_block))
+        transactions = [transaction]
+        genesis_block = Block.new_genesis_block(transactions)
+        genesis_block.set_header_hash()
 
-            self.insert_block(genesis_block)
+        logging.info("Create genesis block : {}".format(genesis_block))
 
-    def get_latest_block(self):
+        self.insert_block(genesis_block)
+
+    def get_latest_block(self) -> (Block, str):
         """
         通过数据库中的记录latest来拉取得到区块
         :return: 返回Block对象和对应的哈希值
@@ -128,14 +132,14 @@ class BlockChain(Singleton):
             block_hash = self.__latest.block_header.hash
             return self.__latest, block_hash
 
-        # todo：如果存储的是单字符串？
-        latest_block_hash_obj = self.db['latest']
+        latest_block_hash_obj = self.db["latest"]
 
         if not latest_block_hash_obj:
             return None, None
 
-        latest_block_hash = latest_block_hash_obj.get('hash', '')
-        block_data = self.db[latest_block_hash]
+        latest_block_hash = latest_block_hash_obj.get("hash", "")
+        block_db_key = blockhash_to_db_key(latest_block_hash)
+        block_data = self.db[block_db_key]
         block = Block.deserialize(block_data)
         self.__latest = block
         return block, latest_block_hash
@@ -147,53 +151,29 @@ class BlockChain(Singleton):
         :param blockhash: 设置的哈希值
         :return: None
         """
-        latest_hash = {
+        latest_hash_dict = {
             "hash": blockhash
         }
 
-        if 'latest' not in self.db:
-            self.db['latest'] = latest_hash
+        self.db["latest"] = latest_hash_dict
+
+    def get_block_by_height(self, height: int) -> Block:
+        if self.__block_map.get(height, None):
+            logging.debug("Hit height to hash cache, search block in cache...")
+
+            block_hash = self.__block_map[height]
         else:
-            latest_block_hash_doc = self.db.get('latest')
-            latest_block_hash_doc.update(hash=hash)
-            self.db.update([latest_block_hash_doc])
+            block_height_db_key = height_to_db_key(height)
+            block_hash = self.db[block_height_db_key]
+            self.__block_map[height] = block_hash
 
-    def get_block_by_height(self, height):
-        if height in self.__block_cache and self.__block_cache[height]:
-            logging.debug("Hit height in cache, return block.")
-
-            with self.__block_count_lock:
-                self.__block_hit += 1
-                self.__block_used += 1
-
-            return self.__block_cache[height]
-        """
-        通过高度获取区块
-        :param height: 所需要获取的区块的高度
-        """
-        # todo： leveldb需要另外的索引方式
-        query = {
-            "selector": {
-                "block_header": {
-                    "height": height
-                }
-            }
-        }
-        docs = self.db.find(query)
-        block = None
-        for block_data in docs:
-            # logging.debug("Get block data: {}".format(block_data))
-            block = Block.deserialize(block_data)
-        self.__block_cache[height] = block
-
-        with self.__block_count_lock:
-            self.__block_used += 1
-
-        return block
+        return self.get_block_by_hash(block_hash)
 
     # 缓存100个区块数据
     def get_block_by_hash(self, block_hash):
+        block_db_key = blockhash_to_db_key(block_hash)
         if block_hash in self.__block_cache and self.__block_cache[block_hash]:
+            # 如果命中区块缓存，直接返回
             logging.debug("Hit block hash in cache, return block.")
 
             with self.__block_count_lock:
@@ -205,7 +185,7 @@ class BlockChain(Singleton):
         if not block_hash or block_hash == "":
             return None
 
-        data = self.db.get(block_hash)
+        data = self.db[block_db_key]
 
         if not data:
             return None
@@ -237,8 +217,8 @@ class BlockChain(Singleton):
             return self.__cache[tx_hash]
 
         logging.debug("Search tx#{} in db".format(tx_hash))
-        db_tx_key = "tx-" + tx_hash
-        data = self.db.get(db_tx_key)
+        db_tx_key = tx_hash_to_db_key(tx_hash)
+        data = self.db[db_tx_key]
 
         with self.__cache_count_lock:
             self.__cache_used += 1
@@ -247,7 +227,8 @@ class BlockChain(Singleton):
             tx = Transaction.deserialize(data)
             self.__cache[tx_hash] = tx
             return tx
-        except:
+        except Exception as e:
+            logging.error(e)
             return None
 
     def roll_back(self):
@@ -261,6 +242,7 @@ class BlockChain(Singleton):
 
         # 先修改索引， 再删除数据， 尽量避免拿到空数据
         block = self.get_block_by_height(latest_height - 1)
+        self.__block_map.pop(latest_height)
         self.set_latest_hash(block.block_header.hash)
         self.__block_cache["latest"] = block
 
@@ -274,35 +256,16 @@ class BlockChain(Singleton):
 
         for tx in latest_block.transactions:
             tx_hash = tx.tx_hash
-            db_tx_key = "tx-" + tx_hash
-            doc = self.db.get(db_tx_key)
-
-            if doc:
-                delete_list.append(doc)
+            tx_db_key = tx_hash_to_db_key(tx_hash)
+            delete_list.append(tx_db_key)
 
             if tx_hash in self.__cache:
                 self.__cache.pop(tx_hash)
-            # try:
-            #     self.db.delete(doc)
-            # except ResourceNotFound as e:
-            #     logging.error(e)
-            # # 数据库中没有对应的交易信息
-            # except TypeError as e:
-            #     logging.error(e)
 
-        doc = self.db.get(latest_block.block_header.hash)
-        self.db.delete()
-        try:
-            self.db.delete(doc)
-        except ResourceNotFound as e:
-            logging.error(e)
-
-        try:
-            self.db.batch_delete(delete_list)
-        except pycouchdb.exceptions.Conflict as e:
-            logging.error(e)
-        except pycouchdb.exceptions.NotFound as e:
-            logging.error(e)
+        latest_block_hash = latest_block.block_header.hash
+        latest_block_db_key = blockhash_to_db_key(latest_block_hash)
+        self.db.delete(latest_block_db_key)
+        self.db.batch_remove(delete_list)
 
     def find_utxo(self):
         """
@@ -387,33 +350,28 @@ class BlockChain(Singleton):
         @return:
         """
         block_hash = block.block_header.hash
+        block_db_key = blockhash_to_db_key(block_hash)
+        block_height_db_key = height_to_db_key(block.height)
         height = block.block_header.height
         logging.info("Insert new block#{} height {}".format(block_hash, block.block_header.height))
-        try:
-            self.db.create(block_hash, block.serialize())
-        except couchdb.http.ResourceConflict:
-            return
 
         self.set_latest_hash(block_hash)
-        self.__block_cache["latest"] = block
+        self.__latest = block
         UTXOSet().update(block)
-        insert_list = []
+        insert_list = {block_db_key: block.serialize(), block_height_db_key: block_hash}
 
         for tx in block.transactions:
             tx_hash = tx.tx_hash
-            db_tx_key = "tx-" + tx_hash
+            db_tx_key = tx_hash_to_db_key(tx_hash)
             tx_dict = tx.serialize()
             tx_dict.update({"_id": db_tx_key})
             self.__cache[tx_hash] = tx
-            insert_list.append(tx_dict)
+            insert_list[db_tx_key] = tx_dict
 
-        self.__block_cache[height] = block
+        self.__block_map[height] = block_hash
         self.__block_cache[block_hash] = block
 
-        try:
-            self.db.batch_save(insert_list)
-        except pycouchdb.exceptions.Conflict as e:
-            logging.error(e)
+        self.db.batch_insert(insert_list)
 
     def get_cache_status(self):
         with self.__cache_count_lock:
