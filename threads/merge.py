@@ -194,7 +194,7 @@ class MergeThread(Singleton):
                     for _ in range(rollback_times):
                         latest_block, _ = bc.get_latest_block()
                         logging.info("Rollback block#{}.".format(latest_block.block_header.hash))
-                        UTXOSet().roll_back(latest_block)
+                        UTXOSet().roll_back(latest_block, bc)
                         bc.roll_back()
 
                     # 回退然后更新, 回退后需要保证投票中心的更新

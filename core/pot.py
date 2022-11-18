@@ -10,7 +10,6 @@ from utils.leveldb import LevelDB
 
 class ProofOfTime(object):
     def __init__(self):
-        db_url = Config().get('database.url')
         self.db = LevelDB()
 
     def local_vote(self):
@@ -33,7 +32,7 @@ class ProofOfTime(object):
         final_time = 0
         abs_time = 1000
 
-        wallets = self.db.get('wallets', '')
+        wallets = self.db.get('wallets', {})
 
         for item in wallets.items():
             if '_id' in item or '_rev' in item or "" in item:

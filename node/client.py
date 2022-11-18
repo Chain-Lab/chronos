@@ -89,10 +89,7 @@ class Client(object):
 
                     if old_wallets is None:
                         logging.info('Remote node wallet is not created in database, create new record.')
-                        try:
-                            db.create('wallets', {})
-                        except couchdb.ResourceConflict:
-                            logging.error("Database wallet: resource conflict")
+                        db.insert('wallets', {})
                         old_wallets = db.get('wallets')
                     old_wallets.update({
                         address: {
@@ -100,7 +97,7 @@ class Client(object):
                             'id': int(Config().get('node.id'))
                         }
                     })
-                    db.update([old_wallets])
+                    db.insert("wallets", old_wallets)
         # 在信息错误或连接断开时会产生该错误
         except json.decoder.JSONDecodeError as e:
             logging.debug(data)

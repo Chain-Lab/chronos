@@ -244,7 +244,7 @@ class BlockChain(Singleton):
         block = self.get_block_by_height(latest_height - 1)
         self.__block_map.pop(latest_height)
         self.set_latest_hash(block.block_header.hash)
-        self.__block_cache["latest"] = block
+        self.__latest = block
 
         if latest_hash in self.__block_cache:
             self.__block_cache.pop(latest_hash)
@@ -264,7 +264,7 @@ class BlockChain(Singleton):
 
         latest_block_hash = latest_block.block_header.hash
         latest_block_db_key = blockhash_to_db_key(latest_block_hash)
-        self.db.delete(latest_block_db_key)
+        self.db.remove(latest_block_db_key)
         self.db.batch_remove(delete_list)
 
     def find_utxo(self):
