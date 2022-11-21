@@ -222,11 +222,7 @@ class UTXOSet(Singleton):
             flag_index = tx_hash_index_str.find("#")
             tx_hash = tx_hash_index_str[:flag_index]
 
-            utxos[tx_hash] = {
-                "tx_hash": utxo.get("tx_hash"),
-                "output": utxo,
-                "index": utxo.get("index")
-            }
+            utxos[tx_hash] = utxo
         return utxos
 
     @staticmethod
