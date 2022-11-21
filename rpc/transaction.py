@@ -13,6 +13,8 @@ class TransactionService(transaction_pb2_grpc.TransactionServicer):
     def submit_transaction(self, request, context):
         transaction = request.signedTransaction
         signed_dict = json.loads(transaction)
+
+        # 格式校验
         is_valid = json_validator("./schemas/transaction.json", signed_dict)
 
         assert is_valid is True

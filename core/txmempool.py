@@ -16,7 +16,7 @@ class TxMemPool(Singleton):
         self.txs = {}
         # 交易打包队列
         self.tx_queue = Queue()
-        #
+        # 上一次打包的队列，如果区块打包失败，tx不会在dict中被清除
         self.prev_queue = Queue()
         self.bc = BlockChain()
         # todo: 存在潜在的类型转换错误，如果config文件配置错误可能抛出错误
@@ -43,12 +43,6 @@ class TxMemPool(Singleton):
         # 在添加交易到交易池前先检查交易是否存在，如果存在说明已经被打包了
         with self.pool_lock:
             self.__status = TxMemPool.STATUS_APPEND
-            # 在 add之前已经检查过不在数据库中了， 后面不用再重复检查
-            # 不再检查交易是否在数据库中，如果交易存在或utxo已被使用，会无法通过验证而导致区块不会被打包
-            # if self.bc.get_transaction_by_tx_hash(tx_hash) is not None:
-            #     logging.debug("Transaction #{} existed.".format(tx_hash))
-            #     self.__status = TxMemPool.STATUS_NONE
-            #     return False
 
             if tx_hash not in self.__queue_set and tx_hash not in self.txs:
                 self.__queue_set.add(tx_hash)

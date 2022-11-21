@@ -204,10 +204,6 @@ class BlockChain(Singleton):
 
     def get_transaction_by_tx_hash(self, tx_hash):
         """
-        通过交易的tx_hash来检索得到交易
-        但是这里遍历区块的方式较为暴力， 需要进行优化
-        todo： 将交易的信息另外存入一个表？ 交易本身需要存入区块，可以直接存入表中，数据库直接建立索引
-        在区块达到一定高度后可能存在一定的问题
         :param tx_hash: 需要检索的交易id
         :return: 检索到交易返回交易， 否则返回None
         """
@@ -331,14 +327,21 @@ class BlockChain(Singleton):
         :param transaction: 待校验的交易
         :return: 是否校验通过
         """
+        st = time.time()
+
         prev_txs = {}
         for _input in transaction.inputs:
             tx_hash = _input.tx_hash
             prev_tx = self.get_transaction_by_tx_hash(tx_hash)
 
             if not prev_tx:
+                ed = time.time()
+                logging.debug("Verify transaction use {} s.".format(ed - st))
                 return False
             prev_txs[prev_tx.tx_hash] = prev_tx
+
+        ed = time.time()
+        logging.debug("Verify transaction use {} s.".format(ed - st))
         return transaction.verify(prev_txs)
 
     def get_latest_delay_params(self):
