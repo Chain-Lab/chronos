@@ -24,6 +24,13 @@ def utxo_hash_to_db_key(tx_hash: str, index: int) -> str:
     """
     return UTXO_PREFIX + tx_hash + "#" + str(index)
 
+def utxo_db_key_to_hash(utxo_db_key: str) -> (str, int):
+    """
+    Convert utxo db key to tx hash and index
+    """
+    utxo_db_key.replace(UTXO_PREFIX, "")
+    flag_index = utxo_db_key.find('#')
+    return utxo_db_key[:flag_index], int(utxo_db_key[flag_index + 1:])
 
 def remove_utxo_db_prefix(utxo_db_key: str) -> str:
     return utxo_db_key.replace(UTXO_PREFIX, "")

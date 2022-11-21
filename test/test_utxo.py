@@ -13,3 +13,7 @@ class TestUTxO(unittest.TestCase):
 
         block, block_hash = bc.get_latest_block()
         self.assertEqual(UTXOSet().get_latest_height(), block.height)
+
+    def test_find_utxo(self):
+        utxos = UTXOSet().find_utxo("1PuRN6PvTfhVazxoK8zZ3eFvTUSU76VHRF")
+        print(utxos)

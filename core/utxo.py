@@ -90,6 +90,7 @@ class UTXOSet(Singleton):
                 output_dict["tx_hash"] = tx_hash
                 utxo_db_key = utxo_hash_to_db_key(tx_hash, idx)
                 address = outputs.pub_key_hash
+                address_db_key = addr_utxo_db_key(address)
                 if address not in self.__address_cache:
                     self.find_utxo(address)
                 self.__utxo_cache[utxo_db_key] = {
@@ -97,29 +98,30 @@ class UTXOSet(Singleton):
                     "output": output_dict,
                     "index": idx
                 }
+                self.__address_cache[address].add(utxo_db_key)
                 insert_list[utxo_db_key] = copy.deepcopy(output_dict)
+                insert_list[address_db_key] = list(self.__address_cache[address])
+
 
             for _input in tx.inputs:
                 input_tx_hash = _input.tx_hash
                 utxo_db_key = utxo_hash_to_db_key(input_tx_hash, _input.index)
                 tx_hash_index_str = "{0}#{1}".format(tx_hash, _input.index)
                 input_address = pub_to_address(_input.pub_key)
+                address_db_key = addr_utxo_db_key(input_address)
 
                 delete_list.append(utxo_db_key)
 
-                if input_address in self.__address_cache and utxo_db_key in self.__address_cache[input_address]:
-                    self.__address_cache[input_address].pop(utxo_db_key)
+                self.__address_cache[input_address].discard(utxo_db_key)
+                if utxo_db_key in self.__utxo_cache:
+                    self.__utxo_cache.pop(utxo_db_key)
+                insert_list[address_db_key] = {
+                    "utxos": list(self.__address_cache[input_address])
+                }
                 logging.debug("UTxO {} cleaned.".format(tx_hash_index_str))
 
-        try:
-            self.db.batch_insert(insert_list)
-        except pycouchdb.exceptions.Conflict as e:
-            logging.error(e)
-
-        try:
-            self.db.batch_remove(delete_list)
-        except pycouchdb.exceptions.Conflict as e:
-            logging.error(e)
+        self.db.batch_insert(insert_list)
+        self.db.batch_remove(delete_list)
 
         self.set_latest_height(block.block_header.height)
 
@@ -137,13 +139,18 @@ class UTXOSet(Singleton):
                 utxo_db_key = utxo_hash_to_db_key(tx_hash, idx)
 
                 address = output.pub_key_hash
+                address_db_key = addr_utxo_db_key(address)
                 delete_list.append(utxo_db_key)
 
                 if address not in self.__address_cache:
                     self.find_utxo(address)
-                # 避免异常pop
-                if address in self.__address_cache and utxo_db_key in self.__address_cache[address]:
-                    self.__address_cache[address].pop(utxo_db_key)
+                self.__address_cache[address].discard(utxo_db_key)
+
+                if utxo_db_key in self.__utxo_cache:
+                    self.__utxo_cache.pop(utxo_db_key)
+                insert_list[address_db_key] = {
+                    "utxos": list(self.__address_cache[address])
+                }
 
             if transaction.is_coinbase():
                 continue
@@ -164,11 +171,12 @@ class UTXOSet(Singleton):
                 output_dict = output.serialize()
                 output_dict.update({'index': output_index})
                 address = output_dict["pub_key_hash"]
+                address_db_key = addr_utxo_db_key(address)
                 tx_hash_index_str = "{0}#{1}".format(input_tx_hash, output_index)
 
                 if address not in self.__address_cache:
                     self.find_utxo(address)
-                self.__address_cache[address].append(utxo_db_key)
+                self.__address_cache[address].add(utxo_db_key)
                 self.__utxo_cache[utxo_db_key] = {
                     "tx_hash": tx_hash,
                     "output": output_dict,
@@ -176,6 +184,9 @@ class UTXOSet(Singleton):
                 }
                 output_dict.update({"tx_hash": input_tx_hash})
                 insert_list[utxo_db_key] = copy.deepcopy(output_dict)
+                insert_list[address_db_key] = {
+                    "utxos": list(self.__address_cache[address])
+                }
 
         self.db.batch_insert(insert_list)
         self.db.batch_remove(delete_list)
@@ -188,28 +199,33 @@ class UTXOSet(Singleton):
         :param address: 需要查询的地址
         :return: 对应地址的utxo
         """
+        address_db_key = addr_utxo_db_key(address)
         if address in self.__address_cache:
-            return self.__address_cache[address]
+            utxos_db_key_set = self.__address_cache[address]
         else:
-            address_db_key = addr_utxo_db_key(address)
-            utxos_db_key_list = self.db.get(address_db_key, {}).get("utxos", [])
-            self.__address_cache[address] = utxos_db_key_list
+            utxos_db_key_set = self.db.get(address_db_key, {}).get("utxos", [])
+            self.__address_cache[address] = set(utxos_db_key_set)
 
         utxos = {}
-        for utxo_db_key in utxos_db_key_list:
+        for utxo_db_key in utxos_db_key_set:
             tx_hash_index_str = remove_utxo_db_prefix(utxo_db_key)
             if utxo_db_key in self.__utxo_cache:
                 utxo = self.__utxo_cache[utxo_db_key]
             else:
-                utxo = self.db.get(address_db_key, {})
-                self.__utxo_cache[utxo_db_key] = utxo
+                utxo = self.db.get(utxo_db_key, None)
 
-            flag_index = tx_hash_index_str.find('#')
+                if utxo:
+                    self.__utxo_cache[utxo_db_key] = utxo
+                else:
+                    logging.error("Get utxo error, get none from database.")
+
+            flag_index = tx_hash_index_str.find("#")
             tx_hash = tx_hash_index_str[:flag_index]
-            utxos[tx_hash_index_str] = {
-                "tx_hash": tx_hash,
+
+            utxos[tx_hash] = {
+                "tx_hash": utxo.get("tx_hash"),
                 "output": utxo,
-                "index": utxo.get('index')
+                "index": utxo.get("index")
             }
         return utxos
 

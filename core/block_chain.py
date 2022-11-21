@@ -157,7 +157,7 @@ class BlockChain(Singleton):
 
         self.db["latest"] = latest_hash_dict
 
-    def get_block_by_height(self, height: int) -> Block:
+    def get_block_by_height(self, height: int):
         if self.__block_map.get(height, None):
             logging.debug("Hit height to hash cache, search block in cache...")
 
@@ -165,6 +165,10 @@ class BlockChain(Singleton):
         else:
             block_height_db_key = height_to_db_key(height)
             block_hash = self.db[block_height_db_key]
+
+            if not block_hash:
+                return None
+
             self.__block_map[height] = block_hash
 
         return self.get_block_by_hash(block_hash)
