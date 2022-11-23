@@ -72,16 +72,16 @@ class MergeThread(Singleton):
         prev_block = bc.get_block_by_hash(prev_hash)
         # delta = abs(latest_height - block_height)
 
-        # 如果前一个区块在本地没有出现过， 拉取前一股区块
+        # 如果前一个区块在本地没有出现过， 拉取前一个区块
         if prev_hash not in self.cache and block_height != 0 and prev_block is None:
             # and delta < 5:
-            logging.info("Previous block#{} not exists, pull block.".format(prev_hash))
+            logging.debug("Previous block#{} not exists, pull block.".format(prev_hash))
             return MergeThread.STATUS_PULL
 
         self.__lock.acquire()
         # 如果该区块在本地出现过
         if block_hash in self.cache:
-            logging.info("Block#{} already in cache.".format(block_hash))
+            logging.debug("Block#{} already in cache.".format(block_hash))
             self.__lock.release()
             # 如果cache[hash]是false并且前一个区块不存在（prev_block=None）
             if not self.cache[block_hash]['status']:

@@ -160,13 +160,13 @@ class UTXOSet(Singleton):
                 output_index = _input.index
                 utxo_db_key = utxo_hash_to_db_key(input_tx_hash, output_index)
 
-                transaction = bc.get_transaction_by_hash(tx_hash)
+                transaction = bc.get_transaction_by_tx_hash(tx_hash)
                 outputs = transaction.outputs
 
                 try:
                     output = outputs[output_index]
                 except IndexError:
-                    logging.error("Get output with index {} in tx#{} failed.".format(tx_hash, output_index))
+                    logging.error("Get output with index {} in tx#{} failed.".format(output_index, tx_hash))
                     continue
                 output_dict = output.serialize()
                 output_dict.update({'index': output_index})

@@ -107,7 +107,7 @@ class Gossip(Singleton):
 
                 # 选取50%的邻居节点发送交易
                 nodes = random.choices(Peer().nodes, k=length // 2)
-                logging.info("Send tx to gossip network.")
+                logging.debug("Send tx to gossip network.")
                 for node in nodes:
                     ip = node.ip
                     port = Config().get('node.gossip_port')
