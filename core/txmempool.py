@@ -104,8 +104,8 @@ class TxMemPool(Singleton):
                     transaction = self.txs[tx_hash]
                     # db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
-                    if not bc.verify_transaction(transaction):
-                        continue
+                    # if not bc.verify_transaction(transaction):
+                    #     continue
 
                     result.append(transaction)
                     count += 1
@@ -125,8 +125,8 @@ class TxMemPool(Singleton):
                     transaction = self.txs[tx_hash]
                     # db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
-                    if not bc.verify_transaction(transaction):
-                        continue
+                    # if not bc.verify_transaction(transaction):
+                    #     continue
 
                     self.prev_queue.put(tx_hash)
                     result.append(transaction)

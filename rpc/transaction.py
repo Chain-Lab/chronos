@@ -22,8 +22,8 @@ class TransactionService(transaction_pb2_grpc.TransactionServicer):
         transaction = Transaction.deserialize(signed_dict)
         bc = BlockChain()
 
-        if not bc.verify_transaction(transaction):
-            return transaction_pb2.SubmitTransactionRespond(status=-1)
+        # if not bc.verify_transaction(transaction):
+        #     return transaction_pb2.SubmitTransactionRespond(status=-1)
         # peer = Peer()
         # peer.broadcast(transaction)
         if package_lock.locked():
