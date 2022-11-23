@@ -20,7 +20,7 @@ from utils.convertor import blockhash_to_db_key, tx_hash_to_db_key, utxo_hash_to
 class BlockChain(Singleton):
     def __init__(self):
         self.db = LevelDB()
-        self.__cache = LRU(30000)
+        self.__tx_cache = LRU(30000)
         self.__block_cache = LRU(500)
 
         # map block_height => block_hash
@@ -207,14 +207,14 @@ class BlockChain(Singleton):
         :param tx_hash: 需要检索的交易id
         :return: 检索到交易返回交易， 否则返回None
         """
-        if tx_hash in self.__cache:
-            logging.debug("Hit cache, return result directly.")
+        if tx_hash in self.__tx_cache:
+            logging.debug("Hit cache, return tx#{} directly.".format(tx_hash))
 
             with self.__cache_count_lock:
                 self.__cache_hit += 1
                 self.__cache_used += 1
 
-            return self.__cache[tx_hash]
+            return self.__tx_cache[tx_hash]
 
         logging.debug("Search tx#{} in db".format(tx_hash))
         db_tx_key = tx_hash_to_db_key(tx_hash)
@@ -225,7 +225,7 @@ class BlockChain(Singleton):
 
         try:
             tx = Transaction.deserialize(data)
-            self.__cache[tx_hash] = tx
+            self.__tx_cache[tx_hash] = tx
             return tx
         except Exception as e:
             logging.error(e)
@@ -259,8 +259,8 @@ class BlockChain(Singleton):
             tx_db_key = tx_hash_to_db_key(tx_hash)
             delete_list.append(tx_db_key)
 
-            if tx_hash in self.__cache:
-                self.__cache.pop(tx_hash)
+            if tx_hash in self.__tx_cache:
+                self.__tx_cache.pop(tx_hash)
 
         latest_block_hash = latest_block.block_header.hash
         latest_block_db_key = blockhash_to_db_key(latest_block_hash)
@@ -372,7 +372,7 @@ class BlockChain(Singleton):
             db_tx_key = tx_hash_to_db_key(tx_hash)
             tx_dict = tx.serialize()
             tx_dict.update({"_id": db_tx_key})
-            self.__cache[tx_hash] = tx
+            self.__tx_cache[tx_hash] = tx
             insert_list[db_tx_key] = tx_dict
 
         self.__block_map[height] = block_hash
