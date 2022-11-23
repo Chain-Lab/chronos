@@ -66,7 +66,7 @@ class Gossip(Singleton):
             tx = Transaction.deserialize(data)
             # 添加交易到交易池和Client的队列
             self.append(tx)
-            time.sleep(1)
+            time.sleep(0.1)
             # 等待1s， 避免gossip发送交易太快了占用cpu较多
 
     def append(self, tx: Transaction):
@@ -122,7 +122,7 @@ class Gossip(Singleton):
                     except OSError:
                         logging.error("Message too long.")
                         break
-                time.sleep(1)
+                time.sleep(0.1)
 
     @property
     def queue_size(self):
