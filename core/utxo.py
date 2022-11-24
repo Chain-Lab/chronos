@@ -102,7 +102,6 @@ class UTXOSet(Singleton):
                 insert_list[utxo_db_key] = copy.deepcopy(output_dict)
                 insert_list[address_db_key] = list(self.__address_cache[address])
 
-
             for _input in tx.inputs:
                 input_tx_hash = _input.tx_hash
                 utxo_db_key = utxo_hash_to_db_key(input_tx_hash, _input.index)

@@ -140,7 +140,7 @@ class Server(object):
                     logging.info("Client lost connect, close server.")
                     server_continue = False
             if server_continue:
-                time.sleep(1)
+                time.sleep(0.01)
             else:
                 # 失去连接， 从vote center中-1
                 Counter().client_close()
@@ -290,7 +290,7 @@ class Server(object):
                 }
                 result = Message(STATUS.SYNC_MSG, data)
                 logging.debug("Send vote result {}#{} to client.".format(address, VoteCenter().height))
-                time.sleep(1)
+                time.sleep(0.01)
                 return result
             except IndexError:
                 # 如果本地没有投票信息直接略过
