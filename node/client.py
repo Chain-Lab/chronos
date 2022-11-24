@@ -228,7 +228,7 @@ class Client(object):
             if is_closed:
                 self.close()
                 break
-            time.sleep(0.01)
+            # time.sleep(0.01)
 
     def handle(self, message: dict):
         code = message.get('code', 0)
