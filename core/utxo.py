@@ -192,6 +192,7 @@ class UTXOSet(Singleton):
         self.set_latest_height(block.block_header.height - 1)
 
     def find_utxo(self, address):
+        # todo: leveldb 中如何检索
         """
         开放给openapi用于查询utxo的方法
         :param address: 需要查询的地址
@@ -214,12 +215,13 @@ class UTXOSet(Singleton):
 
                 if utxo:
                     self.__utxo_cache[utxo_db_key] = utxo
-                    flag_index = tx_hash_index_str.find("#")
-                    tx_hash = tx_hash_index_str[:flag_index]
-
-                    utxos[tx_hash] = utxo
                 else:
                     logging.error("Get utxo error, get none from database.")
+
+            flag_index = tx_hash_index_str.find("#")
+            tx_hash = tx_hash_index_str[:flag_index]
+
+            utxos[tx_hash] = utxo
         return utxos
 
     @staticmethod
