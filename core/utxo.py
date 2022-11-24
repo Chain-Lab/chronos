@@ -218,6 +218,9 @@ class UTXOSet(Singleton):
                 else:
                     logging.error("Get utxo error, get none from database.")
 
+            if not utxo:
+                continue
+
             flag_index = tx_hash_index_str.find("#")
             tx_hash = tx_hash_index_str[:flag_index]
 

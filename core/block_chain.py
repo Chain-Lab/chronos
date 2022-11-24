@@ -371,7 +371,6 @@ class BlockChain(Singleton):
             tx_hash = tx.tx_hash
             db_tx_key = tx_hash_to_db_key(tx_hash)
             tx_dict = tx.serialize()
-            tx_dict.update({"_id": db_tx_key})
             self.__tx_cache[tx_hash] = tx
             insert_list[db_tx_key] = tx_dict
 
