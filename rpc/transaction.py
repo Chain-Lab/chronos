@@ -38,6 +38,8 @@ class TransactionService(transaction_pb2_grpc.TransactionServicer):
 
         bc = BlockChain()
         transaction = bc.get_transaction_by_tx_hash(tx_hash)
+        if not transaction:
+            return transaction_pb2.GetTransactionRespond(status=-1, transaction="")
 
         tx_dict = transaction.serialize()
 

@@ -32,8 +32,19 @@ class TxMemPool(Singleton):
     def is_full(self):
         return len(self.txs) >= self.SIZE
 
-    def add(self, tx):
+    def add(self,
+            tx) -> None:
+        """ 将一笔交易放入交易池中
 
+        在本地节点正在打包时会进行等待
+        首先在集合中放入交易的哈希，然后再放入交易到字典中
+        最后，把交易的哈希值放入到打包队列中等待
+
+        Args:
+            tx: 待放入的交易
+        Returns:
+            如果成功放入交易返回 True
+        """
         with self.__cond:
             while self.__read_lock.locked():
                 logging.debug("Node packaging block, stay wait.")
@@ -60,10 +71,20 @@ class TxMemPool(Singleton):
         self.txs.clear()
         self.pool_lock.release()
 
-    def package(self, height):
-        """
-        :params height: 即将打包的区块的高度， 如果小于已打包高度说明已经被打包过
-        :return: 高度高于已打包高度的情况下返回交易列表， 否则返回None
+    def package(self,
+                height) -> list | None:
+        """ 打包交易
+
+        需要传入当前的高度， 通过高度限制交易池的打包
+        回滚的情况下会直接修改交易池的高度，这里的逻辑可能会引起错误，需要后续观察
+          - 首先从 prev 队列中取出交易，该队列存储了上一次打包的交易，为了避免由于回退导致交易丢失，每次打包会将这一次打包队列中的交易
+            移动到 prev 队列中
+          - 然后处理打包队列中的交易，将他们提出并且哈希值放入 prev 队列
+
+        Args:
+            height: 目前的区块高度
+        Returns:
+            返回一个打包好的交易列表，如果打包失败或者该高度下已经打包返回None
         """
         result = []
         bc = BlockChain()
@@ -102,7 +123,6 @@ class TxMemPool(Singleton):
                         continue
 
                     transaction = self.txs[tx_hash]
-                    # db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
                     if not bc.verify_transaction(transaction):
                         continue
@@ -139,7 +159,17 @@ class TxMemPool(Singleton):
 
         return result
 
-    def set_height(self, height, is_rollback=False):
+    def set_height(self,
+                   height,
+                   is_rollback=False) -> None:
+        """ 设置交易池高度
+
+        只有在回退或是高度大于交易池高度的情况下才能回滚
+        Args:
+            height: 待设置高度
+            is_rollback: 是否回滚的处理逻辑
+        Returns: None
+        """
         if not is_rollback and height <= self.__height:
             return
 
@@ -147,11 +177,11 @@ class TxMemPool(Singleton):
             logging.debug("Rollback, set pool height to #{}.".format(height))
         self.__height = height
 
-    def remove(self, tx_hash):
-        """
-        从交易池移出交易
-        :param tx_hash:
-        :return:
+    def remove(self, tx_hash) -> None:
+        """ 从交易池移出交易
+        Args:
+            tx_hash: 待移除的交易的哈希值
+        Returns: None
         """
         self.pool_lock.acquire()
         if tx_hash in self.txs:

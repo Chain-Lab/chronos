@@ -12,11 +12,7 @@ class Block(object):
         self._transactions = transactions
         self._magic_no = Config().get('node.magic_no')
 
-    # todo: 待调整, 需要后面确认blockchain的方法
-    def mine(self):
-        pass
-
-    def set_header_hash(self, prev_block_hash=None):
+    def set_header_hash(self, prev_block_hash=None) -> None:
         self._block_header.set_hash(prev_block_hash)
 
     def set_transaction(self, txs):
@@ -35,7 +31,15 @@ class Block(object):
         return self._transactions[0].inputs[0].vote_info
 
     @property
-    def vote_count(self):
+    def vote_count(self) -> int:
+        """ 统计该区块记录的投票信息
+
+        Coinbase 交易下存储了该区块生成时的投票信息
+        该函数取出区块的 Coinbase 交易，然后遍历统计投票数据
+
+        Returns:
+            返回一个整数，表示当前区块下的投票地址数量
+        """
         vote_info: dict
         vote_info = self.vote_info
         result = 0

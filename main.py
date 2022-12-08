@@ -167,6 +167,11 @@ def get_tx_data(height):
     print("heights: ", heights)
     print("result:", result)
 
+def get_tx(hash):
+    bc = BlockChain()
+    transaction = bc.get_transaction_by_tx_hash(hash)
+    print(transaction.outputs)
+
 
 def get_timestamp(height):
     bc = BlockChain()

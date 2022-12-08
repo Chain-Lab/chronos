@@ -151,10 +151,12 @@ class Transaction(object):
 
 class TxInput(object):
     def __init__(self, tx_hash=None, index=None, pub_key=None):
-        """
-        :param tx_hash: input的交易hash
-        :param index: 对应交易的index
-        :param pub_key: input的签名公钥
+        """ 交易初始化
+
+        Args:
+            tx_hash: 交易的哈希值，默认为空
+            index: 默认为空，没有被使用
+            pub_key: 该笔交易的发布者的公钥
         """
         self.tx_hash = tx_hash
         self.index = index

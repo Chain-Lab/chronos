@@ -93,11 +93,7 @@ class UTXOSet(Singleton):
                 address_db_key = addr_utxo_db_key(address)
                 if address not in self.__address_cache:
                     self.find_utxo(address)
-                self.__utxo_cache[utxo_db_key] = {
-                    "tx_hash": tx_hash,
-                    "output": output_dict,
-                    "index": idx
-                }
+                self.__utxo_cache[utxo_db_key] = output_dict
                 self.__address_cache[address].add(utxo_db_key)
                 insert_list[utxo_db_key] = copy.deepcopy(output_dict)
                 insert_list[address_db_key] = list(self.__address_cache[address])
@@ -176,11 +172,7 @@ class UTXOSet(Singleton):
                 if address not in self.__address_cache:
                     self.find_utxo(address)
                 self.__address_cache[address].add(utxo_db_key)
-                self.__utxo_cache[utxo_db_key] = {
-                    "tx_hash": tx_hash,
-                    "output": output_dict,
-                    "index": output_index
-                }
+                self.__utxo_cache[utxo_db_key] = output_dict
                 output_dict.update({"tx_hash": input_tx_hash})
                 insert_list[utxo_db_key] = copy.deepcopy(output_dict)
                 insert_list[address_db_key] = {
