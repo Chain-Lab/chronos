@@ -72,7 +72,7 @@ class TxMemPool(Singleton):
         self.pool_lock.release()
 
     def package(self,
-                height) -> list | None:
+                height):
         """ 打包交易
 
         需要传入当前的高度， 通过高度限制交易池的打包

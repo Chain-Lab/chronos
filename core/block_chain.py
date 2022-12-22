@@ -67,7 +67,7 @@ class BlockChain(Singleton):
     def package_new_block(self,
                           transactions: list,
                           vote: dict,
-                          delay_params: dict) -> Block | None:
+                          delay_params: dict):
         """ 区块打包逻辑
 
         传入交易、投票、参数来打包新的区块
@@ -169,7 +169,7 @@ class BlockChain(Singleton):
 
         self.db["latest"] = latest_hash_dict
 
-    def get_block_by_height(self, height: int) -> Block | None:
+    def get_block_by_height(self, height: int):
         """ 获取指定高度的区块
 
         首先查询区块缓存中是否存在区块
@@ -200,7 +200,7 @@ class BlockChain(Singleton):
         return self.get_block_by_hash(block_hash)
 
     # 缓存100个区块数据
-    def get_block_by_hash(self, block_hash: str) -> Block | None:
+    def get_block_by_hash(self, block_hash: str):
         """ 根据区块哈希值获取区块
 
         首先根据哈希值检索缓存
@@ -241,7 +241,7 @@ class BlockChain(Singleton):
 
         return block
 
-    def get_transaction_by_tx_hash(self, tx_hash: str) -> Transaction | None:
+    def get_transaction_by_tx_hash(self, tx_hash: str):
         """ 根据交易的哈希值获取交易
         Args:
             tx_hash: 需要获取的交易的哈希值
