@@ -3,8 +3,8 @@ import copy
 import logging
 import time
 
+# from fastecdsa import keys
 import ecdsa
-
 from core.config import Config
 from utils import funcs
 
