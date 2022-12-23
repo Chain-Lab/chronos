@@ -153,6 +153,8 @@ class Client(object):
                     self.send(send_message)
                 except AttributeError:
                     pass
+
+                self.new_block = None
                 packaged = False
 
             # 获取本地最新区块的高度
@@ -390,22 +392,23 @@ class Client(object):
 
             bc = BlockChain()
             logging.info("Start package new block.")
-            self.new_block = bc.package_new_block(transactions, vote_data, Calculator().delay_params)
+            new_block = bc.package_new_block(transactions, vote_data, Calculator().delay_params)
+            self.new_block = copy.deepcopy(new_block)
 
-            end_time = time.time()
-            logging.info("Package block use {}s include count {}".format(end_time - start_time, len(transactions)))
+            if new_block:
+                end_time = time.time()
+                logging.info("Package block use {}s include count {}".format(end_time - start_time, len(transactions)))
+                logging.info("Append new block to merge thread.")
+                MergeThread().append_block(new_block)
+            else:
+                logging.warning("Package failed, rollback txmempool.")
+                self.tx_pool.roll_back()
 
-            # 如果区块打包失败， 则将交易池回退到上一个高度
-            if not self.new_block:
-                self.tx_pool.set_height(vote_height)
             package_lock.release()
 
-            if self.new_block:
-                logging.debug("Append new block to merge thread.")
-                MergeThread().append_block(self.new_block)
 
             with package_cond:
-                logging.debug("Notify all thread.")
+                logging.info("Notify all thread.")
                 package_cond.notify_all()
 
             logging.debug("Package new block.")

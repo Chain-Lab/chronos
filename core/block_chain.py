@@ -241,6 +241,16 @@ class BlockChain(Singleton):
 
         return block
 
+    def is_transaction_in_cache(self, tx_hash: str):
+        """
+        检查交易是否在 cache 中，用于 RPC 检查最近交易是否被打包
+        Args:
+            tx_hash: 交易的哈希
+        Returns:
+            bool 变量，如果存在则返回 True
+        """
+        return tx_hash in self.__tx_cache
+
     def get_transaction_by_tx_hash(self, tx_hash: str):
         """ 根据交易的哈希值获取交易
         Args:
@@ -271,7 +281,6 @@ class BlockChain(Singleton):
             self.__tx_cache[tx_hash] = tx
             return tx
         except Exception as e:
-            logging.error(e)
             return None
 
     def roll_back(self) -> None:
@@ -430,6 +439,8 @@ class BlockChain(Singleton):
 
         self.set_latest_hash(block_hash)
         self.__latest = block
+        self.__block_map[height] = block_hash
+        self.__block_cache[block_hash] = block
         UTXOSet().update(block)
         insert_list = {block_db_key: block.serialize(), block_height_db_key: block_hash}
 
@@ -439,9 +450,6 @@ class BlockChain(Singleton):
             tx_dict = tx.serialize()
             self.__tx_cache[tx_hash] = tx
             insert_list[db_tx_key] = tx_dict
-
-        self.__block_map[height] = block_hash
-        self.__block_cache[block_hash] = block
 
         self.db.batch_insert(insert_list)
 

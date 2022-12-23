@@ -14,10 +14,11 @@ from utils.convertor import utxo_hash_to_db_key, addr_utxo_db_key, remove_utxo_d
 class UTXOSet(Singleton):
     def __init__(self):
         self.db = LevelDB()
-        self.__utxo_cache = LRU(5000)
-        self.__address_cache = LRU(5000, callback=self.addr_cache_callback)
+        self.__utxo_cache = LRU(50000)
+        self.__address_cache = LRU(50000)
 
     def addr_cache_callback(self, key: str, value: list):
+        # todo(Decision): 这个函数存在问题， 会导致出块错误
         self.db[key] = {"utxos": value}
 
     def reindex(self, bc):

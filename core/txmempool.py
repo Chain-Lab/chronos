@@ -189,6 +189,12 @@ class TxMemPool(Singleton):
             logging.debug("Remove tx#{} from memory pool.".format(tx_hash))
         self.pool_lock.release()
 
+    def roll_back(self):
+        while not self.prev_queue.empty():
+            tx_hash = self.prev_queue.get()
+            self.tx_queue.put(tx_hash)
+        self.__height -= 1
+
     @property
     def height(self):
         return self.__height
