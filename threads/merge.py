@@ -240,6 +240,6 @@ class MergeThread(Singleton):
 
     def __clear_task(self):
         while True:
-            time.sleep(120)
+            time.sleep(150)
             with self.__lock:
                 self.cache.clear()
