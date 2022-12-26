@@ -80,9 +80,9 @@ def run():
     except KeyboardInterrupt:
         with open("./func_stats.ya", "w") as f:
             yappi.get_func_stats(filter_callback=lambda x: yappi.module_matches(x, [
-                core.block_chain, core.utxo, core.transaction, core.pot, core.txmempool,
+                core.block_chain, core.utxo, core.transaction, core.txmempool,
                 node.server, node.client, node.gossip,
-                threads.merge, threads.calculator, threads.vote_center,
+                threads.merge, threads.calculator,
                 utils.leveldb, utils.network,
                 rrpc.node, rrpc.block, rrpc.address, rrpc.transaction
             ])).sort("ttot", "desc").print_all(f)

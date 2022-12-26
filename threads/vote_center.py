@@ -27,9 +27,9 @@ class VoteCenter(Singleton):
         self.__has_voted = False # 在本轮是否投票过
         self.__rolled_back = False # 本轮投票时是否回退过
         self.__final_address = None # 投票的目标地址
-        self.__vote_lock = threading.Lock() # 投票锁
-        self.thread = threading.Thread(target=self.task, args=(), name="VoteCenterThread")
-        self.thread.start()
+        # self.__vote_lock = threading.Lock() # 投票锁
+        # self.thread = threading.Thread(target=self.task, args=(), name="VoteCenterThread")
+        # self.thread.start()
 
     def vote_update(self, address: str, final_address: str, height: int):
         '''

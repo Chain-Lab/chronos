@@ -77,6 +77,7 @@ class BlockChain(Singleton):
             transactions: 交易列表
             vote: 投票信息
             delay_params: VDF参数
+            todo(Decision): vote 后面改成 VRF 参数用于验证是否共识节点
 
         Returns:
             打包得到的新区块

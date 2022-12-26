@@ -16,7 +16,7 @@ from node.message import Message
 from node.timer import Timer
 from threads.calculator import Calculator
 from threads.merge import MergeThread
-from threads.vote_center import VoteCenter
+# from threads.vote_center import VoteCenter
 from utils.leveldb import LevelDB
 from utils.locks import package_lock, package_cond
 from utils.network import TCPConnect
@@ -37,10 +37,13 @@ class Client(object):
         self.tx_pool = TxMemPool()
 
         # 自身线程是否发送过投票信息
-        self.send_vote = False
+        # self.send_vote = False
 
         # 目前client的处理高度
         self.height = -1
+
+        # 本地的钱包地址
+        self.local_address = Config().get('node.address')
 
         # 最新区块的数据
         self.new_block = None
@@ -165,57 +168,61 @@ class Client(object):
 
             if self.height < height:
                 # 当前线程最后共识的高度低于最新高度， 更新共识信息
-                self.send_vote = False
+                # self.send_vote = False
                 self.height = height
                 logging.debug("Refresh client instance height information.")
 
             # v1.1.2 upd: 删除发送交易逻辑， 改为gossip协议使用UDP进行交易的广播
-            logging.debug("Consensus data send status: {}".format(self.send_vote))
-            logging.debug("Vote center vote status: {}".format(VoteCenter().has_vote))
+            # logging.debug("Consensus data send status: {}".format(self.send_vote))
+            # logging.debug("Vote center vote status: {}".format(VoteCenter().has_vote))
 
             # 时间共识投票的开始： 交易池满并且投票信息为空 或 本地已经投票但是没有发送投票信息 或 到达投票时间点并且没有发送投票信息
-            if (self.tx_pool.is_full() and not bool(VoteCenter().vote)) or (
-                    VoteCenter().has_vote and not self.send_vote) or (
-                    Timer().reach() and not self.send_vote):
-                logging.debug("Start consensus.")
-                address = Config().get('node.address')
-                # 本地进行一次投票， 如果已经投票过了会直接返回地址
-                final_address = VoteCenter().local_vote(height)
-                if final_address is None:
-                    final_address = address
+            # if (self.tx_pool.is_full() and not bool(VoteCenter().vote)) or (
+            #         VoteCenter().has_vote and not self.send_vote) or (
+            #         Timer().reach() and not self.send_vote):
+            #     logging.debug("Start consensus.")
+            #     address = Config().get('node.address')
+            #     # 本地进行一次投票， 如果已经投票过了会直接返回地址
+            #     final_address = VoteCenter().local_vote(height)
+            #     if final_address is None:
+            #         final_address = address
+            #
+            #     if final_address != -1:
+            #         VoteCenter().vote_update(address, final_address, self.height)
+            #         logging.debug("Send local vote information to server.")
+            #
+            #         message_data = {
+            #             'vote': address + ' ' + final_address,
+            #             'address': address,
+            #             'time': time.time(),
+            #             'id': int(Config().get('node.id')),
+            #             'height': self.height
+            #         }
+            #         # 发送投票信息给对端的server进行处理
+            #         send_message = Message(STATUS.POT, message_data)
+            #         logging.debug("Send consensus address to server.")
+            #         self.send(send_message)
+            #         # 不论是否进行过数据的发送，都设置为True
+            #         self.send_vote = True
 
-                if final_address != -1:
-                    VoteCenter().vote_update(address, final_address, self.height)
-                    logging.debug("Send local vote information to server.")
+            # local_vote = copy.deepcopy(VoteCenter().vote)
 
-                    message_data = {
-                        'vote': address + ' ' + final_address,
-                        'address': address,
-                        'time': time.time(),
-                        'id': int(Config().get('node.id')),
-                        'height': self.height
-                    }
-                    # 发送投票信息给对端的server进行处理
-                    send_message = Message(STATUS.POT, message_data)
-                    logging.debug("Send consensus address to server.")
-                    self.send(send_message)
-                    # 不论是否进行过数据的发送，都设置为True
-                    self.send_vote = True
-
-            logging.debug("Send vote list to server.")
-            local_vote = copy.deepcopy(VoteCenter().vote)
             data = {
                 "latest_height": -1,
                 "latest_block": "",
                 "address": Config().get('node.address'),
                 "time": time.time(),
                 "id": int(Config().get('node.id')),
-                "vote": local_vote,
-                "vote_height": VoteCenter().height
+                # "vote": local_vote,
+                # "vote_height": VoteCenter().height
             }
 
             if not latest_block:
                 latest_block, _ = bc.get_latest_block()
+
+            if Calculator().verify_address(self.local_address) and latest_block:
+                height = latest_block.block_header.height
+                self.package_new_block(height)
 
             try:
                 data['latest_height'] = latest_block.block_header.height
@@ -239,10 +246,10 @@ class Client(object):
             self.handle_shake(message)
         elif code == STATUS.GET_BLOCK_MSG:
             self.handle_get_block(message)
-        elif code == STATUS.POT:
-            self.handle_pot(message)
-        elif code == STATUS.SYNC_MSG:
-            self.handle_sync(message)
+        # elif code == STATUS.POT:
+        #     self.handle_pot(message)
+        # elif code == STATUS.SYNC_MSG:
+        #     self.handle_sync(message)
         elif code == STATUS.UPDATE_MSG:
             self.handle_update(message)
         elif code == STATUS.BLOCK:
@@ -270,8 +277,8 @@ class Client(object):
                 remote_block = Block.deserialize(remote_block_data)
                 MergeThread().append_block(remote_block)
 
-        if bool(vote_data):
-            VoteCenter().vote_sync(vote_data, vote_height)
+        # if bool(vote_data):
+        #     VoteCenter().vote_sync(vote_data, vote_height)
 
         bc = BlockChain()
         latest_block, prev_hash = bc.get_latest_block()
@@ -308,110 +315,110 @@ class Client(object):
             send_msg = Message(STATUS.BLOCK, height - 1)
             self.send(send_msg)
 
-    def handle_pot(self, message: dict):
-        """
-        状态码为STATUS.POT = 3, 进行时间共识投票
-        """
-        data = message.get('data', {})
-        vote_data = data.get('vote', '')
-        height = data.get('height', -1)
+    # def handle_pot(self, message: dict):
+    #     """
+    #     状态码为STATUS.POT = 3, 进行时间共识投票
+    #     """
+    #     data = message.get('data', {})
+    #     vote_data = data.get('vote', '')
+    #     height = data.get('height', -1)
+    #
+    #     if height < self.height:
+    #         return
+    #
+    #     address, final_address = vote_data.split(' ')
+    #     VoteCenter().vote_update(address, final_address, height)
 
-        if height < self.height:
-            return
-
-        address, final_address = vote_data.split(' ')
-        VoteCenter().vote_update(address, final_address, height)
-
-    def handle_sync(self, message: dict):
-        """
-        状态码为STATUS.SYNC_MSG = 4, 该节点为共识节点， 生成新区块
-        :param message: 待处理的message
-        :return: None
-        """
-        # 一轮共识结束的第二个标志：本地被投票为打包区块的节点，产生新区块
-        data = message.get('data', {})
-
-        logging.debug("Remote data: {}".format(data))
-
-        address = Config().get('node.address')
-        dst_address = data.get("result", "0")
-        vote_height = data.get("height", 0)
-        logging.debug("Client receive package address: {} height {}".format(address, vote_height))
-
-        latest_block, _ = BlockChain().get_latest_block()
-
-        if latest_block.height != vote_height:
-            logging.info("Vote height is not equal local height.")
-            return
-
-        vote_data = data.get("vote_info", {})
-
-        if bool(vote_data):
-            logging.debug("Syncing remote vote data.")
-            VoteCenter().vote_sync(vote_data, vote_height)
-
-        if address == dst_address:
-            if package_lock.locked():
-                logging.debug("Package locked.")
-                return
-            package_lock.acquire()
-            vote_data = copy.deepcopy(VoteCenter().vote)
-
-            # 用于验证本地是否打包节点的逻辑
-            a = sorted(vote_data.items(), key=lambda x: (len(x[1]), x[0]), reverse=True)
-            try:
-                if a[0][0] != address:
-                    package_lock.release()
-                    with package_cond:
-                        package_cond.notify_all()
-                    logging.debug("Local address is not package node.")
-                    logging.debug("Local vote list#{}: {}".format(VoteCenter().height, a))
-                    return
-            except IndexError:
-                package_lock.release()
-                with package_cond:
-                    package_cond.notify_all()
-                logging.debug("Local address is not package node.")
-                logging.debug("Local vote list#{}: {}".format(VoteCenter().height, a))
-                return
-
-            start_time = time.time()
-
-            logging.debug("Lock package lock. Start package memory pool.")
-            transactions = self.tx_pool.package(vote_height + 1)
-            logging.debug("Package transaction result: {}".format(transactions))
-
-            # 如果取出的交易数据是None， 说明另外一个线程已经打包了， 就不用再管
-            # upd: 在新的逻辑里面，不论节点交易池是否存在交易都会进行区块的打包
-            if transactions is None:
-                logging.debug("Tx memory pool has been packaged.")
-                package_lock.release()
-                with package_cond:
-                    package_cond.notify_all()
-                return
-
-            bc = BlockChain()
-            logging.info("Start package new block.")
-            new_block = bc.package_new_block(transactions, vote_data, Calculator().delay_params)
-            self.new_block = copy.deepcopy(new_block)
-
-            if new_block:
-                end_time = time.time()
-                logging.info("Package block use {}s include count {}".format(end_time - start_time, len(transactions)))
-                logging.info("Append new block to merge thread.")
-                MergeThread().append_block(new_block)
-            else:
-                logging.warning("Package failed, rollback txmempool.")
-                self.tx_pool.roll_back()
-
-            package_lock.release()
-
-
-            with package_cond:
-                logging.info("Notify all thread.")
-                package_cond.notify_all()
-
-            logging.debug("Package new block.")
+    # def handle_sync(self, message: dict):
+    #     """
+    #     状态码为STATUS.SYNC_MSG = 4, 该节点为共识节点， 生成新区块
+    #     :param message: 待处理的message
+    #     :return: None
+    #     """
+    #     # 一轮共识结束的第二个标志：本地被投票为打包区块的节点，产生新区块
+    #     data = message.get('data', {})
+    #
+    #     logging.debug("Remote data: {}".format(data))
+    #
+    #     address = Config().get('node.address')
+    #     dst_address = data.get("result", "0")
+    #     vote_height = data.get("height", 0)
+    #     logging.debug("Client receive package address: {} height {}".format(address, vote_height))
+    #
+    #     latest_block, _ = BlockChain().get_latest_block()
+    #
+    #     if latest_block.height != vote_height:
+    #         logging.info("Vote height is not equal local height.")
+    #         return
+    #
+        # vote_data = data.get("vote_info", {})
+        #
+        # if bool(vote_data):
+        #     logging.debug("Syncing remote vote data.")
+        #     VoteCenter().vote_sync(vote_data, vote_height)
+        #
+        # if address == dst_address:
+        #     if package_lock.locked():
+        #         logging.debug("Package locked.")
+        #         return
+        #     package_lock.acquire()
+        #     vote_data = copy.deepcopy(VoteCenter().vote)
+        #
+        #     # 用于验证本地是否打包节点的逻辑
+        #     a = sorted(vote_data.items(), key=lambda x: (len(x[1]), x[0]), reverse=True)
+        #     try:
+        #         if a[0][0] != address:
+        #             package_lock.release()
+        #             with package_cond:
+        #                 package_cond.notify_all()
+        #             logging.debug("Local address is not package node.")
+        #             logging.debug("Local vote list#{}: {}".format(VoteCenter().height, a))
+        #             return
+        #     except IndexError:
+        #         package_lock.release()
+        #         with package_cond:
+        #             package_cond.notify_all()
+        #         logging.debug("Local address is not package node.")
+        #         logging.debug("Local vote list#{}: {}".format(VoteCenter().height, a))
+        #         return
+        #
+        #     start_time = time.time()
+        #
+        #     logging.debug("Lock package lock. Start package memory pool.")
+        #     transactions = self.tx_pool.package(vote_height + 1)
+        #     logging.debug("Package transaction result: {}".format(transactions))
+        #
+        #     # 如果取出的交易数据是None， 说明另外一个线程已经打包了， 就不用再管
+        #     # upd: 在新的逻辑里面，不论节点交易池是否存在交易都会进行区块的打包
+        #     if transactions is None:
+        #         logging.debug("Tx memory pool has been packaged.")
+        #         package_lock.release()
+        #         with package_cond:
+        #             package_cond.notify_all()
+        #         return
+        #
+        #     bc = BlockChain()
+        #     logging.info("Start package new block.")
+        #     new_block = bc.package_new_block(transactions, vote_data, Calculator().delay_params)
+        #     self.new_block = copy.deepcopy(new_block)
+        #
+        #     if new_block:
+        #         end_time = time.time()
+        #         logging.info("Package block use {}s include count {}".format(end_time - start_time, len(transactions)))
+        #         logging.info("Append new block to merge thread.")
+        #         MergeThread().append_block(new_block)
+        #     else:
+        #         logging.warning("Package failed, rollback txmempool.")
+        #         self.tx_pool.roll_back()
+        #
+        #     package_lock.release()
+        #
+        #
+        #     with package_cond:
+        #         logging.info("Notify all thread.")
+        #         package_cond.notify_all()
+        #
+        #     logging.debug("Package new block.")
 
     def handle_update(self, message: dict):
         """
@@ -471,6 +478,45 @@ class Client(object):
             send_message = Message(STATUS.UPDATE_MSG, block.serialize())
 
         self.send(send_message)
+
+    def package_new_block(self, height: int):
+        start_time = time.time()
+
+        logging.info("Lock package lock. Start package memory pool.")
+        transactions = self.tx_pool.package(height + 1)
+        logging.debug("Package transaction result: {}".format(transactions))
+
+        # 如果取出的交易数据是None， 说明另外一个线程已经打包了， 就不用再管
+        # upd: 在新的逻辑里面，不论节点交易池是否存在交易都会进行区块的打包
+        if transactions is None:
+            logging.debug("Tx memory pool has been packaged.")
+            package_lock.release()
+            with package_cond:
+                package_cond.notify_all()
+            return
+
+        bc = BlockChain()
+        logging.info("Start package new block.")
+        new_block = bc.package_new_block(transactions, {}, Calculator().delay_params)
+        self.new_block = copy.deepcopy(new_block)
+
+        if new_block:
+            end_time = time.time()
+            logging.info("Package block use {}s include count {}".format(end_time - start_time, len(transactions)))
+            logging.info("Append new block to merge thread.")
+            MergeThread().append_block(new_block)
+        else:
+            logging.warning("Package failed, rollback txmempool.")
+            self.tx_pool.roll_back()
+
+        package_lock.release()
+
+
+        with package_cond:
+            logging.info("Notify all thread.")
+            package_cond.notify_all()
+
+        logging.debug("Package new block.")
 
     def close(self):
         self.sock.close()

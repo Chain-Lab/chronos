@@ -13,9 +13,9 @@ from node.constants import STATUS
 from node.message import Message
 from node.timer import Timer
 from threads.calculator import Calculator
-from threads.counter import Counter
+# from threads.counter import Counter
 from threads.merge import MergeThread
-from threads.vote_center import VoteCenter
+# from threads.vote_center import VoteCenter
 from utils.locks import package_lock, package_cond
 from utils.network import TCPConnect
 
@@ -70,7 +70,7 @@ class Server(object):
         calculator = Calculator()
         calculator.run()
         # 实例化timer， 进行初始化操作
-        Timer()
+        # Timer()
 
         thread = threading.Thread(target=self.listen_loop, args=())
         thread.start()
@@ -109,7 +109,7 @@ class Server(object):
                 # rec_data = conn.recv(4096 * 2)
                 rec_data = TCPConnect.recv_msg(conn)
                 if rec_data is None:
-                    Counter().client_close()
+                    # Counter().client_close()
                     conn.close()
                     break
 
@@ -144,7 +144,7 @@ class Server(object):
                 pass
             else:
                 # 失去连接， 从vote center中-1
-                Counter().client_close()
+                # Counter().client_close()
                 conn.close()
                 break
 
@@ -169,40 +169,40 @@ class Server(object):
             result_message = Message.empty_message()
         return json.dumps(result_message.__dict__)
 
-    @staticmethod
-    def check_vote_synced(vote_data):
-        """
-        将邻居节点发送的投票信息与本地进行对比， 投票完全一致说明投票完成
-        除了需要与client的信息一致， 还需要至少在本轮和每一个client都同步过一次
-        :param vote_data:
-        :return:
-        """
-        local_vote = VoteCenter().vote
-        if vote_data == {} or len(vote_data) != len(local_vote) or not Counter().client_verify():
-            logging.debug("Vote data: {}".format(vote_data))
-            logging.debug("Vote data length: {} / {}".format(len(vote_data), len(local_vote)))
-            logging.debug("Check vote synced condition failed.")
-            return False
-        for address in vote_data:
-            # 当前地址的键值不存在， 说明信息没有同步
-            if address not in local_vote.keys():
-                logging.debug("Address {} not in local vote key.".format(address))
-                return False
-            # todo: 由于是浅拷贝，会不会影响到另外一个正在写的线程
-            a = local_vote[address]
-            b = vote_data[address]
-            if len(a) == 0 or len(b) == 0 or len(a) != len(b):
-                logging.debug("Vote list length is not equal.")
-                return False
-            a = a[: -1]
-            b = b[: -1]
-            a.sort()
-            b.sort()
-            if a != b:
-                logging.debug("Sorted list is not equal.")
-                return False
-        logging.debug("Vote list same, return True.")
-        return True
+    # @staticmethod
+    # def check_vote_synced(vote_data):
+    #     """
+    #     将邻居节点发送的投票信息与本地进行对比， 投票完全一致说明投票完成
+    #     除了需要与client的信息一致， 还需要至少在本轮和每一个client都同步过一次
+    #     :param vote_data:
+    #     :return:
+    #     """
+    #     local_vote = VoteCenter().vote
+    #     if vote_data == {} or len(vote_data) != len(local_vote) or not Counter().client_verify():
+    #         logging.debug("Vote data: {}".format(vote_data))
+    #         logging.debug("Vote data length: {} / {}".format(len(vote_data), len(local_vote)))
+    #         logging.debug("Check vote synced condition failed.")
+    #         return False
+    #     for address in vote_data:
+    #         # 当前地址的键值不存在， 说明信息没有同步
+    #         if address not in local_vote.keys():
+    #             logging.debug("Address {} not in local vote key.".format(address))
+    #             return False
+    #         # todo: 由于是浅拷贝，会不会影响到另外一个正在写的线程
+    #         a = local_vote[address]
+    #         b = vote_data[address]
+    #         if len(a) == 0 or len(b) == 0 or len(a) != len(b):
+    #             logging.debug("Vote list length is not equal.")
+    #             return False
+    #         a = a[: -1]
+    #         b = b[: -1]
+    #         a.sort()
+    #         b.sort()
+    #         if a != b:
+    #             logging.debug("Sorted list is not equal.")
+    #             return False
+    #     logging.debug("Vote list same, return True.")
+    #     return True
 
     def handle_handshake(self, message: dict):
         """
@@ -231,9 +231,9 @@ class Server(object):
 
         # 如果当前线程没有同步过client的节点信息， 设置一次并且注册
         # upd： 保证对端节点的高度和本地一致
-        if self.thread_local.client_id == -1 and remote_height == local_height:
-            self.thread_local.client_id = node_id
-            Counter().client_reg()
+        # if self.thread_local.client_id == -1 and remote_height == local_height:
+        #     self.thread_local.client_id = node_id
+        #     Counter().client_reg()
 
         logging.debug("Remote address {} height #{}.".format(remote_address, remote_height))
 
@@ -244,7 +244,7 @@ class Server(object):
         # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
         if self.thread_local.height != local_height:
             logging.debug("New consensus round, refresh flags.")
-            Counter().refresh(local_height)
+            # Counter().refresh(local_height)
             self.thread_local.height = local_height
             self.thread_local.client_synced = False
             self.thread_local.server_synced = False
@@ -272,35 +272,34 @@ class Server(object):
             return result
 
         # 投票信息同步完成
-        # todo： 逻辑修改， 在到达时间点后直接进行处理
         # 这里的逻辑实际是存在问题的， server和每个client都有建立连接， 但是只和一个client判断信息同步完成， 并且每一次都要判断
         # logging.debug("Server vote result send status: {}".format(self.thread_local.server_send))
-        local_votes = copy.deepcopy(VoteCenter().vote)
-        if Timer().finish() or self.check_vote_synced(vote_data):
-            height = VoteCenter().height
-            a = sorted(local_votes.items(), key=lambda x: (len(x[1]), x[0]), reverse=True)
-            # 如果同步完成， 按照第一关键字为投票数，第二关键字为地址字典序来进行排序
-            # x的结构： addr1: [addr2 , addr3, ..., count]
-            # x[1]取后面的列表
-            try:
-                address = a[0][0]
-                data = {
-                    "result": address,
-                    "height": height,
-                    "vote_info": local_votes
-                }
-                result = Message(STATUS.SYNC_MSG, data)
-                logging.debug("Send vote result {}#{} to client.".format(address, VoteCenter().height))
-                # time.sleep(0.01)
-                return result
-            except IndexError:
-                # 如果本地没有投票信息直接略过
-                logging.info("Local node has none vote information.")
-
-        if bool(vote_data):
-            logging.debug("Vote information is not synced, sync remote vote list.")
-            VoteCenter().vote_sync(vote_data, vote_height)
-            logging.debug("Vote information append to queue finished.")
+        # local_votes = copy.deepcopy(VoteCenter().vote)
+        # if Timer().finish() or self.check_vote_synced(vote_data):
+        #     height = VoteCenter().height
+        #     a = sorted(local_votes.items(), key=lambda x: (len(x[1]), x[0]), reverse=True)
+        #     # 如果同步完成， 按照第一关键字为投票数，第二关键字为地址字典序来进行排序
+        #     # x的结构： addr1: [addr2 , addr3, ..., count]
+        #     # x[1]取后面的列表
+        #     try:
+        #         address = a[0][0]
+        #         data = {
+        #             "result": address,
+        #             "height": height,
+        #             "vote_info": local_votes
+        #         }
+        #         result = Message(STATUS.SYNC_MSG, data)
+        #         logging.debug("Send vote result {}#{} to client.".format(address, VoteCenter().height))
+        #         # time.sleep(0.01)
+        #         return result
+        #     except IndexError:
+        #         # 如果本地没有投票信息直接略过
+        #         logging.info("Local node has none vote information.")
+        #
+        # if bool(vote_data):
+        #     logging.debug("Vote information is not synced, sync remote vote list.")
+        #     VoteCenter().vote_sync(vote_data, vote_height)
+        #     logging.debug("Vote information append to queue finished.")
 
         result_data = {
             "last_height": -1,
@@ -308,8 +307,8 @@ class Server(object):
             "address": Config().get('node.address'),
             "time": time.time(),
             "id": int(Config().get('node.id')),
-            "vote": local_votes,
-            "vote_height": VoteCenter().height,
+            # "vote": local_votes,
+            # "vote_height": VoteCenter().height,
         }
 
         if not block:
@@ -348,35 +347,35 @@ class Server(object):
             result = Message(STATUS.GET_BLOCK_MSG, result_data)
         return result
 
-    def handle_sync_vote(self, message: dict):
-        """
-        状态码为STATUS.POT = 3， 同步时间共识的投票信息, 将远端的投票信息加入本地
-        :param message: 需要处理的message
-        :return: None
-        """
-        data = message.get('data', {})
-        vote = data.get('vote', '')
-        height = data.get('height', -1)
-
-        if height < self.thread_local.height:
-            return
-
-        address, final_address = vote.split(' ')
-        # 将client发过来的投票信息添加到本地
-        # 对端节点如果高度低于本地， 不接收对应的投票信息
-        VoteCenter().vote_update(address, final_address, height)
-        if not self.thread_local.server_synced:
-            logging.debug("Add local vote information")
-            address = Config().get("node.address")
-
-            final_address = VoteCenter().local_vote(self.thread_local.height)
-            if final_address is not None:
-                VoteCenter().vote_update(address, final_address, self.thread_local.height)
-            self.thread_local.server_synced = True
-        if not self.thread_local.client_synced:
-            logging.debug("Synced with node {} vote info {}".format(self.thread_local.client_id, vote))
-            self.thread_local.client_synced = True
-            Counter().client_synced(height)
+    # def handle_sync_vote(self, message: dict):
+    #     """
+    #     状态码为STATUS.POT = 3， 同步时间共识的投票信息, 将远端的投票信息加入本地
+    #     :param message: 需要处理的message
+    #     :return: None
+    #     """
+    #     data = message.get('data', {})
+    #     vote = data.get('vote', '')
+    #     height = data.get('height', -1)
+    #
+    #     if height < self.thread_local.height:
+    #         return
+    #
+    #     address, final_address = vote.split(' ')
+    #     # 将client发过来的投票信息添加到本地
+    #     # 对端节点如果高度低于本地， 不接收对应的投票信息
+    #     VoteCenter().vote_update(address, final_address, height)
+    #     if not self.thread_local.server_synced:
+    #         logging.debug("Add local vote information")
+    #         address = Config().get("node.address")
+    #
+    #         final_address = VoteCenter().local_vote(self.thread_local.height)
+    #         if final_address is not None:
+    #             VoteCenter().vote_update(address, final_address, self.thread_local.height)
+    #         self.thread_local.server_synced = True
+    #     if not self.thread_local.client_synced:
+    #         logging.debug("Synced with node {} vote info {}".format(self.thread_local.client_id, vote))
+    #         self.thread_local.client_synced = True
+    #         Counter().client_synced(height)
 
     def handle_update(self, message: dict):
         """

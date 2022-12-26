@@ -9,8 +9,8 @@ from core.txmempool import TxMemPool
 from core.utxo import UTXOSet
 from node.timer import Timer
 from threads.calculator import Calculator
-from threads.counter import Counter
-from threads.vote_center import VoteCenter
+# from threads.counter import Counter
+# from threads.vote_center import VoteCenter
 from utils import funcs
 from utils.singleton import Singleton
 from queue import Queue
@@ -110,9 +110,9 @@ class MergeThread(Singleton):
         logging.debug("Update votecenter, calculator, mempool with height #{} rollback: {}".format(height, rolled_back))
 
         # 注意更新顺序
-        VoteCenter().refresh(height, rolled_back)
-        Counter().refresh(height, rolled_back)
-        Timer().refresh()
+        # VoteCenter().refresh(height, rolled_back)
+        # Counter().refresh(height, rolled_back)
+        # Timer().refresh()
 
         delay_params = block.transactions[0].inputs[0].delay_params
         hex_seed = delay_params.get("seed")
