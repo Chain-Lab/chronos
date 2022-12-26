@@ -220,7 +220,7 @@ class Client(object):
             if not latest_block:
                 latest_block, _ = bc.get_latest_block()
 
-            if Calculator().verify_address(self.local_address) and latest_block:
+            if Timer().finish() and Calculator().verify_address(self.local_address) and latest_block:
                 height = latest_block.block_header.height
                 self.package_new_block(height)
 
