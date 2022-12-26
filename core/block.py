@@ -40,14 +40,15 @@ class Block(object):
         Returns:
             返回一个整数，表示当前区块下的投票地址数量
         """
-        vote_info: dict
-        vote_info = self.vote_info
-        result = 0
-        logging.debug("BLock#{} vote info data: {}".format(self.block_header.hash, vote_info))
-        logging.debug("Block data: {}".format(self.serialize()))
-        for item in vote_info.values():
-            result += len(item)
-        return result
+        return 0
+        # vote_info: dict
+        # vote_info = self.vote_info
+        # result = 0
+        # logging.debug("BLock#{} vote info data: {}".format(self.block_header.hash, vote_info))
+        # logging.debug("Block data: {}".format(self.serialize()))
+        # for item in vote_info.values():
+        #     result += len(item)
+        # return result
 
     def delay_params(self):
         return self._transactions[0].inputs[0].delay_params
