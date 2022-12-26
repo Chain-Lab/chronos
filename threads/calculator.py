@@ -86,7 +86,7 @@ class Calculator(Singleton):
 
         if genesis_block is None:
             logging.error("Genesis block is not exists.")
-            return
+            return False
 
         coinbase_tx = genesis_block.transactions[0]
         coinbase_tx_input = coinbase_tx.inputs[0]
@@ -107,6 +107,7 @@ class Calculator(Singleton):
         self.seed = new_seed
         self.__finished = False
         self.__has_inited = True
+        return True
 
     def task(self):
         """
@@ -199,13 +200,15 @@ class Calculator(Singleton):
         """
         if not self.__has_inited:
             with self.__cond:
-                self.__initialization()
+                init_result = self.__initialization()
                 self.__cond.notify_all()
+            if not init_result:
+                return False
 
         address_number = int.from_bytes(Base58Code.decode_check(address), byteorder='big')
         node_hash = self.seed * address_number % 2 ** 256
 
-        if node_hash / 2 ** 256 > 0.3:
+        if node_hash / 2 ** 256 > 0.4:
             logging.debug("{} is not consensus node.".format(address))
             return False
 

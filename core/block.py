@@ -40,7 +40,7 @@ class Block(object):
         Returns:
             返回一个整数，表示当前区块下的投票地址数量
         """
-        return 0
+        return len(self._transactions)
         # vote_info: dict
         # vote_info = self.vote_info
         # result = 0

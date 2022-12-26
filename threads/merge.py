@@ -112,7 +112,7 @@ class MergeThread(Singleton):
         # 注意更新顺序
         # VoteCenter().refresh(height, rolled_back)
         # Counter().refresh(height, rolled_back)
-        # Timer().refresh()
+        Timer().refresh()
 
         delay_params = block.transactions[0].inputs[0].delay_params
         hex_seed = delay_params.get("seed")

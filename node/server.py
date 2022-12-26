@@ -70,7 +70,7 @@ class Server(object):
         calculator = Calculator()
         calculator.run()
         # 实例化timer， 进行初始化操作
-        # Timer()
+        Timer()
 
         thread = threading.Thread(target=self.listen_loop, args=())
         thread.start()
