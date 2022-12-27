@@ -131,10 +131,9 @@ class Transaction(object):
         :param delay_params: 用于VDF的参数信息
         :return: 返回生成的coinbase交易
         """
-        vote_node = data
+        proof_info = data
         _input = CoinBaseInput('', -1, Config().get('node.public_key'))
-        _input.vote_info = vote_node
-        logging.debug("Set coinbase input vote info: {}".format(vote_node))
+        _input.proof_info = proof_info
         _input.delay_params = delay_params
         output = TxOutput(int(Config().get('node.coinbase_reward')),
                           Config().get('node.address'))
@@ -216,19 +215,13 @@ class TxOutput(object):
 class CoinBaseInput(TxInput):
     def __init__(self, tx_hash=None, inputs=None, outputs=None):
         super().__init__(tx_hash, inputs, outputs)
-        self.vote_info = {}
+        self.proof_info = {}
         self.delay_params = {}
         """
         delay_params: 用于进行VDF的参数， 在创世区块中表现为n, seed, l, t的选取
                       在其他区块中表现为new_seed, proof
         todo: 可能存在的风险：不对这部分数据校验导致整个网络出现错误
         """
-
-    def set_vote(self, address, node_id, vote_count, vote_node):
-        self.vote_info[address] = {}
-        self.vote_info[address]['node_id'] = node_id
-        self.vote_info[address]['vote_count'] = vote_count
-        self.vote_info[address][vote_node] = vote_node
 
     def __repr__(self):
         """

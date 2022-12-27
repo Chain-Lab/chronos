@@ -27,7 +27,6 @@ from utils import constant
 class Client(object):
     # Client线程类， 多个client之间相互独立， 不共享变量
     def __init__(self, ip, port):
-        self.txs = []
         self.sock = socket.socket()
 
         self.sock.connect((ip, port))
@@ -47,14 +46,6 @@ class Client(object):
 
         # 最新区块的数据
         self.new_block = None
-
-    def add_transaction(self, transaction):
-        """
-        添加交易到本地client, 即直接append到txs列表中
-        :param transaction: 待添加的交易
-        :return: None
-        """
-        self.txs.append(transaction)
 
     def send(self, message):
         """

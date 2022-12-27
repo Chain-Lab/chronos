@@ -10,3 +10,8 @@ class STATUS(object):
     SYNC_MSG = 4
     UPDATE_MSG = 5
     BLOCK = 6
+
+    HANDSHAKE = 7
+    PULL_BLOCK = 8
+    PUSH_BLOCK = 9
+    NEW_BLOCK = 10

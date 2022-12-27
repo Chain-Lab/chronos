@@ -66,7 +66,7 @@ class BlockChain(Singleton):
 
     def package_new_block(self,
                           transactions: list,
-                          vote: dict,
+                          proof: dict,
                           delay_params: dict):
         """ 区块打包逻辑
 
@@ -75,9 +75,8 @@ class BlockChain(Singleton):
 
         Args:
             transactions: 交易列表
-            vote: 投票信息
+            proof: 共识节点证明
             delay_params: VDF参数
-            todo(Decision): vote 后面改成 VRF 参数用于验证是否共识节点
 
         Returns:
             打包得到的新区块
@@ -90,9 +89,7 @@ class BlockChain(Singleton):
         prev_height = latest_block.block_header.height
         height = latest_block.block_header.height + 1
 
-        logging.debug("Vote info: {}".format(vote))
-
-        coin_base_tx = Transaction.coinbase_tx(vote, delay_params)
+        coin_base_tx = Transaction.coinbase_tx(proof, delay_params)
         transactions.insert(0, coin_base_tx)
 
         data = []

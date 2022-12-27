@@ -165,6 +165,10 @@ class MergeThread(Singleton):
                 logging.debug("Latest block: {}".format(latest_block))
                 logging.debug("Now block: {}".format(block))
 
+                if MergeThread().__check_block_timeout(block):
+                    logging.debug("Block is timeout.")
+                    continue
+
                 # 获取到的该区块的高度低于或等于本地高度， 说明区块已经存在
                 if block_height <= latest_height:
                     logging.info("Block has equal block, check whether block is legal.")
@@ -237,6 +241,15 @@ class MergeThread(Singleton):
             result = prev_hash
             prev_hash = self.cache[result]['prev_hash']
         return result
+
+    @staticmethod
+    def __check_block_timeout(block):
+        genesis = BlockChain().get_block_by_height(0)
+        genesis_timestamp = int(genesis.block_header.timestamp)
+        block_timestamp = int(block.block_header.timestamp)
+        block_height = block.block_header.height
+
+        return block_height * 2 * 1000 + genesis_timestamp < block_timestamp
 
     def __clear_task(self):
         while True:
