@@ -9,10 +9,11 @@ from utils import constant
 
 
 class Peer(Singleton):
-    def __init__(self):
+    def __init__(self, manager):
         # 消除多次__init__问题后可以直接初始化
         self.peers = []
         self.nodes = []
+        self.manager = manager
 
     def find_nodes(self, p2p_server):
         # local_ip = socket.getaddrinfo(socket.gethostname(), None)
@@ -35,7 +36,7 @@ class Peer(Singleton):
                     if ip == local_ip:
                         continue
                     logging.info("Detect new node: ip {} port {}".format(ip, port))
-                    client = Client(ip, port)
+                    client = Client(ip, port, self.manager)
                     thread = threading.Thread(target=client.shake_loop)
                     thread.start()
                     self.peers.append(client)

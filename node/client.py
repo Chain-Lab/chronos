@@ -15,10 +15,7 @@ from core.txmempool import TxMemPool
 from node.constants import STATUS
 from node.message import Message
 from node.timer import Timer
-from node.manager import Manager
 from threads.calculator import Calculator
-from threads.selector import Selector
-# from threads.vote_center import VoteCenter
 from utils.leveldb import LevelDB
 from utils.locks import package_lock, package_cond
 from utils.network import TCPConnect
@@ -26,7 +23,7 @@ from utils.network import TCPConnect
 
 class Client(object):
     # Client线程类， 多个client之间相互独立， 不共享变量
-    def __init__(self, ip, port):
+    def __init__(self, ip, port, manager):
         self.sock = socket.socket()
 
         self.sock.connect((ip, port))
@@ -40,6 +37,8 @@ class Client(object):
 
         # 最新打包区块的数据
         self.new_block = None
+
+        self.__manager = manager
 
         self.__queued_blocks = queue.Queue()
 
@@ -136,7 +135,7 @@ class Client(object):
             # 如果打包了区块， 发送新的区块给对端
             if self.new_block:
                 try:
-                    Manager().append_block(self.new_block)
+                    self.__manager.append_block(self.new_block)
                 except AttributeError:
                     pass
 
@@ -157,7 +156,7 @@ class Client(object):
                 continue
 
             if Timer().finish():
-                Manager().notify_insert()
+                self.__manager.notify_insert()
                 continue
 
             try:
@@ -226,14 +225,14 @@ class Client(object):
         """
         data = message.get('data', {})
         block = Block.deserialize(data)
-        Manager().insert_block(block)
+        self.__manager.insert_block(block)
 
     def handle_get_block(self, message: dict):
         """
         状态码 STATUS.GET_BLOCK, 返回给服务器某个新区块
         """
         block_hash = message.get('data', "")
-        block = Manager().get_known_block(block_hash)
+        block = self.__manager.get_known_block(block_hash)
         send_msg = Message(STATUS.NEW_BLOCK, block.serialize())
         self.send(send_msg)
 
@@ -269,7 +268,7 @@ class Client(object):
         if new_block:
             end_time = time.time()
             logging.info("Package block use {}s include count {}".format(end_time - start_time, len(transactions)))
-            Manager().append_block(new_block)
+            self.__manager.append_block(new_block)
         else:
             logging.warning("Package failed, rollback txmempool.")
             self.tx_pool.roll_back()
@@ -287,7 +286,7 @@ class Client(object):
         状态码为 STATUS.BLOCK_KNOWN的响应，在list中添加哈希值
         """
         block_hash = message.get("data")
-        self.__known_blocks[block_hash] = Manager().get_known_block(block_hash)
+        self.__known_blocks[block_hash] = self.__manager.get_known_block(block_hash)
 
     def append_block_queue(self, block):
         self.__queued_blocks.put(block)

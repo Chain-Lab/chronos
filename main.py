@@ -25,6 +25,7 @@ from node.gossip import Gossip
 from node.peer import Peer
 from node.peer_to_peer import P2p
 from node.server import Server
+from node.manager import Manager
 from utils import funcs
 from utils.b58code import Base58Code
 from utils import number_theory
@@ -73,7 +74,7 @@ def run():
         logging.info("RPC server start")
 
         p2p = P2p()
-        server = Peer()
+        server = Peer(Manager())
         server.run(p2p)
         p2p.run()
     except KeyboardInterrupt:
