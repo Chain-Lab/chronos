@@ -176,9 +176,6 @@ class Server(object):
         except AttributeError:
             result_data['height'] = -1
 
-        if not block:
-            return Message.empty_message()
-
         result = Message(STATUS.HANDSHAKE, result_data)
         logging.debug("Return handshake data.")
         return result
