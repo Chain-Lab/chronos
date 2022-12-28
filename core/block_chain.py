@@ -439,6 +439,7 @@ class BlockChain(Singleton):
         self.__latest = block
         self.__block_map[height] = block_hash
         self.__block_cache[block_hash] = block
+
         UTXOSet().update(block)
         insert_list = {block_db_key: block.serialize(), block_height_db_key: block_hash}
 

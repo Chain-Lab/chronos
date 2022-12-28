@@ -29,7 +29,6 @@ from utils import funcs
 from utils.b58code import Base58Code
 from utils import number_theory
 from rpc.rpcserver import RPCServer
-from threads.merge import MergeThread
 
 """
 注意： 该文件仅用于测试
@@ -82,7 +81,7 @@ def run():
             yappi.get_func_stats(filter_callback=lambda x: yappi.module_matches(x, [
                 core.block_chain, core.utxo, core.transaction, core.txmempool,
                 node.server, node.client, node.gossip,
-                threads.merge, threads.calculator,
+                threads.selector, threads.calculator,
                 utils.leveldb, utils.network,
                 rrpc.node, rrpc.block, rrpc.address, rrpc.transaction
             ])).sort("ttot", "desc").print_all(f)

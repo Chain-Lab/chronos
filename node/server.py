@@ -12,10 +12,8 @@ from core.txmempool import TxMemPool
 from node.constants import STATUS
 from node.message import Message
 from node.timer import Timer
+from node.manager import Manager
 from threads.calculator import Calculator
-# from threads.counter import Counter
-from threads.merge import MergeThread
-# from threads.vote_center import VoteCenter
 from utils.locks import package_lock, package_cond
 from utils.network import TCPConnect
 
@@ -87,13 +85,6 @@ class Server(object):
         thread_obj.name = "Server Thread - " + thread_obj.getName().split("-")[-1]
         rec_msg = None
         server_continue = True
-        # 连接的client的id
-        self.thread_local.client_id = -1
-        # client同步标志， 确认是否和所连接的client同步过一次
-        self.thread_local.client_synced = False
-        # server同步标志， 确认本地投票的信息是否放入到vote_center
-        self.thread_local.server_synced = False
-        self.thread_local.height = -1
 
         while True:
             if not constant.NODE_RUNNING:
@@ -106,10 +97,8 @@ class Server(object):
                     package_cond.wait()
 
             try:
-                # rec_data = conn.recv(4096 * 2)
                 rec_data = TCPConnect.recv_msg(conn)
                 if rec_data is None:
-                    # Counter().client_close()
                     conn.close()
                     break
 
@@ -117,8 +106,6 @@ class Server(object):
 
             except ValueError:
                 try:
-                    # 发送信息， 如果出现错误说明连接断开
-                    # conn.sendall('{"code": 0, "data": ""}'.encode())
                     TCPConnect.send_msg(conn, '{"code": 0, "data": ""}')
                 except BrokenPipeError:
                     logging.info("Client lost connect, close server.")
@@ -133,18 +120,13 @@ class Server(object):
                     continue
 
                 try:
-                    # 发送信息， 如果出现错误说明连接断开
-                    # conn.sendall(send_data.encode())
                     TCPConnect.send_msg(conn, send_data)
                 except BrokenPipeError:
                     logging.info("Client lost connect, close server.")
                     server_continue = False
             if server_continue:
-                # time.sleep(0.01)
                 pass
             else:
-                # 失去连接， 从vote center中-1
-                # Counter().client_close()
                 conn.close()
                 break
 
@@ -154,55 +136,17 @@ class Server(object):
         :return: 消息处理完成后应该返回的数据
         """
         code = message.get('code', 0)
-        if code == STATUS.HAND_SHAKE_MSG:
+        if code == STATUS.HANDSHAKE:
             result_message = self.handle_handshake(message)
-        elif code == STATUS.GET_BLOCK_MSG:
-            result_message = self.handle_get_block(message)
-        elif code == STATUS.POT:
-            self.handle_sync_vote(message)
-            result_message = Message(STATUS.NODE_MSG, "4")
-        elif code == STATUS.UPDATE_MSG:
-            result_message = self.handle_update(message)
-        elif code == STATUS.BLOCK:
-            result_message = self.handle_send_block(message)
+        elif code == STATUS.PULL_BLOCK:
+            result_message = self.handle_pull_block(message)
+        elif code == STATUS.NEW_BLOCK:
+            result_message = self.handle_new_block(message)
+        elif code == STATUS.NEW_BLOCK_HASH:
+            result_message = self.handle_new_block_hash(message)
         else:
             result_message = Message.empty_message()
         return json.dumps(result_message.__dict__)
-
-    # @staticmethod
-    # def check_vote_synced(vote_data):
-    #     """
-    #     将邻居节点发送的投票信息与本地进行对比， 投票完全一致说明投票完成
-    #     除了需要与client的信息一致， 还需要至少在本轮和每一个client都同步过一次
-    #     :param vote_data:
-    #     :return:
-    #     """
-    #     local_vote = VoteCenter().vote
-    #     if vote_data == {} or len(vote_data) != len(local_vote) or not Counter().client_verify():
-    #         logging.debug("Vote data: {}".format(vote_data))
-    #         logging.debug("Vote data length: {} / {}".format(len(vote_data), len(local_vote)))
-    #         logging.debug("Check vote synced condition failed.")
-    #         return False
-    #     for address in vote_data:
-    #         # 当前地址的键值不存在， 说明信息没有同步
-    #         if address not in local_vote.keys():
-    #             logging.debug("Address {} not in local vote key.".format(address))
-    #             return False
-    #         # todo: 由于是浅拷贝，会不会影响到另外一个正在写的线程
-    #         a = local_vote[address]
-    #         b = vote_data[address]
-    #         if len(a) == 0 or len(b) == 0 or len(a) != len(b):
-    #             logging.debug("Vote list length is not equal.")
-    #             return False
-    #         a = a[: -1]
-    #         b = b[: -1]
-    #         a.sort()
-    #         b.sort()
-    #         if a != b:
-    #             logging.debug("Sorted list is not equal.")
-    #             return False
-    #     logging.debug("Vote list same, return True.")
-    #     return True
 
     def handle_handshake(self, message: dict):
         """
@@ -213,11 +157,7 @@ class Server(object):
         """
         logging.debug("Server receive handshake message.")
         data = message.get("data", {})
-        vote_data = data.get("vote", {})
-        remote_height = data.get("latest_height", -1)
-        remote_address = data.get("address")
-        node_id = data.get("id")
-        vote_height = data.get("vote_height", 0)
+        remote_height = data.get("height", -1)
 
         if remote_height != -1:
             remote_block_data = data.get("latest_block", "")
@@ -227,204 +167,66 @@ class Server(object):
 
         bc = BlockChain()
         block, prev_hash = bc.get_latest_block()
-        local_height = -1
-
-        # 如果当前线程没有同步过client的节点信息， 设置一次并且注册
-        # upd： 保证对端节点的高度和本地一致
-        # if self.thread_local.client_id == -1 and remote_height == local_height:
-        #     self.thread_local.client_id = node_id
-        #     Counter().client_reg()
-
-        logging.debug("Remote address {} height #{}.".format(remote_address, remote_height))
-
-        # 获取本地高度之前检查是否存在区块
-        if block:
-            local_height = block.block_header.height
-
-        # 与client通信的线程高度与数据库高度不一致， 说明新一轮共识没有同步
-        if self.thread_local.height != local_height:
-            logging.debug("New consensus round, refresh flags.")
-            # Counter().refresh(local_height)
-            self.thread_local.height = local_height
-            self.thread_local.client_synced = False
-            self.thread_local.server_synced = False
-
-        # 本地高度低于邻居高度， 拉取区块
-        if local_height < remote_height:
-            logging.debug(
-                "Local height#{} lower than remote height#{}, pull block.".format(local_height, remote_height))
-
-            if not block:
-                block, _ = bc.get_latest_block()
-
-            try:
-                block_data = block.serialize()
-                logging.debug("Send local height and latest block information.")
-            except AttributeError:
-                block_data = ""
-
-            data = {
-                'height': local_height,
-                'block': block_data
-            }
-
-            result = Message(STATUS.UPDATE_MSG, data)
-            return result
-
-        # 投票信息同步完成
-        # 这里的逻辑实际是存在问题的， server和每个client都有建立连接， 但是只和一个client判断信息同步完成， 并且每一次都要判断
-        # logging.debug("Server vote result send status: {}".format(self.thread_local.server_send))
-        # local_votes = copy.deepcopy(VoteCenter().vote)
-        # if Timer().finish() or self.check_vote_synced(vote_data):
-        #     height = VoteCenter().height
-        #     a = sorted(local_votes.items(), key=lambda x: (len(x[1]), x[0]), reverse=True)
-        #     # 如果同步完成， 按照第一关键字为投票数，第二关键字为地址字典序来进行排序
-        #     # x的结构： addr1: [addr2 , addr3, ..., count]
-        #     # x[1]取后面的列表
-        #     try:
-        #         address = a[0][0]
-        #         data = {
-        #             "result": address,
-        #             "height": height,
-        #             "vote_info": local_votes
-        #         }
-        #         result = Message(STATUS.SYNC_MSG, data)
-        #         logging.debug("Send vote result {}#{} to client.".format(address, VoteCenter().height))
-        #         # time.sleep(0.01)
-        #         return result
-        #     except IndexError:
-        #         # 如果本地没有投票信息直接略过
-        #         logging.info("Local node has none vote information.")
-        #
-        # if bool(vote_data):
-        #     logging.debug("Vote information is not synced, sync remote vote list.")
-        #     VoteCenter().vote_sync(vote_data, vote_height)
-        #     logging.debug("Vote information append to queue finished.")
 
         result_data = {
-            "last_height": -1,
-            "latest_block": "",
+            "height": -1,
             "address": Config().get('node.address'),
-            "time": time.time(),
-            "id": int(Config().get('node.id')),
-            # "vote": local_votes,
-            # "vote_height": VoteCenter().height,
+            "timestamp": time.time(),
         }
 
         if not block:
             block, _ = bc.get_latest_block()
 
         try:
-            result_data['latest_height'] = block.block_header.height
-            result_data['latest_block'] = block.serialize()
+            result_data['height'] = block.block_header.height
         except AttributeError:
-            result_data['latest_height'] = -1
-            result_data['latest_block'] = ""
+            result_data['height'] = -1
 
         if not block:
             return Message.empty_message()
 
-        result = Message(STATUS.HAND_SHAKE_MSG, result_data)
+        result = Message(STATUS.HANDSHAKE, result_data)
         logging.debug("Return handshake data.")
         return result
 
-    @staticmethod
-    def handle_get_block(message: dict):
+    def handle_pull_block(self, message: dict):
         """
-        状态码STATUS.GET_BLOCK_MSG = 2， 发送邻居节点需要的block
-        :param message: 需要处理的message
-        :return: 返回对方需要的block数据
+        状态码 STATUS.PULL_BLOCK, 发送对应高度的区块给对端 Client
+        Args:
+            message: 包含区块高度的消息
         """
-        height = message.get("data", 1)
+        height = message.get("data", -1)
+        if height == -1:
+            result = Message.empty_message()
+
         bc = BlockChain()
         block = bc.get_block_by_height(height)
         try:
             result_data = block.serialize()
-            # logging.debug("Return get block message: {}".format(result_data))
         except AttributeError:
             result = Message.empty_message()
         else:
-            result = Message(STATUS.GET_BLOCK_MSG, result_data)
+            result = Message(STATUS.PUSH_BLOCK, result_data)
         return result
 
-    # def handle_sync_vote(self, message: dict):
-    #     """
-    #     状态码为STATUS.POT = 3， 同步时间共识的投票信息, 将远端的投票信息加入本地
-    #     :param message: 需要处理的message
-    #     :return: None
-    #     """
-    #     data = message.get('data', {})
-    #     vote = data.get('vote', '')
-    #     height = data.get('height', -1)
-    #
-    #     if height < self.thread_local.height:
-    #         return
-    #
-    #     address, final_address = vote.split(' ')
-    #     # 将client发过来的投票信息添加到本地
-    #     # 对端节点如果高度低于本地， 不接收对应的投票信息
-    #     VoteCenter().vote_update(address, final_address, height)
-    #     if not self.thread_local.server_synced:
-    #         logging.debug("Add local vote information")
-    #         address = Config().get("node.address")
-    #
-    #         final_address = VoteCenter().local_vote(self.thread_local.height)
-    #         if final_address is not None:
-    #             VoteCenter().vote_update(address, final_address, self.thread_local.height)
-    #         self.thread_local.server_synced = True
-    #     if not self.thread_local.client_synced:
-    #         logging.debug("Synced with node {} vote info {}".format(self.thread_local.client_id, vote))
-    #         self.thread_local.client_synced = True
-    #         Counter().client_synced(height)
-
-    def handle_update(self, message: dict):
+    def handle_new_block(self, message: dict):
         """
-        状态码为STATUS.UPDATE_MSG = 5, 从邻居节点更新区块
-        :param message: 需要处理的message
-        :return: None
+        状态码 STATUS.NEW_BLOCK， 将新区块添加到 Manager 中进行广播
         """
-        data = message.get("data", "")
+        data = message.get('data', {})
         block = Block.deserialize(data)
-        height = block.block_header.height
+        Manager().append_block(block)
+        return Message.empty_message()
 
-        try:
-            # 一轮共识结束的第一个标识：收到其他节点发来的新区块
-            result = MergeThread().append_block(block)
-            if result == MergeThread.STATUS_APPEND:
-                # 从邻居节点更新了区块， 说明一轮共识已经结束或本地区块没有同步
-                # 需要更新vote center中的信息并且设置synced为false
-                self.thread_local.client_synced = False
-                self.thread_local.server_synced = False
-                # 从交易池中移除已有的交易
-                for tx in block.transactions:
-                    tx_hash = tx.tx_hash
-                    self.tx_pool.remove(tx_hash)
-            elif result == MergeThread.STATUS_EXISTS:
-                send_msg = Message(STATUS.BLOCK, height - 1)
-                return send_msg
-        except ValueError as e:
-            # todo: 失败的情况下应该进行回滚
-            logging.error(e)
-        return Message(STATUS.NODE_MSG, "6")
-
-    @staticmethod
-    def handle_send_block(message: dict):
+    def handle_new_block_hash(self, message: dict):
         """
-        状态码为STATUS.BLOCK = 6, 发送对应高度的区块给对端
-        :param message: 包含高度信息的message
-        :return:
+        状态码 STATUS_NEW_BLOCK_HASH， 对新的区块哈希值进行响应
         """
-        height = message.get('data', -1)
+        block_hash = message.get("data", None)
+        if not block_hash:
+            return Message.empty_message()
 
-        if height == -1:
-            send_message = Message.empty_message()
-            return send_message
-
-        block = BlockChain().get_block_by_height(height)
-
-        if block is None:
-            send_message = Message.empty_message()
+        if Manager().is_known_block(block_hash):
+            return Message(STATUS.BLOCK_KNOWN, {})
         else:
-            send_message = Message(STATUS.GET_BLOCK_MSG, block.serialize())
-
-        return send_message
+            return Message(STATUS.GET_BLOCK, block_hash)

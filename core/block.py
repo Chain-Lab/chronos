@@ -62,7 +62,7 @@ class Block(object):
         return self._transactions
 
     @property
-    def header_hash(self):
+    def hash(self):
         return self._block_header.hash
 
     @property

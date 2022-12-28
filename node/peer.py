@@ -41,8 +41,9 @@ class Peer(Singleton):
                     self.peers.append(client)
                     self.nodes.append(node)
             time.sleep(1)
-    def search(self):
-        pass
+    @property
+    def clients(self):
+        return self.peers
 
     def run(self, p2p_server):
         thread = threading.Thread(target=self.find_nodes, args=(p2p_server,))
