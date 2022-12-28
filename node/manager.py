@@ -1,6 +1,7 @@
 import queue
 import random
 import threading
+import logging
 from math import sqrt
 
 from lru import LRU
@@ -26,6 +27,7 @@ class Manager(Singleton):
         while True:
             with self.__cond:
                 while self.__queued_block.empty():
+                    logging.info("Manager wait for new block.")
                     self.__cond.wait()
 
                 block = self.__queued_block.get()
@@ -74,6 +76,7 @@ class Manager(Singleton):
                 return
             self.__queued_block.put(block_hash)
             self.__known_block[block_hash] = block
+            logging.info("Append block #{} to manager.".format(block_hash))
             self.__cond.notify_all()
 
     def get_known_block(self, block_hash):
@@ -87,7 +90,7 @@ class Manager(Singleton):
         广播新区块， 选取 sqrt(n) 个邻居发送区块，其他的邻居只发送哈希值
         待优化
         """
-        clients = Peer().clients
+        clients = Peer(Manager()).clients
         count = len(clients)
         block_hash = block.hash
 

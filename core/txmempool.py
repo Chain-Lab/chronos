@@ -195,7 +195,6 @@ class TxMemPool(Singleton):
             self.tx_queue.put(tx_hash)
         self.__height -= 1
 
-    @property
     def packaged(self, height):
         if height <= self.__height or self.__read_lock.locked():
             logging.debug("Mempool height #{}, package height #{}.".format(self.__height, height))

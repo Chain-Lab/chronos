@@ -237,7 +237,7 @@ class Client(object):
         self.send(send_msg)
 
     def package_new_block(self, height: int):
-        if self.tx_pool.packaged:
+        if self.tx_pool.packaged(height + 1):
             logging.debug("Mempool packaged.")
             return
 

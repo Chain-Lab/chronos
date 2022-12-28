@@ -187,9 +187,7 @@ class Server(object):
             message: 包含区块高度的消息
         """
         height = message.get("data", -1)
-        if height == -1:
-            result = Message.empty_message()
-
+        logging.info("Receive pull block request, send block #{}.".format(height))
         bc = BlockChain()
         block = bc.get_block_by_height(height)
         try:
