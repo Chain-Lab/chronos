@@ -6,6 +6,7 @@ import logging
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
 from node.gossip import Gossip
+from node.timer import Timer
 from rpc.grpcs import node_pb2_grpc
 from rpc.grpcs import node_pb2
 from core.block_chain import BlockChain
@@ -54,6 +55,7 @@ class NodeService(node_pb2_grpc.NodeServicer):
             "verify_param": funcs.int2hex(number_theory.get_prime(256))
         }
         logging.debug(delay_params)
+        Timer().refresh()
 
         bc = BlockChain()
         tx = Transaction.coinbase_tx({}, delay_params)

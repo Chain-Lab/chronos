@@ -1,5 +1,6 @@
 import threading
 import time
+import logging
 
 from core.block_chain import BlockChain
 from utils.singleton import Singleton
@@ -9,8 +10,8 @@ class Timer(Singleton):
     """
     节点的计时器， 在间隔时间后触发共识逻辑
     """
-    INTERVAL = 0.5
-    FINISH_INTERVAL = 1.5
+    INTERVAL = 2.0
+    FINISH_INTERVAL = 2.0
 
     def __init__(self):
         self.__next_time = -1
@@ -29,7 +30,7 @@ class Timer(Singleton):
         latest_block, _ = bc.get_latest_block()
         if latest_block is None:
             return
-        timestamp = latest_block.block_header.height
+        timestamp = int(latest_block.block_header.timestamp)
         self.refresh(timestamp=timestamp)
         self.__initialed = True
 
@@ -45,10 +46,11 @@ class Timer(Singleton):
         if timestamp is None:
             timestamp = time.time()
         else:
-            timestamp = timestamp // 1000
+            timestamp = timestamp / 1000
 
         self.__next_time = timestamp + Timer.INTERVAL
         self.__finish_time = self.__next_time + Timer.FINISH_INTERVAL
+        logging.info("Refresh timer to {}, finish time {}".format(timestamp, self.__finish_time))
         self.__lock.release()
 
     def reach(self):

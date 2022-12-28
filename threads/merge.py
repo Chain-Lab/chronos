@@ -48,6 +48,8 @@ class MergeThread(Singleton):
         self.__queue = Queue()
         self.__cond = threading.Condition()
         self.__lock = threading.Lock()
+        self.__insert_lock = threading.Lock()
+        self.__selected_block = None
         self.thread = threading.Thread(target=self.__task, args=(), name="Merge Thread")
         self.thread.start()
         # self.__cleaner = threading.Thread(target=self.__clear_task, args=(), name="Cleaner Thread")
@@ -206,28 +208,59 @@ class MergeThread(Singleton):
                     bc.insert_block(block)
                     continue
                 elif block_height == latest_height + 1:
-                    # 取得区块的前一个区块哈希
-                    block_prev_hash = block.block_header.prev_block_hash
-                    if block_prev_hash == latest_hash:
-                        # 在需要insert时优先更新同步使用的信息
-                        self.__update(block)
-                        bc.insert_block(block)
-                    else:
-                        # 最前面的区块没有被处理过， 将区块返回到队列中等待
-                        # 追溯到最前面的区块， 并且检查是否被处理过， 需要在cache中存储前一个区块的信息
-                        front_block_hash = self.__scan_prev_blocks(block_hash)
-                        if self.cache[front_block_hash]['status']:
-                            logging.debug("Block is not main chain block.")
-                        else:
-                            logging.debug("Push block#{} back to queue.".format(block_hash))
-                            self.__queue.put(block)
-                            self.cache[block_hash]['status'] = False
+                    if not self.__selected_block:
+                        self.__selected_block = block
+                        continue
+
+                    block_count = block.vote_count
+                    block_timestamp = block.block_header.timestamp
+
+                    equal_block = self.__selected_block
+                    equal_count = equal_block.vote_count
+                    equal_hash = equal_block.block_header.hash
+                    equal_timestamp = equal_block.block_header.timestamp
+                    equal_prev_hash = equal_block.block_header.prev_block_hash
+
+                    if block_hash == equal_hash or block_prev_hash != equal_prev_hash or block_count < equal_count or (
+                            block_count == equal_count and block_timestamp > equal_timestamp):
+                        logging.info("block#{} < equal block.".format(block_hash))
+                        continue
+
+                    self.__selected_block = block
+                    # # 取得区块的前一个区块哈希
+                    # block_prev_hash = block.block_header.prev_block_hash
+                    # if block_prev_hash == latest_hash:
+                    #     # 在需要insert时优先更新同步使用的信息
+                    #     self.__update(block)
+                    #     bc.insert_block(block)
+                    # else:
+                    #     # 最前面的区块没有被处理过， 将区块返回到队列中等待
+                    #     # 追溯到最前面的区块， 并且检查是否被处理过， 需要在cache中存储前一个区块的信息
+                    #     front_block_hash = self.__scan_prev_blocks(block_hash)
+                    #     if self.cache[front_block_hash]['status']:
+                    #         logging.debug("Block is not main chain block.")
+                    #     else:
+                    #         logging.debug("Push block#{} back to queue.".format(block_hash))
+                    #         self.__queue.put(block)
+                    #         self.cache[block_hash]['status'] = False
                 else:
                     # 如果区块的高度高于目前区块一个区块以上， 返回到队列中等待处理
                     if block_prev_hash in self.cache.keys() and not self.cache[block_prev_hash]:
                         logging.debug("Block#{} push back to queue.".format(block_hash))
                         self.__queue.put(block)
                         self.cache[block_hash] = False
+
+    def insert_selected_block(self):
+        with self.__insert_lock:
+            if not Timer().finish() or not self.__selected_block:
+                return
+
+            bc = BlockChain()
+            block = self.__selected_block
+            self.__update(block)
+            bc.insert_block(block)
+
+            self.__selected_block = None
 
     def __scan_prev_blocks(self, block_hash):
         '''
@@ -249,7 +282,7 @@ class MergeThread(Singleton):
         block_timestamp = int(block.block_header.timestamp)
         block_height = block.block_header.height
 
-        return block_height * 2 * 1000 + genesis_timestamp < block_timestamp
+        return block_height * 5 * 1000 + genesis_timestamp < block_timestamp
 
     def __clear_task(self):
         while True:

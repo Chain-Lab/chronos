@@ -211,9 +211,11 @@ class Client(object):
             if not latest_block:
                 latest_block, _ = bc.get_latest_block()
 
-            if Timer().finish() and Calculator().verify_address(self.local_address) and latest_block:
+            if Timer().reach() and Calculator().verify_address(self.local_address) and latest_block:
                 height = latest_block.block_header.height
                 self.package_new_block(height)
+
+
 
             try:
                 data['latest_height'] = latest_block.block_header.height
@@ -255,8 +257,8 @@ class Client(object):
         logging.debug("Receive handshake status code.")
         data = message.get('data', {})
         remote_height = data.get('latest_height', -1)
-        vote_height = data.get('vote_height', 0)
-        vote_data = data['vote']
+        # vote_height = data.get('vote_height', 0)
+        # vote_data = data['vote']
         remote_address = data.get("address")
 
         logging.debug("Remote address {} height #{}.".format(remote_address, remote_height))
@@ -471,6 +473,10 @@ class Client(object):
         self.send(send_message)
 
     def package_new_block(self, height: int):
+        if self.tx_pool.packaged:
+            logging.debug("Mempool packaged.")
+            return
+
         if package_lock.locked():
             logging.debug("Package locked.")
             return
