@@ -1,8 +1,6 @@
 import logging
 import threading
 from queue import Queue
-
-from core.block_chain import BlockChain
 from core.config import Config
 from utils.singleton import Singleton
 
@@ -18,7 +16,6 @@ class TxMemPool(Singleton):
         self.tx_queue = Queue()
         # 上一次打包的队列，如果区块打包失败，tx不会在dict中被清除
         self.prev_queue = Queue()
-        self.bc = BlockChain()
         # todo: 存在潜在的类型转换错误，如果config文件配置错误可能抛出错误
         self.SIZE = int(Config().get("node.mem_pool_size"))
 
@@ -87,7 +84,6 @@ class TxMemPool(Singleton):
             返回一个打包好的交易列表，如果打包失败或者该高度下已经打包返回None
         """
         result = []
-        bc = BlockChain()
         if height <= self.__height or self.__read_lock.locked():
             logging.debug("Mempool height #{}, package height #{}.".format(self.__height, height))
             return None

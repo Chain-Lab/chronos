@@ -8,6 +8,9 @@ from lru import LRU
 
 from node.peer import Peer
 from node.timer import Timer
+from threads.calculator import Calculator
+from utils import funcs
+from utils.locks import package_lock, package_cond
 from core.block_chain import BlockChain
 from threads.selector import Selector
 from utils.singleton import Singleton
@@ -52,14 +55,23 @@ class Manager(Singleton):
             if block_hash in self.__known_block:
                 return
 
-            if block_height != BlockChain().get_latest_block() + 1:
+            if block_height != BlockChain().latest_height + 1:
                 return
 
             # 在同一时间只能有一个线程插入区块
             self.__known_block[block_hash] = block
             Selector().refresh(block.height)
-            BlockChain().insert_block(block)
-            Timer().refresh()
+            with package_lock:
+                BlockChain().insert_block(block)
+                Timer().refresh()
+                delay_params = block.transactions[0].inputs[0].delay_params
+                hex_seed = delay_params.get("seed")
+                hex_pi = delay_params.get("proof")
+                seed = funcs.hex2int(hex_seed)
+                pi = funcs.hex2int(hex_pi)
+                Calculator().update(seed, pi)
+            with package_cond:
+                package_cond.notify_all()
 
     def notify_insert(self):
         if self.__insert_lock.locked():

@@ -150,7 +150,7 @@ class Client(object):
                 logging.debug("Time finished, notify selector to insert.")
                 self.__manager.notify_insert()
 
-            if Timer().reach() and Calculator().verify_address(self.local_address) and latest_block:
+            if Calculator().verify_address(self.local_address) and latest_block:
                 logging.debug("Time reached, notify client to package.")
                 height = latest_block.block_header.height
                 self.package_new_block(height)

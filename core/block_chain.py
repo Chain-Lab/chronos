@@ -8,7 +8,7 @@ from lru import LRU
 
 from core.block import Block
 from core.block_header import BlockHeader
-from core.config import Config
+from core.txmempool import TxMemPool
 from core.merkle import MerkleTree
 from core.transaction import Transaction
 from core.utxo import UTXOSet
@@ -440,15 +440,12 @@ class BlockChain(Singleton):
 
         for tx in block.transactions:
             tx_hash = tx.tx_hash
+            TxMemPool().remove(tx_hash)
+
             db_tx_key = tx_hash_to_db_key(tx_hash)
             tx_dict = tx.serialize()
             self.__tx_cache[tx_hash] = tx
             insert_list[db_tx_key] = tx_dict
-
-        self.set_latest_hash(block_hash)
-        self.__latest = block
-        self.__block_map[height] = block_hash
-        self.__block_cache[block_hash] = block
 
         self.db.batch_insert(insert_list)
 

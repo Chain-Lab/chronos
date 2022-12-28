@@ -4,6 +4,9 @@ import threading
 
 from core.block_chain import BlockChain
 from node.timer import Timer
+from threads.calculator import Calculator
+from utils import funcs
+from utils.locks import package_lock, package_cond
 from utils.singleton import Singleton
 
 
@@ -44,17 +47,30 @@ class Selector(Singleton):
 
             if block_hash == equal_hash or block_prev_hash != equal_prev_hash or block_count < equal_count or (
                     block_count == equal_count and block_timestamp > equal_timestamp):
-                logging.info("block #{} < block #{}.".format(block_hash, equal_block))
+                logging.info("block #{} < block #{}.".format(block_hash, equal_block.hash))
                 return
 
             self.__selected_block = block
 
     def insert_block(self):
+        if not self.__selected_block:
+            return
+
         with self.__select_lock:
             block_height = self.__selected_block.height
-            BlockChain().insert_block(self.__selected_block)
-            Timer().refresh()
-            self.refresh(block_height)
+            block = self.__selected_block
+            with package_lock:
+                BlockChain().insert_block(self.__selected_block)
+                Timer().refresh()
+                delay_params = block.transactions[0].inputs[0].delay_params
+                hex_seed = delay_params.get("seed")
+                hex_pi = delay_params.get("proof")
+                seed = funcs.hex2int(hex_seed)
+                pi = funcs.hex2int(hex_pi)
+                Calculator().update(seed, pi)
+                self.refresh(block_height)
+            with package_cond:
+                package_cond.notify_all()
 
     def refresh(self, height):
         with self.__select_lock:
@@ -69,7 +85,7 @@ class Selector(Singleton):
         block_timestamp = int(block.block_header.timestamp)
         block_height = block.block_header.height
 
-        return (block_height - 1) * 8 * 1000 + genesis_timestamp + 7500 < block_timestamp
+        return (block_height - 1) * 15 * 1000 + genesis_timestamp + 13500 < block_timestamp
 
     @property
     def height(self):

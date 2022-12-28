@@ -10,6 +10,8 @@ from node.timer import Timer
 from rpc.grpcs import node_pb2_grpc
 from rpc.grpcs import node_pb2
 from core.block_chain import BlockChain
+from threads.calculator import Calculator
+from threads.selector import Selector
 # from threads.vote_center import VoteCenter
 
 from utils import constant, number_theory, funcs
@@ -56,6 +58,12 @@ class NodeService(node_pb2_grpc.NodeServicer):
         }
         logging.debug(delay_params)
         Timer().refresh()
+        hex_seed = delay_params.get("seed")
+        hex_pi = delay_params.get("proof")
+        seed = funcs.hex2int(hex_seed)
+        pi = funcs.hex2int(hex_pi)
+        Calculator().update(seed, pi)
+        Selector().refresh(0)
 
         bc = BlockChain()
         tx = Transaction.coinbase_tx({}, delay_params)
