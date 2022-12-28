@@ -435,11 +435,6 @@ class BlockChain(Singleton):
         height = block.block_header.height
         logging.info("Insert new block#{} height {}".format(block_hash, block.block_header.height))
 
-        self.set_latest_hash(block_hash)
-        self.__latest = block
-        self.__block_map[height] = block_hash
-        self.__block_cache[block_hash] = block
-
         UTXOSet().update(block)
         insert_list = {block_db_key: block.serialize(), block_height_db_key: block_hash}
 
@@ -449,6 +444,11 @@ class BlockChain(Singleton):
             tx_dict = tx.serialize()
             self.__tx_cache[tx_hash] = tx
             insert_list[db_tx_key] = tx_dict
+
+        self.set_latest_hash(block_hash)
+        self.__latest = block
+        self.__block_map[height] = block_hash
+        self.__block_cache[block_hash] = block
 
         self.db.batch_insert(insert_list)
 
@@ -470,3 +470,10 @@ class BlockChain(Singleton):
                 block_cache_rate = 0
 
         return tx_cache_rate, block_cache_rate
+
+    @property
+    def latest_height(self):
+        if not self.__latest:
+            return -1
+        else:
+            return self.__latest.height

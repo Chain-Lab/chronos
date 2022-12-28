@@ -3,7 +3,7 @@ import queue
 import threading
 
 from core.block_chain import BlockChain
-
+from node.timer import Timer
 from utils.singleton import Singleton
 
 
@@ -12,15 +12,15 @@ class Selector(Singleton):
         self.__height = -1
         self.__blocks = {}
         self.__selected_block = None
-        self.__select_lock = threading.Lock()
+        self.__select_lock = threading.RLock()
 
     def compare_block(self, block):
         block_hash = block.hash
-        if block.height <= self.__height or block_hash in self.__blocks:
+        if block.height != self.__height + 1 or block_hash in self.__blocks:
             return
 
         with self.__select_lock:
-            if block.height <= self.__height or block_hash in self.__blocks:
+            if block.height != self.__height + 1 or block_hash in self.__blocks:
                 return
 
             if not self.__selected_block:
@@ -44,7 +44,7 @@ class Selector(Singleton):
 
             if block_hash == equal_hash or block_prev_hash != equal_prev_hash or block_count < equal_count or (
                     block_count == equal_count and block_timestamp > equal_timestamp):
-                logging.info("block#{} < equal block.".format(block_hash))
+                logging.info("block #{} < block #{}.".format(block_hash, equal_block))
                 return
 
             self.__selected_block = block
@@ -53,6 +53,7 @@ class Selector(Singleton):
         with self.__select_lock:
             block_height = self.__selected_block.height
             BlockChain().insert_block(self.__selected_block)
+            Timer().refresh()
             self.refresh(block_height)
 
     def refresh(self, height):
@@ -68,7 +69,7 @@ class Selector(Singleton):
         block_timestamp = int(block.block_header.timestamp)
         block_height = block.block_header.height
 
-        return (block_height - 1) * 15 * 1000 + genesis_timestamp + 3500 < block_timestamp
+        return (block_height - 1) * 8 * 1000 + genesis_timestamp + 7500 < block_timestamp
 
     @property
     def height(self):

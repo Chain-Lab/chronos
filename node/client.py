@@ -134,11 +134,7 @@ class Client(object):
 
             # 如果打包了区块， 发送新的区块给对端
             if self.new_block:
-                try:
-                    self.__manager.append_block(self.new_block)
-                except AttributeError:
-                    pass
-
+                self.__manager.append_block(self.new_block)
                 self.new_block = None
 
             data = {
@@ -150,14 +146,14 @@ class Client(object):
             if not latest_block:
                 latest_block, _ = bc.get_latest_block()
 
+            if Timer().finish():
+                logging.debug("Time finished, notify selector to insert.")
+                self.__manager.notify_insert()
+
             if Timer().reach() and Calculator().verify_address(self.local_address) and latest_block:
+                logging.debug("Time reached, notify client to package.")
                 height = latest_block.block_header.height
                 self.package_new_block(height)
-                continue
-
-            if Timer().finish():
-                self.__manager.notify_insert()
-                continue
 
             try:
                 data['height'] = latest_block.block_header.height
@@ -181,6 +177,7 @@ class Client(object):
 
     def handle(self, message: dict):
         code = message.get('code', 0)
+        logging.debug("Receive status code {}".format(code))
 
         if code == STATUS.HANDSHAKE:
             self.handle_handshake(message)
@@ -198,7 +195,6 @@ class Client(object):
         Args:
             message: 待处理的消息
         """
-        logging.debug("Receive handshake status code.")
         data = message.get('data', {})
         remote_height = data.get('height', -1)
 
@@ -209,11 +205,13 @@ class Client(object):
             local_height = latest_block.block_header.height
         else:
             local_height = -1
+        logging.debug("Local height #{}, remote height #{}.".format(local_height, remote_height))
 
         if local_height < remote_height:
             start_height = 0 if local_height == -1 else local_height + 1
             for i in range(start_height, remote_height + 1):
                 send_msg = Message(STATUS.PULL_BLOCK, i)
+                logging.debug("Send pull block #{} request.".format(i))
                 self.send(send_msg)
 
     def handle_push_block(self, message: dict):
@@ -223,6 +221,7 @@ class Client(object):
         Args:
             message: 包含区块的消息
         """
+        logging.debug("Receive new block request.")
         data = message.get('data', {})
         block = Block.deserialize(data)
         self.__manager.insert_block(block)
@@ -234,6 +233,7 @@ class Client(object):
         block_hash = message.get('data', "")
         block = self.__manager.get_known_block(block_hash)
         send_msg = Message(STATUS.NEW_BLOCK, block.serialize())
+        logging.debug("Send new block to server.")
         self.send(send_msg)
 
     def package_new_block(self, height: int):

@@ -7,6 +7,7 @@ from math import sqrt
 from lru import LRU
 
 from node.peer import Peer
+from node.timer import Timer
 from core.block_chain import BlockChain
 from threads.selector import Selector
 from utils.singleton import Singleton
@@ -42,6 +43,7 @@ class Manager(Singleton):
             block: 新插入的区块
         """
         block_hash = block.hash
+        block_height = block.height
         if block_hash in self.__known_block:
             return
 
@@ -50,13 +52,18 @@ class Manager(Singleton):
             if block_hash in self.__known_block:
                 return
 
+            if block_height != BlockChain().get_latest_block() + 1:
+                return
+
             # 在同一时间只能有一个线程插入区块
             self.__known_block[block_hash] = block
             Selector().refresh(block.height)
             BlockChain().insert_block(block)
+            Timer().refresh()
 
     def notify_insert(self):
         if self.__insert_lock.locked():
+            logging.debug("Insert locked.")
             return
 
         with self.__insert_lock:
@@ -74,10 +81,11 @@ class Manager(Singleton):
         with self.__append_lock:
             if block_hash in self.__known_block:
                 return
-            self.__queued_block.put(block_hash)
+            self.__queued_block.put(block)
             self.__known_block[block_hash] = block
             logging.info("Append block #{} to manager.".format(block_hash))
-            self.__cond.notify_all()
+            with self.__cond:
+                self.__cond.notify_all()
 
     def get_known_block(self, block_hash):
         return self.__known_block[block_hash]

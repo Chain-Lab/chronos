@@ -87,10 +87,6 @@ class Server(object):
         server_continue = True
 
         while True:
-            if not constant.NODE_RUNNING:
-                logging.debug("Receive stop signal, stop thread.")
-                break
-
             with package_cond:
                 while package_lock.locked():
                     logging.debug("Wait block package finished.")
@@ -155,7 +151,6 @@ class Server(object):
         :param message:
         :return:
         """
-        logging.debug("Server receive handshake message.")
         data = message.get("data", {})
         remote_height = data.get("height", -1)
 
@@ -177,7 +172,6 @@ class Server(object):
             result_data['height'] = -1
 
         result = Message(STATUS.HANDSHAKE, result_data)
-        logging.debug("Return handshake data.")
         return result
 
     def handle_pull_block(self, message: dict):
@@ -187,7 +181,7 @@ class Server(object):
             message: 包含区块高度的消息
         """
         height = message.get("data", -1)
-        logging.info("Receive pull block request, send block #{}.".format(height))
+        # logging.info("Receive pull block request, send block #{}.".format(height))
         bc = BlockChain()
         block = bc.get_block_by_height(height)
         try:
