@@ -215,7 +215,8 @@ class Client(object):
                 height = latest_block.block_header.height
                 self.package_new_block(height)
 
-
+            if Timer().finish():
+                MergeThread().insert_selected_block()
 
             try:
                 data['latest_height'] = latest_block.block_header.height

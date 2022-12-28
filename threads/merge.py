@@ -251,10 +251,9 @@ class MergeThread(Singleton):
                         self.cache[block_hash] = False
 
     def insert_selected_block(self):
+        if self.__insert_lock.locked() or not Timer().finish() or not self.__selected_block:
+            return
         with self.__insert_lock:
-            if not Timer().finish() or not self.__selected_block:
-                return
-
             bc = BlockChain()
             block = self.__selected_block
             self.__update(block)
