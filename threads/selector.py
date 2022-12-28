@@ -59,7 +59,7 @@ class Selector(Singleton):
         with self.__select_lock:
             self.__blocks.clear()
             self.__height = height
-            self.__select_lock = None
+            self.__selected_block = None
 
     @staticmethod
     def __check_block_timeout(block):

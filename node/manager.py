@@ -29,6 +29,7 @@ class Manager(Singleton):
                     self.__cond.wait()
 
                 block = self.__queued_block.get()
+                Selector().compare_block(block)
                 self.__broadcast(block)
 
     def insert_block(self, block):
