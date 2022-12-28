@@ -159,12 +159,6 @@ class Server(object):
         data = message.get("data", {})
         remote_height = data.get("height", -1)
 
-        if remote_height != -1:
-            remote_block_data = data.get("latest_block", "")
-            if remote_block_data != "":
-                remote_block = Block.deserialize(remote_block_data)
-                MergeThread().append_block(remote_block)
-
         bc = BlockChain()
         block, prev_hash = bc.get_latest_block()
 
