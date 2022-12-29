@@ -10,6 +10,7 @@ from core.config import Config
 from core.transaction import Transaction
 from core.txmempool import TxMemPool
 from node.peer import Peer
+from node.manager import Manager
 from utils.locks import package_cond, package_lock
 from utils.singleton import Singleton
 from utils.validator import json_validator
@@ -94,7 +95,7 @@ class Gossip(Singleton):
 
             with self.__cond:
                 # 条件锁，等待唤醒
-                while self.__queue.empty() or len(Peer().nodes) == 0:
+                while self.__queue.empty() or len(Peer(Manager()).nodes) == 0:
                     logging.debug("Client wait insert new transaction.")
                     self.__cond.wait()
 
@@ -103,10 +104,10 @@ class Gossip(Singleton):
                 logging.debug("Client pop transaction.")
 
                 data = json.dumps(tx.serialize())
-                length = len(Peer().nodes)
+                length = len(Peer(Manager()).nodes)
 
                 # 选取50%的邻居节点发送交易
-                nodes = random.choices(Peer().nodes, k=length // 2)
+                nodes = random.choices(Peer(Manager()).nodes, k=length // 2)
                 logging.debug("Send tx to gossip network.")
                 for node in nodes:
                     ip = node.ip

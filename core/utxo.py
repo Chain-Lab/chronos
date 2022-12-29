@@ -1,5 +1,7 @@
 import copy
 import logging
+import threading
+from collections import deque
 
 import pycouchdb.exceptions
 from lru import LRU
@@ -16,6 +18,10 @@ class UTXOSet(Singleton):
         self.db = LevelDB()
         self.__utxo_cache = LRU(50000)
         self.__address_cache = LRU(50000)
+
+        self.__cond = threading.Condition()
+        self.__update_queue = deque()
+
 
     def addr_cache_callback(self, key: str, value: list):
         # todo(Decision): 这个函数存在问题， 会导致出块错误
@@ -232,6 +238,15 @@ class UTXOSet(Singleton):
                     used_utxo.append(utxo)
                     txs.append(tx)
         return txs
+
+    def __task(self):
+        while True:
+            with self.__cond:
+                while not self.__update_queue:
+                    self.__cond.wait()
+
+            block = self.__update_queue.popleft()
+            self.update(block)
 
 
 class FullTXOutput(object):
