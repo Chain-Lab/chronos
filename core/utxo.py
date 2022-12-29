@@ -22,10 +22,19 @@ class UTXOSet(Singleton):
         self.__cond = threading.Condition()
         self.__update_queue = deque()
 
+        self.__thread = threading.Thread(target=self.__task)
+        self.__thread.start()
+
 
     def addr_cache_callback(self, key: str, value: list):
         # todo(Decision): 这个函数存在问题， 会导致出块错误
         self.db[key] = {"utxos": value}
+
+    def notify_update(self, block):
+        self.__update_queue.append(block)
+        logging.info("Notify UTxO update.")
+        with self.__cond:
+            self.__cond.notify_all()
 
     def reindex(self, bc):
         """
@@ -64,7 +73,7 @@ class UTXOSet(Singleton):
             latest_block_height = latest_block.block_header.height
             for i in range(latest_utxo_height, latest_block_height):
                 block = bc.get_block_by_height(i)
-                self.update(block)
+                self.notify_update(block)
 
     def set_latest_height(self, height):
         """
