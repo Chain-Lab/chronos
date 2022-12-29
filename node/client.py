@@ -269,9 +269,6 @@ class Client(object):
             end_time = time.time()
             logging.info("Package block use {}s include count {}".format(end_time - start_time, len(transactions)))
             self.__manager.append_block(new_block)
-        else:
-            logging.warning("Package failed, rollback txmempool.")
-            self.tx_pool.roll_back()
 
         package_lock.release()
 

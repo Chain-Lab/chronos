@@ -14,8 +14,7 @@ class TxMemPool(Singleton):
         self.txs = {}
         # 交易打包队列
         self.tx_queue = deque()
-        # 上一次打包的队列，如果区块打包失败，tx不会在dict中被清除
-        self.prev_queue = deque()
+        self.txs_flag = {}
         # todo: 存在潜在的类型转换错误，如果config文件配置错误可能抛出错误
         self.SIZE = int(Config().get("node.mem_pool_size"))
 
@@ -30,7 +29,7 @@ class TxMemPool(Singleton):
         return len(self.txs) >= self.SIZE
 
     def add(self,
-            tx) -> None:
+            tx) -> bool:
         """ 将一笔交易放入交易池中
 
         在本地节点正在打包时会进行等待
@@ -55,6 +54,7 @@ class TxMemPool(Singleton):
             if tx_hash not in self.__queue_set and tx_hash not in self.txs:
                 self.__queue_set.add(tx_hash)
                 self.txs[tx_hash] = tx
+                self.txs_flag[tx_hash] = -1
                 # self.tx_hashes.append(tx_hash)
                 self.tx_queue.append(tx_hash)
                 logging.debug("Add tx#{} in memory pool.".format(tx_hash))
@@ -106,37 +106,18 @@ class TxMemPool(Singleton):
                 pool_size = int(Config().get("node.mem_pool_size"))
                 count = 0
 
-                while count < pool_size and self.prev_queue:
-                    logging.debug("Pop transaction from prev queue.")
-
-                    if not self.prev_queue:
-                        logging.debug("Memory pool cleaned.")
+                while True:
+                    if count >= pool_size or not self.tx_queue:
                         break
-                    tx_hash = self.prev_queue.popleft()
-                    self.__queue_set.remove(tx_hash)
 
-                    if tx_hash not in self.txs:
-                        continue
-
-                    transaction = self.txs[tx_hash]
-
-                    # if not bc.verify_transaction(transaction):
-                    #     continue
-
-                    result.append(transaction)
-                    count += 1
-
-                while count < pool_size and self.tx_queue:
                     logging.debug("Pop transaction from pool.")
-
-                    if not self.tx_queue:
-                        logging.debug("Memory pool cleaned.")
-                        break
-
                     tx_hash = self.tx_queue.popleft()
 
                     if tx_hash not in self.txs:
                         continue
+
+                    if self.txs_flag[tx_hash] >= self.__height:
+                        break
 
                     transaction = self.txs[tx_hash]
                     # db_tx = bc.get_transaction_by_tx_hash(tx_hash)
@@ -144,9 +125,10 @@ class TxMemPool(Singleton):
                     # if not bc.verify_transaction(transaction):
                     #     continue
 
-                    self.prev_queue.append(tx_hash)
                     result.append(transaction)
                     count += 1
+                    self.txs_flag[tx_hash] = self.__height
+                    self.tx_queue.append(tx_hash)
 
                 with self.__cond:
                     self.__cond.notify_all()
@@ -179,17 +161,11 @@ class TxMemPool(Singleton):
             tx_hash: 待移除的交易的哈希值
         Returns: None
         """
-        self.pool_lock.acquire()
-        if tx_hash in self.txs:
-            self.txs.pop(tx_hash)
-            logging.debug("Remove tx#{} from memory pool.".format(tx_hash))
-        self.pool_lock.release()
-
-    def roll_back(self):
-        while self.prev_queue:
-            tx_hash = self.prev_queue.popleft()
-            self.tx_queue.append(tx_hash)
-        self.__height -= 1
+        with self.pool_lock:
+            if tx_hash in self.txs:
+                self.txs.pop(tx_hash)
+                self.txs_flag.pop(tx_hash)
+                logging.debug("Remove tx#{} from memory pool.".format(tx_hash))
 
     def packaged(self, height):
         if height <= self.__height or self.__read_lock.locked():
