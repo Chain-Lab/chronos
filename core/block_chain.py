@@ -435,7 +435,8 @@ class BlockChain(Singleton):
         height = block.block_header.height
         logging.info("Insert new block#{} height {}".format(block_hash, block.block_header.height))
 
-        UTXOSet().update(block)
+        logging.info("Start UTxO update thread - {}.".format(height))
+        threading.Thread(target=UTXOSet().update, args=(block, ), name="UTxO Thread - {}".format(height)).start()
         insert_list = {block_db_key: block.serialize(), block_height_db_key: block_hash}
 
         for tx in block.transactions:
@@ -446,6 +447,11 @@ class BlockChain(Singleton):
             tx_dict = tx.serialize()
             self.__tx_cache[tx_hash] = tx
             insert_list[db_tx_key] = tx_dict
+
+        self.set_latest_hash(block_hash)
+        self.__latest = block
+        self.__block_map[height] = block_hash
+        self.__block_cache[block_hash] = block
 
         self.db.batch_insert(insert_list)
 
