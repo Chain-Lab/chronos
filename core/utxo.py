@@ -22,7 +22,7 @@ class UTXOSet(Singleton):
         self.__cond = threading.Condition()
         self.__update_queue = deque()
 
-        self.__thread = threading.Thread(target=self.__task)
+        self.__thread = threading.Thread(target=self.__task, name="UTxo Update Thread")
         self.__thread.start()
 
 
