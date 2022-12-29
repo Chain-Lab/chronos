@@ -203,7 +203,7 @@ class TxMemPool(Singleton):
 
     @property
     def counts(self):
-        return self.tx_queue.count()
+        return len(self.tx_queue)
 
     @property
     def valid_txs(self):

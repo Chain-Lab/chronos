@@ -6,7 +6,6 @@ from core.block_chain import BlockChain
 from node.timer import Timer
 from threads.calculator import Calculator
 from utils import funcs
-from utils.locks import package_lock, package_cond
 from utils.singleton import Singleton
 
 
@@ -59,18 +58,15 @@ class Selector(Singleton):
         with self.__select_lock:
             block_height = self.__selected_block.height
             block = self.__selected_block
-            with package_lock:
-                BlockChain().insert_block(self.__selected_block)
-                Timer().refresh()
-                delay_params = block.transactions[0].inputs[0].delay_params
-                hex_seed = delay_params.get("seed")
-                hex_pi = delay_params.get("proof")
-                seed = funcs.hex2int(hex_seed)
-                pi = funcs.hex2int(hex_pi)
-                Calculator().update(seed, pi)
-                self.refresh(block_height)
-            with package_cond:
-                package_cond.notify_all()
+            BlockChain().insert_block(self.__selected_block)
+            Timer().refresh()
+            delay_params = block.transactions[0].inputs[0].delay_params
+            hex_seed = delay_params.get("seed")
+            hex_pi = delay_params.get("proof")
+            seed = funcs.hex2int(hex_seed)
+            pi = funcs.hex2int(hex_pi)
+            Calculator().update(seed, pi)
+            self.refresh(block_height)
 
     def refresh(self, height):
         with self.__select_lock:

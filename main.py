@@ -3,6 +3,7 @@ import logging.config
 import os
 import socket
 import random
+import time
 
 import yappi
 import couchdb
@@ -43,8 +44,10 @@ def setup_logger(default_path="logging.yml", default_level=logging.DEBUG, env_ke
         path = value
 
     if os.path.exists(path):
-        with open(path, "r") as f:
+        current_time = time.strftime("%Y%m%d%H%M", time.localtime(time.time()))
+        with open(path, "r", encoding='utf-8') as f:
             config = yaml.full_load(f)
+            config["handlers"]["file"]["filename"] = "chronos-" + current_time + ".log"
             logging.config.dictConfig(config)
     else:
         logging.basicConfig(level=default_level)

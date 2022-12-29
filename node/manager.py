@@ -31,7 +31,7 @@ class Manager(Singleton):
         while True:
             with self.__cond:
                 while self.__queued_block.empty():
-                    logging.info("Manager wait for new block.")
+                    logging.debug("Manager wait for new block.")
                     self.__cond.wait()
 
                 block = self.__queued_block.get()
@@ -47,31 +47,22 @@ class Manager(Singleton):
         """
         block_hash = block.hash
         block_height = block.height
-        if block_hash in self.__known_block:
-            return
 
         with self.__insert_lock:
-            # 拿到锁后再次检查
-            if block_hash in self.__known_block:
-                return
-
             if block_height != BlockChain().latest_height + 1:
                 return
 
             # 在同一时间只能有一个线程插入区块
             self.__known_block[block_hash] = block
             Selector().refresh(block.height)
-            with package_lock:
-                BlockChain().insert_block(block)
-                Timer().refresh()
-                delay_params = block.transactions[0].inputs[0].delay_params
-                hex_seed = delay_params.get("seed")
-                hex_pi = delay_params.get("proof")
-                seed = funcs.hex2int(hex_seed)
-                pi = funcs.hex2int(hex_pi)
-                Calculator().update(seed, pi)
-            with package_cond:
-                package_cond.notify_all()
+            BlockChain().insert_block(block)
+            Timer().refresh()
+            delay_params = block.transactions[0].inputs[0].delay_params
+            hex_seed = delay_params.get("seed")
+            hex_pi = delay_params.get("proof")
+            seed = funcs.hex2int(hex_seed)
+            pi = funcs.hex2int(hex_pi)
+            Calculator().update(seed, pi)
 
     def notify_insert(self):
         if self.__insert_lock.locked():
@@ -95,7 +86,7 @@ class Manager(Singleton):
                 return
             self.__queued_block.put(block)
             self.__known_block[block_hash] = block
-            logging.info("Append block #{} to manager.".format(block_hash))
+            logging.debug("Append block #{} to manager.".format(block_hash))
             with self.__cond:
                 self.__cond.notify_all()
 

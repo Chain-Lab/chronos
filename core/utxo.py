@@ -8,6 +8,7 @@ from lru import LRU
 
 from core.transaction import Transaction
 from utils.leveldb import LevelDB
+from utils.locks import package_cond, package_lock
 from utils.singleton import Singleton
 from utils.funcs import pub_to_address
 from utils.convertor import utxo_hash_to_db_key, addr_utxo_db_key, remove_utxo_db_prefix
@@ -32,7 +33,7 @@ class UTXOSet(Singleton):
 
     def notify_update(self, block):
         self.__update_queue.append(block)
-        logging.info("Notify UTxO update.")
+        logging.debug("Notify UTxO update.")
         with self.__cond:
             self.__cond.notify_all()
 
@@ -98,6 +99,12 @@ class UTXOSet(Singleton):
         insert_list = {}
         delete_list = []
         for tx in block.transactions:
+
+            with package_cond:
+                while package_lock.locked():
+                    logging.debug("Wait block package finished.")
+                    package_cond.wait()
+
             tx_hash = tx.tx_hash
 
             for idx, outputs in enumerate(tx.outputs):
@@ -256,6 +263,7 @@ class UTXOSet(Singleton):
 
             block = self.__update_queue.popleft()
             self.update(block)
+            logging.info("Block #{} UTxO update finished.".format(block.height))
 
 
 class FullTXOutput(object):
