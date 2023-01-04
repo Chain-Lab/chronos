@@ -21,8 +21,16 @@ class RPCServer(object):
     """
 
     def __init__(self):
+        # RPC 单次消息传输限制 2^29 = 512MB
+        message_max_size = 2 ** 29
+
         # 配置rpc服务的最大worker数量， 可以放入配置文件
-        self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=5))
+        self.server = grpc.server(
+            futures.ThreadPoolExecutor(max_workers=5),
+            options=[
+                ('grpc.max_send_message_length', message_max_size),
+                ('grpc.max_receive_message_length', message_max_size)
+            ])
 
     def serve(self):
         # 注册rpc服务端子模块
