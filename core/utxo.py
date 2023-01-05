@@ -118,7 +118,7 @@ class UTXOSet(Singleton):
                     self.find_utxo(address)
                 self.__utxo_cache[utxo_db_key] = output_dict
                 self.__address_cache[address].add(utxo_db_key)
-                insert_list[utxo_db_key] = copy.deepcopy(output_dict)
+                insert_list[utxo_db_key] = output_dict
                 insert_list[address_db_key] = list(self.__address_cache[address])
 
             for _input in tx.inputs:
@@ -214,11 +214,11 @@ class UTXOSet(Singleton):
         :return: 对应地址的utxo
         """
         address_db_key = addr_utxo_db_key(address)
-        if address in self.__address_cache:
-            utxos_db_key_set = self.__address_cache[address]
-        else:
-            utxos_db_key_set = self.db.get(address_db_key, {}).get("utxos", [])
-            self.__address_cache[address] = set(utxos_db_key_set)
+        if address not in self.__address_cache:
+            utxos_db_key_list = self.db.get(address_db_key, {})
+            self.__address_cache[address] = set(utxos_db_key_list)
+
+        utxos_db_key_set = self.__address_cache[address]
 
         utxos = {}
         for utxo_db_key in utxos_db_key_set:
@@ -236,10 +236,7 @@ class UTXOSet(Singleton):
             if not utxo:
                 continue
 
-            flag_index = tx_hash_index_str.find("#")
-            tx_hash = tx_hash_index_str[:flag_index]
-
-            utxos[tx_hash] = utxo
+            utxos[tx_hash_index_str] = utxo
         return utxos
 
     @staticmethod

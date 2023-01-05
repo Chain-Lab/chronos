@@ -160,15 +160,17 @@ def get_tx_data(height):
     bc = BlockChain()
     heights = []
     result = []
+    total = 0
 
     for i in range(height):
-        print(i)
         block = bc.get_block_by_height(i)
         heights.append(i)
         result.append(len(block.transactions))
+        total += len(block.transactions)
 
     print("heights: ", heights)
     print("result:", result)
+    print("total: {}".format(total))
 
 def get_tx(hash):
     bc = BlockChain()

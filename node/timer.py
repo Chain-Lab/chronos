@@ -10,7 +10,7 @@ class Timer(Singleton):
     """
     节点的计时器， 在间隔时间后触发共识逻辑
     """
-    INTERVAL = 5.0
+    INTERVAL = 0.0
     FINISH_INTERVAL = 3.0
 
     def __init__(self):

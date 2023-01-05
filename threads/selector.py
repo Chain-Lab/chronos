@@ -81,7 +81,7 @@ class Selector(Singleton):
         block_timestamp = int(block.block_header.timestamp)
         block_height = block.block_header.height
 
-        return (block_height - 1) * 15 * 1000 + genesis_timestamp + 13500 < block_timestamp
+        return block_height * 3000 + genesis_timestamp < block_timestamp
 
     @property
     def height(self):
