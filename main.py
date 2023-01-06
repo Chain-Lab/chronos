@@ -195,5 +195,23 @@ def get_timestamp(height):
     print("heights: ", height)
     print("result:", result)
 
+def calculate_tx_size():
+    setup_logger()
+    bc = BlockChain()
+    block = bc.get_block_by_height(200)
+    transactions = block.transactions
+    tx = transactions[0]
+    tx_body = tx.serialize()
+    # 1264 bytes
+    logging.info("Transaction size: {}".format(tx_body, 'utf-8').__sizeof__())
+
+
 if __name__ == "__main__":
-    fire.Fire()
+    fire.Fire({
+        'run': run,
+        'genesis': genesis,
+        'init': init,
+        'get_tx_data': get_tx_data,
+        'get_timestamp': get_timestamp,
+        'clear': clear
+    })

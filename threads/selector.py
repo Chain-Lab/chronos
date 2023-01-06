@@ -52,6 +52,7 @@ class Selector(Singleton):
             self.__selected_block = block
 
     def insert_block(self):
+        # todo(Decision): 添加对上一个区块的哈希值的确认
         if not self.__selected_block:
             return
 
