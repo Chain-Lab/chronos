@@ -5,7 +5,6 @@ import socket
 import random
 import time
 
-import yappi
 import couchdb
 import fire
 import yaml
@@ -54,44 +53,27 @@ def setup_logger(default_path="logging.yml", default_level=logging.DEBUG, env_ke
 
 
 def run():
-    setup_logger()
-    try:
-        yappi.set_clock_type("wall")
-        yappi.start()
+    bc = BlockChain()
+    utxo_set = UTXOSet()
+    utxo_set.reindex(bc)
+    logging.info("UTXO set reindex finish")
 
-        bc = BlockChain()
-        utxo_set = UTXOSet()
-        utxo_set.reindex(bc)
-        logging.info("UTXO set reindex finish")
+    gossip = Gossip()
+    gossip.run()
 
-        gossip = Gossip()
-        gossip.run()
+    tcpserver = Server()
+    tcpserver.listen()
+    tcpserver.run()
+    logging.info("TCP Server start running")
 
-        tcpserver = Server()
-        tcpserver.listen()
-        tcpserver.run()
-        logging.info("TCP Server start running")
+    rpc = RPCServer()
+    rpc.start()
+    logging.info("RPC server start")
 
-        rpc = RPCServer()
-        rpc.start()
-        logging.info("RPC server start")
-
-        p2p = P2p()
-        server = Peer(Manager())
-        server.run(p2p)
-        p2p.run()
-    except KeyboardInterrupt:
-        with open("./func_stats.ya", "w") as f:
-            yappi.get_func_stats(filter_callback=lambda x: yappi.module_matches(x, [
-                core.block_chain, core.utxo, core.transaction, core.txmempool,
-                node.server, node.client, node.gossip,
-                threads.selector, threads.calculator,
-                utils.leveldb, utils.network,
-                rrpc.node, rrpc.block, rrpc.address, rrpc.transaction
-            ])).sort("ttot", "desc").print_all(f)
-            # yappi.get_func_stats().sort("ttot", "desc").print_all(f)
-        with open("./thread_stats.ya", "w") as f:
-            yappi.get_thread_stats().print_all(f)
+    p2p = P2p()
+    server = Peer(Manager())
+    server.run(p2p)
+    p2p.run()
 
 def genesis():
     p = number_theory.get_prime(512)
