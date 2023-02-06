@@ -26,7 +26,6 @@ class UTXOSet(Singleton):
         self.__thread = threading.Thread(target=self.__task, name="UTxo Update Thread")
         self.__thread.start()
 
-
     def addr_cache_callback(self, key: str, value: list):
         # todo(Decision): 这个函数存在问题， 会导致出块错误
         self.db[key] = {"utxos": value}

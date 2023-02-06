@@ -60,9 +60,9 @@ class Gossip(Singleton):
                 continue
 
             # 使用交易的json格式进行验证
-            if not json_validator("./schemas/transaction.json", data):
-                logging.error("Receive transaction invalid.")
-                continue
+            # if not json_validator("./schemas/transaction_v2.json", data):
+            #     logging.error("Receive transaction invalid.")
+            #     continue
 
             tx = Transaction.deserialize(data)
             # 添加交易到交易池和Client的队列

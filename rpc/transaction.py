@@ -15,9 +15,9 @@ class TransactionService(transaction_pb2_grpc.TransactionServicer):
         signed_dict = json.loads(transaction)
 
         # 格式校验
-        is_valid = json_validator("./schemas/transaction.json", signed_dict)
+        # is_valid = json_validator("./schemas/transaction_v2.json", signed_dict)
 
-        assert is_valid is True
+        # assert is_valid is True
 
         transaction = Transaction.deserialize(signed_dict)
         bc = BlockChain()

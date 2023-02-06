@@ -54,8 +54,8 @@ def setup_logger(default_path="logging.yml", default_level=logging.DEBUG, env_ke
 
 def run():
     bc = BlockChain()
-    utxo_set = UTXOSet()
-    utxo_set.reindex(bc)
+    # utxo_set = UTXOSet()
+    # utxo_set.reindex(bc)
     logging.info("UTXO set reindex finish")
 
     gossip = Gossip()

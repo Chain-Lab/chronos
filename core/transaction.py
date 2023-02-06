@@ -7,131 +7,90 @@ import time
 import ecdsa
 from core.config import Config
 from utils import funcs
+from utils.b58code import Base58Code
 
 
 class Transaction(object):
-    def __init__(self, inputs, outputs):
+    __VERSION = b'\0'
+
+    def __init__(self, data: bytes):
         self.tx_hash = ''
-        self.inputs = inputs
-        self.outputs = outputs
+        self.sender = ''
+        self.pub_key = ''
+        self.data = data
+        self.timestamp = -1
+        self.expiration = -1
+        self.signature = None
+        self.proof_info = None
+        self.delay_params = None
 
-    def set_id(self, is_coinbase=False):
+    def set_tx_hash(self, sk=None):
         """
-        设置当前交易的交易id，根据输入和输出的数据哈希得到
-        :return: None
-        """
-        data_list = []
+        设置交易哈希值, 如果 sk 为空则不设置签名
 
-        for _input in self.inputs:
-            input_dict = copy.deepcopy(_input.serialize())
-            if "vote_info" in input_dict:
-                input_dict.pop("vote_info")
-            if "delay_params" in input_dict:
-                input_dict.pop("delay_params")
-            data_list.append(str(input_dict))
+        Args:
+            sk: 发送者的签名私钥
+        """
+        if not sk:
+            self.timestamp = time.time()
+            self.expiration = -1
+            self.signature = None
+            self.tx_hash = funcs.sum256_hex(str(self.__dict__))
+            return
 
-        output_list = [str(_) for _ in self.outputs]
-        # 加入随机数保证同一个节点coinbase交易的hash不一样
-        if is_coinbase:
-            timestamp = str(int(time.time() * 1000))
-            data_list.append(timestamp)
-        data_list.extend(output_list)
-        data = ''.join(data_list)
-        tx_hash = funcs.sum256_hex(data)
-        self.tx_hash = tx_hash
-        return tx_hash
+        pub_key = sk.get_verifying_key()
+        self.pub_key = binascii.b2a_hex(pub_key.to_string()).decode()
+        self.sender = funcs.pub_to_address(self.pub_key)
+        self.timestamp = time.time()
+        self.expiration = self.timestamp + 600
 
-    def is_coinbase(self):
-        """
-        判断当前的交易是否是coinbase交易
-        根据输入只有一个且输入的交易id向量为0以及没有输出来进行判断
-        :return: 如果是coinbase交易， 返回True
-        """
-        return len(self.inputs) == 1 and len(self.inputs[0].tx_hash) == 0 and self.inputs[0].index == -1
+        data = str(self.__dict__)
+        self.tx_hash = funcs.sum256_hex(data)
 
-    def verify(self, prev_txs):
-        """
-        对交易进行验证, 填入链上的输出地址进行验证， 而提交的交易由提交者自己填入地址
-        :param prev_txs: 当前交易的各个input对应哈希的交易
-        :return: 验证是否通过
-        """
+        signature = sk.sign(self.tx_hash.encode())
+        self.signature = signature
+
+    def verify(self) -> bool:
         if self.is_coinbase():
-            logging.debug("Transaction is coinbase tx.")
             return True
 
         tx_copy = copy.deepcopy(self)
+        tx_copy.signature = None
+        tx_hash = funcs.sum256_hex(str(self.__dict__))
+        vk = ecdsa.VerifyingKey.from_string(binascii.a2b_hex(tx_copy.pub_key), ecdsa.SECP256k1)
 
-        for idx, _input in enumerate(self.inputs):
-            prev_tx = prev_txs.get(_input.tx_hash, None)
-            if not prev_tx:
-                # raise ValueError('Previous transaction error.')
-                logging.error("Previous transaction error")
+        try:
+            if not vk.verify(tx_copy.signature, tx_hash.encode()):
                 return False
-            tx_copy.inputs[idx].signature = None
-            tx_copy.inputs[idx].pub_key = prev_tx.outputs[_input.index].pub_key_hash
-            tx_copy.set_id()
-            tx_copy.inputs[idx].pub_key = None
-
-            signature = binascii.a2b_hex(self.inputs[idx].signature)
-            vk = ecdsa.VerifyingKey.from_string(binascii.a2b_hex(_input.pub_key), curve=ecdsa.SECP256k1)
-
-            try:
-                if not vk.verify(signature, tx_copy.tx_hash.encode()):
-                    return False
-            except ecdsa.keys.BadSignatureError:
-                return False
+        except ecdsa.BadSignatureError:
+            return False
 
         return True
 
+    def is_coinbase(self):
+        return self.expiration == -1 and not self.signature
+
     def serialize(self):
-        """
-        序列化， 将交易id、输入列表、输出列表导出为dict
-        :return: 序列化后的字典
-        """
-        return {
-            "tx_hash": self.tx_hash,
-            "inputs": [_.serialize() for _ in self.inputs],
-            "outputs": [_.serialize() for _ in self.outputs]
-        }
+        return self.__dict__
+
+    def deserialize(self, data: dict):
+        self.__dict__ = data
+
+    def __repr__(self):
+        return str(self.__dict__)
 
     @classmethod
-    def deserialize(cls, data: dict):
-        """
-        反序列化, 先按照原有的方法进行反序列化
-        :param data:
-        :return:
-        """
-        tx_hash = data.get('tx_hash', '')
-        inputs_data = data.get('inputs', [])
-        outputs_data = data.get('outputs', [])
-        inputs = []
-        outputs = []
-        is_coinbase = True
-
-        for input_data in inputs_data:
-            if is_coinbase:
-                inputs.append(CoinBaseInput.deserialize(input_data))
-            else:
-                inputs.append(TxInput.deserialize(input_data))
-
-            is_coinbase = False
-
-        for output_data in outputs_data:
-            outputs.append(TxOutput.deserialize(output_data))
-
-        tx = cls(inputs, outputs)
-        tx.tx_hash = tx_hash
-        return tx
-
-    @classmethod
-    def coinbase_tx(cls, data: dict, delay_params: dict):
+    def coinbase_tx(cls, proof_info: dict, delay_params: dict):
         """
         coinbase交易生成
-        :param data: 传入的dict数据
+        :param proof_info: 传入的dict数据
         :param delay_params: 用于VDF的参数信息
         :return: 返回生成的coinbase交易
         """
-        proof_info = data
+        tx = cls(b'')
+        tx.proof_info = proof_info
+        tx.delay_params = delay_params
+
         _input = CoinBaseInput('', -1, Config().get('node.public_key'))
         _input.proof_info = proof_info
         _input.delay_params = delay_params
@@ -141,91 +100,3 @@ class Transaction(object):
         tx.set_id(is_coinbase=True)
         logging.debug("Set coinbase tx hash: {}".format(tx.tx_hash))
         return tx
-
-    def __repr__(self):
-        return 'Transaction(tx_hash={}, ' \
-               'inputs={}, ' \
-               'outputs={})'.format(self.tx_hash, self.inputs, self.outputs)
-
-
-class TxInput(object):
-    def __init__(self, tx_hash=None, index=None, pub_key=None):
-        """ 交易初始化
-
-        Args:
-            tx_hash: 交易的哈希值，默认为空
-            index: 默认为空，没有被使用
-            pub_key: 该笔交易的发布者的公钥
-        """
-        self.tx_hash = tx_hash
-        self.index = index
-        self.signature = ''
-        self.pub_key = pub_key
-
-    def usr_key(self, pub_key_hash):
-        """
-        :param pub_key_hash: 16进制字符串类型的公钥
-        :return:
-        """
-        bin_pub_key = binascii.a2b_hex(self.pub_key)
-        pub_hash = funcs.hash_public_key(bin_pub_key)
-        return pub_key_hash == pub_hash
-
-    def serialize(self):
-        return self.__dict__
-
-    def __repr__(self):
-        return str(self.__dict__)
-
-    # 直接更新dict进行初始化, 后面需要通过json-schema校验
-    @classmethod
-    def deserialize(cls, data: dict):
-        result = cls()
-        result.__dict__.update(data)
-        return result
-
-
-class TxOutput(object):
-    def __init__(self, value=0, pub_key_hash=''):
-        self.value = value
-        self.pub_key_hash = pub_key_hash
-
-    def lock(self, address):
-        hex_pub_key_hash = binascii.b2a_hex(
-            funcs.address_to_pubkey_hash(address)
-        )
-        self.pub_key_hash = hex_pub_key_hash
-
-    def is_locked(self, pub_key_hash):
-        return self.pub_key_hash == pub_key_hash
-
-    def serialize(self):
-        return self.__dict__
-
-    def __repr__(self):
-        return str(self.__dict__)
-
-    @classmethod
-    def deserialize(cls, data: dict):
-        result = cls()
-        result.__dict__.update(data)
-        return result
-
-
-class CoinBaseInput(TxInput):
-    def __init__(self, tx_hash=None, inputs=None, outputs=None):
-        super().__init__(tx_hash, inputs, outputs)
-        self.proof_info = {}
-        self.delay_params = {}
-        """
-        delay_params: 用于进行VDF的参数， 在创世区块中表现为n, seed, l, t的选取
-                      在其他区块中表现为new_seed, proof
-        todo: 可能存在的风险：不对这部分数据校验导致整个网络出现错误
-        """
-
-    def __repr__(self):
-        """
-        重写方法， 相比tx_input多了投票信息, 去掉投票信息
-        保证在出现coinbase交易时与用户的签名信息一致
-        """
-        return str(self.__dict__)

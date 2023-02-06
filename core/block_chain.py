@@ -11,7 +11,6 @@ from core.block_header import BlockHeader
 from core.txmempool import TxMemPool
 from core.merkle import MerkleTree
 from core.transaction import Transaction
-from core.utxo import UTXOSet
 from utils.leveldb import LevelDB
 from utils.singleton import Singleton
 from utils.convertor import blockhash_to_db_key, tx_hash_to_db_key, utxo_hash_to_db_key, height_to_db_key
@@ -98,8 +97,8 @@ class BlockChain(Singleton):
         merkle_tree = MerkleTree(data)
         block_header = BlockHeader(merkle_tree.root_hash, height)
 
-        txs = UTXOSet().clear_transactions(transactions)
-        block = Block(block_header, txs)
+        # txs = UTXOSet().clear_transactions(transactions)
+        block = Block(block_header, transactions)
 
         # TODO(Decision): 区块头的哈希是根据merkle树的根哈希值来进行哈希的， 和交易存在关系
         #  那么是否可以在区块中仅仅存入交易的哈希列表，交易的具体信息存在其他的表中以提高查询效率，区块不存储区块具体的信息？
@@ -391,22 +390,7 @@ class BlockChain(Singleton):
         Returns:
             如果交易交易成功则返回 True
         """
-        st = time.time()
-
-        prev_txs = {}
-        for _input in transaction.inputs:
-            tx_hash = _input.tx_hash
-            prev_tx = self.get_transaction_by_tx_hash(tx_hash)
-
-            if not prev_tx:
-                ed = time.time()
-                logging.debug("Verify transaction use {} s.".format(ed - st))
-                return False
-            prev_txs[prev_tx.tx_hash] = prev_tx
-
-        ed = time.time()
-        logging.debug("Verify transaction use {} s.".format(ed - st))
-        return transaction.verify(prev_txs)
+        return transaction.verify()
 
     def get_latest_delay_params(self) -> dict:
         """ 获取 VDF 的最新计算参数
@@ -437,7 +421,9 @@ class BlockChain(Singleton):
 
         # logging.info("Start UTxO update thread - {}.".format(height))
         # threading.Thread(target=UTXOSet().update, args=(block, ), name="UTxO Thread - {}".format(height)).start()
-        UTXOSet().notify_update(block)
+        # UTXOSet().notify_update(block)
+        # todo(Decision): 这里在 client 线程中更新数据库，先这样处理观察效率
+        #  如果效率会影响整体出块速度则放到新线程中处理
         insert_list = {block_db_key: block.serialize(), block_height_db_key: block_hash}
 
         for tx in block.transactions:
