@@ -53,6 +53,7 @@ def setup_logger(default_path="logging.yml", default_level=logging.DEBUG, env_ke
 
 
 def run():
+    setup_logger()
     bc = BlockChain()
     # utxo_set = UTXOSet()
     # utxo_set.reindex(bc)

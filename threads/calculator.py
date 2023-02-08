@@ -98,7 +98,7 @@ class Calculator(Singleton):
         logging.debug("Genesis params initial.")
 
         latest_block, _ = bc.get_latest_block()
-        coinbase_tx_input = latest_block.transactions[0].inputs[0]
+        coinbase_tx_input = latest_block.transactions[0]
         delay_params = coinbase_tx_input.delay_params
         # 先使用获取到的新的值作为这一轮的seed
         new_seed = funcs.hex2int(delay_params.get("seed"))
@@ -207,7 +207,7 @@ class Calculator(Singleton):
         address_number = int.from_bytes(Base58Code.decode_check(address), byteorder='big')
         node_hash = self.seed * address_number % 2 ** 256
 
-        if node_hash / 2 ** 256 > 0.5:
+        if node_hash / 2 ** 256 > 1.0:
             logging.debug("{} is not consensus node.".format(address))
             return False
 
