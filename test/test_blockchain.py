@@ -63,7 +63,6 @@ class TestBlockchain(unittest.TestCase):
 
     def test_2_find_utxos(self):
         bc = BlockChain()
-        bc.find_utxo()
 
     def test_2_package_with_transaction(self):
         pass
@@ -73,7 +72,6 @@ class TestBlockchain(unittest.TestCase):
         block, latest_hash = bc.get_latest_block()
         height = block.height
 
-        UTXOSet().roll_back(block, bc)
         bc.roll_back()
         block, latest_hash = bc.get_latest_block()
         self.assertEqual(height - 1, block.height)

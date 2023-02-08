@@ -13,10 +13,11 @@ from utils.b58code import Base58Code
 class Transaction(object):
     __VERSION = b'\0'
 
-    def __init__(self, data: bytes):
+    def __init__(self, data: str):
         self.tx_hash = ''
         self.sender = ''
         self.pub_key = ''
+        # data -> HexString
         self.data = data
         self.timestamp = -1
         self.expiration = -1
@@ -73,8 +74,11 @@ class Transaction(object):
     def serialize(self):
         return self.__dict__
 
-    def deserialize(self, data: dict):
-        self.__dict__ = data
+    @classmethod
+    def deserialize(cls, data: dict):
+        transaction = cls('')
+        transaction.__dict__ = data
+        return transaction
 
     def __repr__(self):
         return str(self.__dict__)
@@ -87,16 +91,10 @@ class Transaction(object):
         :param delay_params: 用于VDF的参数信息
         :return: 返回生成的coinbase交易
         """
-        tx = cls(b'')
+        tx = cls('')
         tx.proof_info = proof_info
         tx.delay_params = delay_params
+        tx.expiration = -1
+        tx.signature = None
 
-        _input = CoinBaseInput('', -1, Config().get('node.public_key'))
-        _input.proof_info = proof_info
-        _input.delay_params = delay_params
-        output = TxOutput(int(Config().get('node.coinbase_reward')),
-                          Config().get('node.address'))
-        tx = cls([_input], [output])
-        tx.set_id(is_coinbase=True)
-        logging.debug("Set coinbase tx hash: {}".format(tx.tx_hash))
         return tx
