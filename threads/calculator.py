@@ -89,8 +89,7 @@ class Calculator(Singleton):
             return False
 
         coinbase_tx = genesis_block.transactions[0]
-        coinbase_tx_input = coinbase_tx.inputs[0]
-        delay_params = coinbase_tx_input.delay_params
+        delay_params = coinbase_tx.delay_params
         order_hex = delay_params.get("order")
         verify_param = delay_params.get("verify_param")
         self.time_parma = delay_params.get("time_param")

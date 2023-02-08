@@ -28,7 +28,7 @@ class Block(object):
 
     @property
     def vote_info(self):
-        return self._transactions[0].inputs[0].vote_info
+        return self._transactions[0].vote_info
 
     @property
     def vote_count(self) -> int:
@@ -51,7 +51,7 @@ class Block(object):
         # return result
 
     def delay_params(self):
-        return self._transactions[0].inputs[0].delay_params
+        return self._transactions[0].delay_params
 
     @property
     def block_header(self):

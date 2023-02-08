@@ -400,8 +400,8 @@ class BlockChain(Singleton):
             coinbase 交易中存在的 VDF 计算参数
         """
         latest_block, _ = self.get_latest_block()
-        coinbase_tx_input = latest_block.transactions[0].inputs[0]
-        return coinbase_tx_input.delay_params
+        coinbase_tx = latest_block.transactions[0]
+        return coinbase_tx.delay_params
 
     def insert_block(self, block: Block) -> None:
         """ 更新区块

@@ -57,7 +57,7 @@ class Manager(Singleton):
             Selector().refresh(block.height)
             BlockChain().insert_block(block)
             Timer().refresh()
-            delay_params = block.transactions[0].inputs[0].delay_params
+            delay_params = block.transactions[0].delay_params
             hex_seed = delay_params.get("seed")
             hex_pi = delay_params.get("proof")
             seed = funcs.hex2int(hex_seed)
