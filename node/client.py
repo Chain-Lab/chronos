@@ -16,6 +16,7 @@ from node.constants import STATUS
 from node.message import Message
 from node.timer import Timer
 from threads.calculator import Calculator
+from threads.selector import Selector
 from utils.leveldb import LevelDB
 from utils.locks import package_lock, package_cond
 from utils.network import TCPConnect
@@ -146,7 +147,7 @@ class Client(object):
             if not latest_block:
                 latest_block, _ = bc.get_latest_block()
 
-            if self.__manager.await_block >= 2:
+            if Selector().await_block >= 2:
                 logging.debug("Time finished, notify selector to insert.")
                 self.__manager.notify_insert()
 

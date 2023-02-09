@@ -24,7 +24,6 @@ class Manager(Singleton):
         self.__append_lock = threading.Lock()
         self.__insert_lock = threading.Lock()
         self.__cond = threading.Condition()
-        self.__await_block_count = 0
         self.thread = threading.Thread(target=self.task, name="Manager Thread")
         self.thread.start()
 
@@ -72,7 +71,6 @@ class Manager(Singleton):
 
         with self.__insert_lock:
             Selector().insert_block()
-            self.__await_block_count = 0
 
     def append_block(self, block):
         """
@@ -88,7 +86,6 @@ class Manager(Singleton):
                 return
             self.__queued_block.put(block)
             self.__known_block[block_hash] = block
-            self.__await_block_count += 1
             logging.debug("Append block #{} to manager.".format(block_hash))
             with self.__cond:
                 self.__cond.notify_all()
@@ -98,10 +95,6 @@ class Manager(Singleton):
 
     def is_known_block(self, block_hash):
         return block_hash in self.__known_block
-
-    @property
-    def await_block(self):
-        return self.__await_block_count
 
     def __broadcast(self, block):
         """

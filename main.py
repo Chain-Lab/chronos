@@ -151,9 +151,10 @@ def get_tx_data(height):
         result.append(len(block.transactions))
         total += len(block.transactions)
 
-    print("heights: ", heights)
-    print("result:", result)
-    print("total: {}".format(total))
+    # print("heights: ", heights)
+    # print("result:", result)
+    # print("total: {}".format(total))
+    return result
 
 def get_tx(hash):
     bc = BlockChain()
@@ -175,8 +176,17 @@ def get_timestamp(height):
         result.append((int(block.block_header.timestamp) - timestamp) / 1000)
         timestamp = int(block.block_header.timestamp)
 
-    print("heights: ", height)
-    print("result:", result)
+    # print("heights: ", height)
+    # print("result:", result)
+    return result
+
+def plot(height):
+    consensus_time = get_timestamp(height + 1)
+    tx_data = get_tx_data(height)
+
+    with open("result.txt", "w") as f:
+        f.write("tx_count = {}\n".format(tx_data))
+        f.write("consensus_time = {}\n".format(consensus_time))
 
 def calculate_tx_size():
     setup_logger()
@@ -196,5 +206,6 @@ if __name__ == "__main__":
         'init': init,
         'get_tx_data': get_tx_data,
         'get_timestamp': get_timestamp,
-        'clear': clear
+        'clear': clear,
+        'plot': plot
     })

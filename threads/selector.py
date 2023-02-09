@@ -14,6 +14,7 @@ class Selector(Singleton):
         self.__height = -1
         self.__blocks = {}
         self.__selected_block = None
+        self.__await_block_count = 0
         self.__select_lock = threading.RLock()
 
     def compare_block(self, block):
@@ -24,6 +25,8 @@ class Selector(Singleton):
         with self.__select_lock:
             if block.height != self.__height + 1 or block_hash in self.__blocks:
                 return
+
+            self.__await_block_count += 1
 
             if not self.__selected_block:
                 # if Selector().__check_block_timeout(block):
@@ -60,7 +63,7 @@ class Selector(Singleton):
             block_height = self.__selected_block.height
             block = self.__selected_block
             BlockChain().insert_block(self.__selected_block)
-            Timer().refresh()
+            self.__await_block_count = 0
             delay_params = block.transactions[0].delay_params
             hex_seed = delay_params.get("seed")
             hex_pi = delay_params.get("proof")
@@ -87,3 +90,7 @@ class Selector(Singleton):
     @property
     def height(self):
         return self.__height
+
+    @property
+    def await_block(self):
+        return self.__await_block_count

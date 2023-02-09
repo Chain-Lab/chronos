@@ -8,3 +8,4 @@ test/wallets.json
 /test/leveldb
 /test/conf
 /data/
+chronos-*
