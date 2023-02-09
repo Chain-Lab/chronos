@@ -26,9 +26,9 @@ class Selector(Singleton):
                 return
 
             if not self.__selected_block:
-                if Selector().__check_block_timeout(block):
-                    logging.warning("Block timeout.")
-                    return
+                # if Selector().__check_block_timeout(block):
+                #     logging.warning("Block timeout.")
+                #     return
 
                 self.__selected_block = block
                 self.__blocks[block_hash] = block
@@ -82,7 +82,7 @@ class Selector(Singleton):
         block_timestamp = int(block.block_header.timestamp)
         block_height = block.block_header.height
 
-        return block_height * 1500 + genesis_timestamp < block_timestamp
+        return block_height * 1000 + genesis_timestamp < block_timestamp
 
     @property
     def height(self):

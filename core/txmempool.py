@@ -28,8 +28,7 @@ class TxMemPool(Singleton):
     def is_full(self):
         return len(self.txs) >= self.SIZE
 
-    def add(self,
-            tx) -> bool:
+    def add(self, tx) -> bool:
         """ 将一笔交易放入交易池中
 
         在本地节点正在打包时会进行等待
@@ -115,9 +114,9 @@ class TxMemPool(Singleton):
 
                     if tx_hash not in self.txs:
                         continue
-
-                    if self.txs_flag[tx_hash] >= self.__height:
-                        break
+                    #
+                    # if self.txs_flag[tx_hash] >= self.__height:
+                    #     break
 
                     transaction = self.txs[tx_hash]
                     # db_tx = bc.get_transaction_by_tx_hash(tx_hash)
@@ -126,9 +125,10 @@ class TxMemPool(Singleton):
                     #     continue
 
                     result.append(transaction)
+                    self.txs.pop(tx_hash)
                     count += 1
-                    self.txs_flag[tx_hash] = self.__height
-                    self.tx_queue.append(tx_hash)
+                    # self.txs_flag[tx_hash] = self.__height
+                    # self.tx_queue.append(tx_hash)
 
                 with self.__cond:
                     self.__cond.notify_all()

@@ -425,15 +425,15 @@ class BlockChain(Singleton):
         # todo(Decision): 这里在 client 线程中更新数据库，先这样处理观察效率
         #  如果效率会影响整体出块速度则放到新线程中处理
         insert_list = {block_db_key: block.serialize(), block_height_db_key: block_hash}
-
-        for tx in block.transactions:
-            tx_hash = tx.tx_hash
-            TxMemPool().remove(tx_hash)
-
-            db_tx_key = tx_hash_to_db_key(tx_hash)
-            tx_dict = tx.serialize()
-            self.__tx_cache[tx_hash] = tx
-            insert_list[db_tx_key] = tx_dict
+        #
+        # for tx in block.transactions:
+        #     tx_hash = tx.tx_hash
+        #     TxMemPool().remove(tx_hash)
+        #
+        #     db_tx_key = tx_hash_to_db_key(tx_hash)
+        #     tx_dict = tx.serialize()
+        #     self.__tx_cache[tx_hash] = tx
+        #     insert_list[db_tx_key] = tx_dict
 
         self.set_latest_hash(block_hash)
         self.__latest = block
