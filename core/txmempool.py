@@ -41,27 +41,27 @@ class TxMemPool(Singleton):
         Returns:
             如果成功放入交易返回 True
         """
-        with self.__cond:
-            while self.__read_lock.locked():
-                logging.debug("Node packaging block, stay wait.")
-                self.__cond.wait()
+        # with self.__cond:
+        #     while self.__read_lock.locked():
+        #         logging.debug("Node packaging block, stay wait.")
+        #         self.__cond.wait()
 
         tx_hash = tx.tx_hash
         # 在添加交易到交易池前先检查交易是否存在，如果存在说明已经被打包了
-        with self.pool_lock:
-            self.__status = TxMemPool.STATUS_APPEND
+        # with self.pool_lock:
+        #     self.__status = TxMemPool.STATUS_APPEND
 
-            if tx_hash not in self.__queue_set and tx_hash not in self.txs:
-                self.__queue_set.add(tx_hash)
-                self.txs[tx_hash] = tx
-                self.txs_flag[tx_hash] = -1
-                # self.tx_hashes.append(tx_hash)
-                self.tx_queue.append(tx_hash)
-                logging.debug("Add tx#{} in memory pool.".format(tx_hash))
-                self.__status = TxMemPool.STATUS_NONE
-                return True
+        if tx_hash not in self.__queue_set and tx_hash not in self.txs:
+            self.__queue_set.add(tx_hash)
+            self.txs[tx_hash] = tx
+            self.txs_flag[tx_hash] = -1
+            # self.tx_hashes.append(tx_hash)
+            self.tx_queue.append(tx_hash)
+            logging.debug("Add tx#{} in memory pool.".format(tx_hash))
             self.__status = TxMemPool.STATUS_NONE
-            return False
+            return True
+        self.__status = TxMemPool.STATUS_NONE
+        return False
 
     def clear(self):
         self.pool_lock.acquire()
