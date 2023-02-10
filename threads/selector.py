@@ -16,6 +16,10 @@ class Selector(Singleton):
         self.__selected_block = None
         self.__await_block_count = 0
         self.__select_lock = threading.RLock()
+        self.__cond = threading.Condition()
+
+        self.__thread = threading.Thread(target=self.task, name="Selector Thread")
+        self.__thread.start()
 
     def compare_block(self, block):
         block_hash = block.hash
@@ -54,23 +58,30 @@ class Selector(Singleton):
 
             self.__selected_block = block
 
-    def insert_block(self):
-        # todo(Decision): 添加对上一个区块的哈希值的确认
-        if not self.__selected_block:
-            return
+    def task(self):
+        while True:
+            with self.__cond:
+                while not self.__selected_block:
+                    self.__cond.wait()
+                # todo(Decision): 添加对上一个区块的哈希值的确认
 
-        with self.__select_lock:
-            block_height = self.__selected_block.height
-            block = self.__selected_block
-            BlockChain().insert_block(self.__selected_block)
-            self.__await_block_count = 0
-            delay_params = block.transactions[0].delay_params
-            hex_seed = delay_params.get("seed")
-            hex_pi = delay_params.get("proof")
-            seed = funcs.hex2int(hex_seed)
-            pi = funcs.hex2int(hex_pi)
-            Calculator().update(seed, pi)
-            self.refresh(block_height)
+                with self.__select_lock:
+                    block_height = self.__selected_block.height
+                    block = self.__selected_block
+                    BlockChain().insert_block(self.__selected_block)
+                    self.__await_block_count = 0
+                    delay_params = block.transactions[0].delay_params
+                    hex_seed = delay_params.get("seed")
+                    hex_pi = delay_params.get("proof")
+                    seed = funcs.hex2int(hex_seed)
+                    pi = funcs.hex2int(hex_pi)
+                    Calculator().update(seed, pi)
+                    self.refresh(block_height)
+
+    def notify(self):
+        # todo(Decision): 这里需要处理在多个线程的情况下其他线程抢锁
+        with self.__cond:
+            self.__cond.notify()
 
     def refresh(self, height):
         with self.__select_lock:

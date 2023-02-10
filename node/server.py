@@ -65,8 +65,8 @@ class Server(object):
         类的运行函数， 开一个线程进行监听, 同时启动VDF的计算
         :return: None
         """
-        calculator = Calculator()
-        calculator.run()
+        # calculator = Calculator()
+        # calculator.run()
         # 实例化timer， 进行初始化操作
         Timer()
 

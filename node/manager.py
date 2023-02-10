@@ -70,7 +70,7 @@ class Manager(Singleton):
             return
 
         with self.__insert_lock:
-            Selector().insert_block()
+            Selector().notify()
 
     def append_block(self, block):
         """
