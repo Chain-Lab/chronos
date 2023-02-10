@@ -167,14 +167,14 @@ def get_timestamp(height):
     heights = []
     result = []
 
-    block = bc.get_block_by_height(0)
-    timestamp = int(block.block_header.timestamp)
+    timestamp = bc.get_block_insert_timestamp(0)
 
     for i in range(1, height, 1):
-        block = bc.get_block_by_height(i)
+        nxt_timestamp = bc.get_block_insert_timestamp(i)
+
         heights.append(i)
-        result.append((int(block.block_header.timestamp) - timestamp) / 1000)
-        timestamp = int(block.block_header.timestamp)
+        result.append((nxt_timestamp - timestamp) / 1000)
+        timestamp = nxt_timestamp
 
     # print("heights: ", height)
     # print("result:", result)
@@ -191,9 +191,9 @@ def plot(height):
 def calculate_tx_size():
     setup_logger()
     bc = BlockChain()
-    block = bc.get_block_by_height(200)
+    block = bc.get_block_by_height(100)
     transactions = block.transactions
-    tx = transactions[0]
+    tx = transactions[1]
     tx_body = tx.serialize()
     # 1264 bytes
     logging.info("Transaction size: {}".format(tx_body, 'utf-8').__sizeof__())
@@ -207,5 +207,6 @@ if __name__ == "__main__":
         'get_tx_data': get_tx_data,
         'get_timestamp': get_timestamp,
         'clear': clear,
-        'plot': plot
+        'plot': plot,
+        'size': calculate_tx_size
     })

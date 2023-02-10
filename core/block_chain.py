@@ -425,6 +425,9 @@ class BlockChain(Singleton):
         # todo(Decision): 这里在 client 线程中更新数据库，先这样处理观察效率
         #  如果效率会影响整体出块速度则放到新线程中处理
         insert_list = {block_db_key: block.serialize(), block_height_db_key: block_hash}
+
+        # 记录插入区块的时间戳，用于计算衡量tps
+        insert_list["insert-block-{}".format(block.height)] = int(time.time() * 1000)
         #
         # for tx in block.transactions:
         #     tx_hash = tx.tx_hash
@@ -467,3 +470,6 @@ class BlockChain(Singleton):
             return -1
         else:
             return self.__latest.height
+
+    def get_block_insert_timestamp(self, height):
+        return self.db.get("insert-block-{}".format(height))
