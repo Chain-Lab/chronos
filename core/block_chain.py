@@ -443,6 +443,7 @@ class BlockChain(Singleton):
         self.__block_map[height] = block_hash
         self.__block_cache[block_hash] = block
         self.db["insert-block-{}".format(block.height)] = int(time.time() * 1000)
+        self.db["tx-count-{}".format(block.height)] = len(block.transactions)
 
         # self.db.batch_insert(insert_list)
 
