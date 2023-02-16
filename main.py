@@ -146,10 +146,10 @@ def get_tx_data(height):
     total = 0
 
     for i in range(height):
-        block = bc.get_block_by_height(i)
+        tx_count = bc.db["tx-count-{}".format(i)]
         heights.append(i)
-        result.append(len(block.transactions))
-        total += len(block.transactions)
+        result.append(tx_count)
+        total += tx_count
 
     # print("heights: ", heights)
     # print("result:", result)
