@@ -20,7 +20,7 @@ class BlockChain(Singleton):
     def __init__(self):
         self.db = LevelDB()
         self.__tx_cache = LRU(30000)
-        self.__block_cache = LRU(500)
+        self.__block_cache = LRU(2000)
 
         # map block_height => block_hash
         self.__block_map = LRU(2000)
@@ -424,10 +424,10 @@ class BlockChain(Singleton):
         # UTXOSet().notify_update(block)
         # todo(Decision): 这里在 client 线程中更新数据库，先这样处理观察效率
         #  如果效率会影响整体出块速度则放到新线程中处理
-        insert_list = {block_db_key: block.serialize(), block_height_db_key: block_hash}
-
+        # insert_list = {block_db_key: block.serialize(), block_height_db_key: block_hash}
+        #
         # 记录插入区块的时间戳，用于计算衡量tps
-        insert_list["insert-block-{}".format(block.height)] = int(time.time() * 1000)
+        # insert_list["insert-block-{}".format(block.height)] = int(time.time() * 1000)
         #
         # for tx in block.transactions:
         #     tx_hash = tx.tx_hash
@@ -442,8 +442,9 @@ class BlockChain(Singleton):
         self.__latest = block
         self.__block_map[height] = block_hash
         self.__block_cache[block_hash] = block
+        self.db["insert-block-{}".format(block.height)] = int(time.time() * 1000)
 
-        self.db.batch_insert(insert_list)
+        # self.db.batch_insert(insert_list)
 
     def get_cache_status(self):
         """ 获取缓存命中情况

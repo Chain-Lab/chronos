@@ -26,7 +26,7 @@ class RPCServer(object):
 
         # 配置rpc服务的最大worker数量， 可以放入配置文件
         self.server = grpc.server(
-            futures.ThreadPoolExecutor(max_workers=5),
+            futures.ThreadPoolExecutor(max_workers=20),
             options=[
                 ('grpc.max_send_message_length', message_max_size),
                 ('grpc.max_receive_message_length', message_max_size)
