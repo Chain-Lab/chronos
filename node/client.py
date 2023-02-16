@@ -147,7 +147,7 @@ class Client(object):
             if not latest_block:
                 latest_block, _ = bc.get_latest_block()
 
-            if Selector().await_block >= 2:
+            if Selector().await_block >= 4:
                 logging.debug("Time finished, notify selector to insert.")
                 self.__manager.notify_insert()
 
