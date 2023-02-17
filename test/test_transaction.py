@@ -15,4 +15,7 @@ class TestTransaction(unittest.TestCase):
         raw_transaction = Transaction(tx_data)
         raw_transaction.set_tx_hash(sign_key)
 
-        self.assertTrue(raw_transaction.verify())
+        raw_data = raw_transaction.serialize()
+        tx = Transaction.deserialize(raw_data)
+
+        self.assertTrue(tx.verify())

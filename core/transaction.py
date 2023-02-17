@@ -49,7 +49,7 @@ class Transaction(object):
         self.tx_hash = funcs.sum256_hex(data)
 
         signature = sk.sign(self.tx_hash.encode())
-        self.signature = signature
+        self.signature = binascii.b2a_hex(signature).decode()
 
     def verify(self) -> bool:
         if self.is_coinbase():
@@ -59,13 +59,14 @@ class Transaction(object):
         tx_copy.signature = None
         tx_copy.tx_hash = ''
         tx_hash = funcs.sum256_hex(str(tx_copy.__dict__))
+        signature = binascii.a2b_hex(self.signature)
 
         if tx_hash != self.tx_hash:
             return False
         vk = ecdsa.VerifyingKey.from_string(binascii.a2b_hex(tx_copy.pub_key), ecdsa.SECP256k1)
 
         try:
-            if not vk.verify(self.signature, tx_hash.encode()):
+            if not vk.verify(signature, tx_hash.encode()):
                 return False
         except ecdsa.BadSignatureError:
             return False
