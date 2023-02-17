@@ -57,11 +57,15 @@ class Transaction(object):
 
         tx_copy = copy.deepcopy(self)
         tx_copy.signature = None
-        tx_hash = funcs.sum256_hex(str(self.__dict__))
+        tx_copy.tx_hash = ''
+        tx_hash = funcs.sum256_hex(str(tx_copy.__dict__))
+
+        if tx_hash != self.tx_hash:
+            return False
         vk = ecdsa.VerifyingKey.from_string(binascii.a2b_hex(tx_copy.pub_key), ecdsa.SECP256k1)
 
         try:
-            if not vk.verify(tx_copy.signature, tx_hash.encode()):
+            if not vk.verify(self.signature, tx_hash.encode()):
                 return False
         except ecdsa.BadSignatureError:
             return False

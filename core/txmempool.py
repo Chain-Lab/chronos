@@ -1,5 +1,6 @@
 import logging
 import threading
+import time
 from collections import deque
 from core.config import Config
 from utils.singleton import Singleton
@@ -121,14 +122,15 @@ class TxMemPool(Singleton):
                     transaction = self.txs[tx_hash]
                     # db_tx = bc.get_transaction_by_tx_hash(tx_hash)
 
-                    # if not bc.verify_transaction(transaction):
-                    #     continue
+                    if not transaction.verify():
+                        continue
 
                     result.append(transaction)
                     self.txs.pop(tx_hash)
                     count += 1
                     # self.txs_flag[tx_hash] = self.__height
                     # self.tx_queue.append(tx_hash)
+                    # time.sleep(0.01)
 
                 with self.__cond:
                     self.__cond.notify_all()
